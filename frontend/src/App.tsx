@@ -19,7 +19,7 @@ function App() {
 
         <HomePage 
           setActivePage={() => {}}
-          lang='ar'
+          lang='en'
           listings={[]}
           onSelectListing={() => {}}
           isLoggedIn={false}
