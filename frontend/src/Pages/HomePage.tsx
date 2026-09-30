@@ -3,6 +3,8 @@ import type { Language, Listing } from '../types';
 import {translations} from '../translations';
 import type {MapMarker, MapCameraProps} from '../Components/home/PropertyMap'
 
+import { HomeSearchPanel } from '../Components/home/HomeSearchPanel';
+
 
 
 interface HomePageProps {
@@ -16,7 +18,7 @@ interface HomePageProps {
 
 type HomeTab = 'home' | 'roommate' | 'list';
 
-type PropertyType = '' | 'apartement' | 'house' | 'villa' | 'studio' | 'riad';
+type PropertyType = '' | 'apartment' | 'house' | 'villa' | 'studio' | 'riad';
 
 type PriceRange = '' | '0-1500' | '1500-3000' | '3000+';
 
@@ -116,7 +118,7 @@ const findCityCoords = (cityAr?: string, cityEnFr?: string) =>{
         CITIES[0]);
 };
 
-const detectNearstCity= (lat: number, lng: number)=>{
+const detectNearestCity= (lat: number, lng: number)=>{
     let nearest = CITIES[0];
     let miniDistance = Infinity;
 
@@ -141,7 +143,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
 
   // language
-    const currenntLang = translations[lang].homePage;
+    const currentLang = translations[lang].homePage;
     const isRTL = lang === 'ar';
 
 
@@ -150,9 +152,9 @@ export const HomePage: React.FC<HomePageProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [propertyType, setPropertyType] = useState<PropertyType>(''); // ola apartement , apres nxofo 
     const [priceRange, setPriceRange] = useState<PriceRange>('');
-    const [rommateLocation, setRommateLocation] = useState('');
+    const [roommateLocation, setRoommateLocation] = useState('');
     const [budget, setBudget] = useState('');
-    const [rommateGender, setRommateGender] = useState<GenderPreference>('');
+    const [roommateGender, setRoommateGender] = useState<GenderPreference>('');
 
 
     // Details state
@@ -202,7 +204,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         title: item.title,
         price: `${item.price} DH`,
         category: 'home',
-        type: 'apartment',
+        type: item.type,
         image: item.imageUrl,
         description: {
           ar: district ? `${district} - ${cityMatch.ar}` : cityMatch.ar,
@@ -225,7 +227,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
 
-        const nearestFr = detectNearstCity(userLat, userLng);
+        const nearestFr = detectNearestCity(userLat, userLng);
         setSearchQuery(nearestFr);
         setCameraProps({
           center: {
@@ -242,7 +244,9 @@ export const HomePage: React.FC<HomePageProps> = ({
     );
   }, []);
 
-
+ () => {
+  
+ }
   // search input
 
   const handleSearchChange = (value: string) =>{
@@ -276,7 +280,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     if (activeTab === 'roommate'){
       // data rommate oussama
 
-      onSearch?.(rommateLocation || budget);
+      onSearch?.(roommateLocation || budget);
     }
     else{
       onSearch?.(searchQuery); // ?. ila onsearch existe call him , sinon mdir wlo : optionel chaining
@@ -290,7 +294,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const filteredMarkers = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return mapMarkers.filter((marker) => {
-      const matchesSearch = query === ''  || marker.city.en.toLowerCase().includes(query)
+      const matchesSearch = query === ''  || marker.city.ar.toLowerCase().includes(query)
                                           || marker.city.fr.toLowerCase().includes(query)
                                           || marker.city.en.toLowerCase().includes(query);
 
@@ -306,7 +310,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       return (matchesSearch && matchesType && matchesPrice && matchesTab);
     })
-  }, [mapMarkers, searchQuery, propertyType, priceRange, activeTab, lang]);
+  }, [mapMarkers, searchQuery, propertyType, priceRange, activeTab]);
 
   // marker click
 
@@ -324,34 +328,93 @@ export const HomePage: React.FC<HomePageProps> = ({
   }
 
     return(
-      <div dir={isRTL ? 'rtl' : 'ltr'} className='w-screen min-h-screen font-sans bg-[var(--color-background)] relative'>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className='w-screen min-h-screen font-sans bg-(--color-background) relative'>
         {/*Ticker pup*/}
-        <div className='w-full bg-orange-900'>
-          <div className='overflow-hidden w-full whitespace-nowrap' >
+        <div className='w-full bg-(--color-accent) text-white py-2.5'>
+          <div className='overflow-hidden w-full whitespace-nowrap '  >
             <div className={`animate-ticker items-center ${isRTL ? 'ticker-rtl' : 'ticker-ltr'}`}>
                 <div className='flex items-center gap-12 px-6'>
-                  <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currenntLang.ticker1}
+                  <span className='text-xs md:text-sm tracking-wider'>
+                    {currentLang.ticker1}
                   </span>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currenntLang.ticker2}
+                    {currentLang.ticker2}
                   </span>
                 </div>
                 <div className='flex items-center gap-12 px-6'>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currenntLang.ticker2}
+                    {currentLang.ticker2}
                   </span>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currenntLang.ticker1}
+                    {currentLang.ticker1}
                   </span>
                 </div>
             </div>
           </div>
         </div>
+        {/*Main content*/}
+      <main className='w-full flex-1 flex flex-col px-4 md:px-8 pb-8 pt-6 md:pt-8 max-w-[1400] mx-auto'>
+        {/*Hero*/}
+        <section className='text-center pb-4 px-2 shrink-0 max-w-2xl mx-auto'>
+          <h1 className='text-lg md:text-xl font-black text-gray-900 tracking-tight'>
+            {currentLang.titleMain}{' '} 
+            <span className='text-(--color-accent)'>
+              {currentLang.titleAccent}
+            </span>
+          </h1>
+          <p className='text-xs text-gray-500 font-medium mt-1.5'>
+            {currentLang.subtitle}
+          </p>
+        </section>
 
+        {/*Search*/}
 
+        <HomeSearchPanel
+         activeTab={activeTab}
+          onTabChange={setActiveTab}
 
+          isLoggedIn={isLoggedIn}
+          onNavigate={setActivePage}
 
+          searchQuery={searchQuery}
+          onSearchQueryChange={
+            handleSearchChange
+          }
+
+          propertyType={propertyType}
+          onPropertyTypeChange={
+            setPropertyType
+          }
+
+          priceRange={priceRange}
+          onPriceRangeChange={
+            setPriceRange
+          }
+
+          roommateLocation={
+            roommateLocation
+          }
+          onRoommateLocationChange={
+            setRoommateLocation
+          }
+
+          budget={budget}
+          onBudgetChange={setBudget}
+
+          roommateGender={
+            roommateGender
+          }
+          onRoommateGenderChange={
+            setRoommateGender
+          }
+
+          onSearch={
+            handlSearchClick
+          }
+
+          labels={currentLang}
+        />
+      </main>
       </div>
     );
 

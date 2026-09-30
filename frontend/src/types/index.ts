@@ -1,5 +1,12 @@
 export type Language = 'ar' | 'fr' | 'en';
 
+export type PropertyType =
+    | 'apartment'
+    | 'house'
+    | 'studio'
+    | 'riad'
+    | 'villa';
+
 export interface Listing {
     id: number;
     ownerId: number;
@@ -23,4 +30,7 @@ export interface Listing {
     lat: number;
     lng: number;
 
+    type: PropertyType;
+
 }
+

@@ -15,14 +15,16 @@ export const translations = {
             subtitle: 'اكتشف أفضل العروض السكنية ولقى المكان المناسب ليك',
 
             tabHome: 'السكن',
-            tabRommate: 'رفيق السكن',
-            TableRowsSplitIcon: 'جميع العروض',
+            tabRoommate: 'رفيق السكن',
+            // TableRowsSplitIcon: 'جميع العروض',
             locationPlaceholder : 'المدينة أو الحي',
-            roomateLocationPlaceholder: 'فين باغي تسكن؟',
+            roommateLocationPlaceholder: 'فين باغي تسكن؟',
+            tabList: 'جميع العروض',
 
-            proptype: 'نوع السكن',
+            available: 'متاح',
+            propType: 'نوع السكن',
             apt: 'شقة',
-            House: 'منزل',
+            house: 'منزل',
             studio: 'ستوديو',
             villa: 'فيلا',
             riad : 'رياض',
@@ -39,10 +41,9 @@ export const translations = {
             male: 'ذكر',
             female: 'أنثى',
 
-            SearchBtn: 'بحث',
+            searchBtn: 'بحث',
             
             featured: 'عروض مميزة',
-            avaliable: 'متاح',
 
             detailsTitle: 'تفاصيل السكن',
             contactBtn: 'تواصل مع المالك',
@@ -72,12 +73,14 @@ export const translations = {
             house: 'House',
             studio: 'Studio',
             riad: 'Riad',
+            villa: 'villa',
 
             priceRange: 'Price Range',
             priceAny: 'All Prices',
             price0To1500: '0 - 1500 DH',
             price1500To3000: '1500 - 3000 DH',
             price3000Plus: '3000+ DH',
+
             budgetPlaceholder: 'Monthly budget',
 
             genderPref: 'Preferred Gender',
@@ -118,6 +121,7 @@ export const translations = {
             house: 'Maison',
             studio: 'Studio',
             riad: 'Riad',
+            villa: 'villa',
 
             priceRange: 'Fourchette de prix',
             priceAny: 'Tous les prix',

@@ -17,8 +17,8 @@ export interface MapMarker{
         en: string;
     };
     price: string;
-    category: 'home' | 'rommate';
-    type: 'apartment' | 'house' | 'studio' | 'riad';
+    category: 'home' | 'roommate';
+    type: 'apartment' | 'house' | 'studio' | 'riad' | 'villa';
 
     description: {
         ar: string;

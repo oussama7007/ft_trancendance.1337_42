@@ -1,6 +1,12 @@
 @import "tailwindcss";
-
-:root{
+/*create custom css === >> root: global variable */
+:root{ /*hnaaya adrary hdo varibales css , ila bgha ykhdm bxi color mn hado just y3ytt 3la smito 
+  
+  hka , mtalan anbdl background dial xihaja b tailwind andir haka : bg-[var(--color-primary)] 
+  
+  libgha yzid xi color hnaya yzido , bx lbghyna n xojiw yjina dkxi easy */
+  
+  
    --color-primary: #1e3a5f;
   --color-primary-dark: #152c47;
 
@@ -27,8 +33,11 @@
     margin: 0;
     background: var(--color-background);
     color: var(--color-text);
-    font-family: Arial, Helvetica, sans-serif;
-    -webkit-font-smoothing: antialiased;
+    font-family: Arial, Helvetica, sans-serif;/*
+     parfois css mktkonx md3oma mn browser chrome ..., donc ana knzid hd webkit bx ngol l browser khdaam hd lkhasiya bttari9a dialk
+    ==> hnaya kngol lih l font lkhttota ykon na3imin o r9i9a omybanox mna9ttyni f bzff dial xaxat.
+    */
+    -webkit-font-smoothing: antialiased; 
   }
 
   button,
@@ -37,19 +46,19 @@
   select {font: inherit}
 }
 /*scrollbar*/
-.scrollbar-hide::-webkit-scrollbar{
+.scrollbar-hide::-webkit-scrollbar{ /*7ayd liya scrollbar myb9ax yban ga3 , google safar, edge */
   display: none;
 }
 
 .scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none;/*internet explorer*/
+  scrollbar-width: none;/*firefox*/
 }
 
 
-@keyframes tickerLTR{
+@keyframes tickerLTR{/*les etapes animation*/
   0%{
-    transform: translateX(-50%);
+    transform: translateX(-50%); /*left move*/
   }
 
   100%{
@@ -76,7 +85,7 @@
   animation: tickerLTR 20s linear infinite;
 }
 .ticker-rtl{
-  animation: tickerRTL 20s linear infinite;
+  animation: tickerRTL 20s linear infinite;/*3awed lanimation infinitly 20s f time dialha , o vitese constante*/
 }
 .animate-ticker:hover{
   animation-play-state: paused;
