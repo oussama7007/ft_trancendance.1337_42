@@ -2,7 +2,7 @@ import Chat from './Components/chat/Chat'
 import type { Language } from './types';
 
 function App() {
-  const lang: Language = "ar";
+  const lang: Language = "en";
 
   return <Chat lang={lang} />
 }
