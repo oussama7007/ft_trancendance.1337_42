@@ -1,8 +1,7 @@
 import React, {useState, useMemo, useEffect} from 'react';
 import type { Language, Listing } from '../types';
 import {translations} from '../translations';
-import type {MapMarker, MapCameraProps} from '../Components/home/PropertyMap'
-
+import { PropertyMap, type MapMarker, type MapCameraProps } from '../Components/home/PropertyMap';
 import { HomeSearchPanel } from '../Components/home/HomeSearchPanel';
 
 
@@ -202,7 +201,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         lng: cityMatch.lng + lngOffset,
 
         title: item.title,
-        price: `${item.price} DH`,
+        price: Number(item.price),
         category: 'home',
         type: item.type,
         image: item.imageUrl,
@@ -244,9 +243,6 @@ export const HomePage: React.FC<HomePageProps> = ({
     );
   }, []);
 
- () => {
-  
- }
   // search input
 
   const handleSearchChange = (value: string) =>{
@@ -299,12 +295,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                                           || marker.city.en.toLowerCase().includes(query);
 
       const matchesType = propertyType === '' || marker.type === propertyType;
-      const numericPrice = parseInt(marker.price, 10);
 
       let matchesPrice = true;
-      if (priceRange === '0-1500'){matchesPrice = numericPrice <= 1500;}
-      if (priceRange === '1500-3000'){matchesPrice = numericPrice > 1500 && numericPrice <= 3000;}
-      if (priceRange === '3000+'){matchesPrice = numericPrice > 3000;};
+      if (priceRange === '0-1500'){matchesPrice = marker.price <= 1500;}
+      if (priceRange === '1500-3000'){matchesPrice = marker.price > 1500 && marker.price <= 3000;}
+      if (priceRange === '3000+'){matchesPrice = marker.price > 3000;};
 
       const matchesTab = activeTab === 'list' || marker.category === activeTab;
 
@@ -353,7 +348,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
         {/*Main content*/}
-      <main className='w-full flex-1 flex flex-col px-4 md:px-8 pb-8 pt-6 md:pt-8 max-w-[1400] mx-auto'>
+      <main className='w-full flex-1 flex flex-col px-4 md:px-8 pb-8 pt-6 md:pt-8 max-w-[1400px] mx-auto'>
         {/*Hero*/}
         <section className='text-center pb-4 px-2 shrink-0 max-w-2xl mx-auto'>
           <h1 className='text-lg md:text-xl font-black text-gray-900 tracking-tight'>
@@ -414,6 +409,20 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           labels={currentLang}
         />
+        {/*Map*/}
+        <PropertyMap 
+          markers={filteredMarkers}
+          cameraProps={cameraProps}
+          apiKey={googleMapsApiKey}
+          onCameraChanged= {setCameraProps}
+          onMarkerClick={
+            handleMarkerClick
+          }
+        />
+
+
+
+
       </main>
       </div>
     );

@@ -90,3 +90,22 @@
 .animate-ticker:hover{
   animation-play-state: paused;
 }
+
+@keyframes marker-bounce {
+  0%{
+    transform: translateY(0) rotateX(0deg);
+
+  }
+  50%{
+    transform: translateY(-8px) rotateX(8deg);
+  }
+  100%{
+    transform: translateY(0) rotateX(0deg);
+  }
+}
+
+.marker-3d-bounce {
+  animation: marker-bounce 2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
