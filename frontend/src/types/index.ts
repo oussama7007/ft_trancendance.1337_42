@@ -10,8 +10,9 @@ export type PropertyType =
 export interface Listing {
     id: number;
     ownerId: number;
-    city: string;
-    cityEnFr: string;
+    // city: string;
+    city: Record<Language, string>;
+    // cityEnFr: string;
 
     title: Record<Language, string>;
     description: Record<Language, string>; // object (key o value)

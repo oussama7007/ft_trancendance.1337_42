@@ -1,6 +1,7 @@
 import './App.css'
 import './index.css'
 import { HomePage } from './Pages/HomePage'
+import { mockListings } from './Pages/mockListings'
 
 
 function App() {
@@ -9,8 +10,8 @@ function App() {
         <HomePage 
           setActivePage={() => {}}
           lang='en'
-          listings={[]}
-          // listings={mockListings}
+          // listings={[]}
+          listings={mockListings}
           onSelectListing={() => {}}
           isLoggedIn={false}
           onSearch={() => {}}        

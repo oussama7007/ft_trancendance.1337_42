@@ -3,6 +3,7 @@ import type { Language, Listing } from '../types';
 import {translations} from '../translations';
 import { PropertyMap, type MapMarker, type MapCameraProps } from '../Components/home/PropertyMap';
 import { HomeSearchPanel } from '../Components/home/HomeSearchPanel';
+import { FeaturedListing } from '../Components/home/FeaturedListings';
 
 
 
@@ -96,16 +97,18 @@ const CITIES = [
   },
 ];
 
-const findCityCoords = (cityAr?: string, cityEnFr?: string) =>{
+const findCityCoords = (cityObj?: Record<Language, string>) =>{
+  if (!cityObj){
+    return CITIES.find((city) => city.en === 'Khouribga') || CITIES[0];
+  }
     const match = CITIES.find((city)=> {
-        const matchesArabic = cityAr && (
-            city.ar === cityAr || city.ar.includes(cityAr) || cityAr.includes(city.ar)
+        const matchesArabic = cityObj.ar && (
+            city.ar === cityObj.ar || city.ar.includes(cityObj.ar) || cityObj.ar.includes(city.ar)
         );
 
-        const matchesLatin = cityEnFr && (
-            city.fr.toLowerCase() === cityEnFr.toLowerCase() || 
-            city.en.toLowerCase() === cityEnFr.toLowerCase()
-        );
+        const matchesLatin = 
+            cityObj.fr && city.fr.toLowerCase() === cityObj.fr.toLowerCase() || 
+            cityObj.en && city.en.toLowerCase() === cityObj.en.toLowerCase();
 
         return matchesArabic || matchesLatin;
     });
@@ -181,7 +184,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       return (listings || []).map((item, index) => {
      
 
-      const cityMatch = findCityCoords(item.city, item.cityEnFr);
+      const cityMatch = findCityCoords(item.city);
       const angle = (index * 130 * Math.PI) / 180;
       const radius = 0.0015 + (index % 3) * 0.001;
       const latOffset = Math.cos(angle) * radius;
@@ -329,7 +332,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className='overflow-hidden w-full whitespace-nowrap '  >
             <div className={`animate-ticker items-center ${isRTL ? 'ticker-rtl' : 'ticker-ltr'}`}>
                 <div className='flex items-center gap-12 px-6'>
-                  <span className='text-xs md:text-sm tracking-wider'>
+                  <span className='text-xs md:text-sm font-black tracking-wider'>
                     {currentLang.ticker1}
                   </span>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
@@ -419,8 +422,17 @@ export const HomePage: React.FC<HomePageProps> = ({
             handleMarkerClick
           }
         />
-
-
+      
+      <FeaturedListing
+        listings={listings}
+        lang={lang}
+        featuredLabel={currentLang.featured}
+        availableLabel={currentLang.available}
+        detailsLabel={currentLang.detailsTitle}
+        onSelect={onSelectListing}
+      
+      
+      />
 
 
       </main>

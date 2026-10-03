@@ -1,7 +1,3 @@
-import { House } from 'lucide-react';
-import type {Language} from './types';
-
-
 export const translations = {
     ar: {
         // home page
@@ -46,6 +42,7 @@ export const translations = {
             featured: 'عروض مميزة',
 
             detailsTitle: 'تفاصيل السكن',
+            details: 'التفاصيل',
             contactBtn: 'تواصل مع المالك',
 
             noRentals: 'لا توجد عروض متاحة حالياً',            
@@ -94,6 +91,7 @@ export const translations = {
             available: 'Available',
 
             detailsTitle: 'Property Details',
+            details: 'Details',
             contactBtn: 'Contact Owner',
 
             noRentals: 'No listings available at the moment',                   
@@ -141,6 +139,7 @@ export const translations = {
             available: 'Disponible',
 
             detailsTitle: 'Détails du logement',
+            details: 'Details',
             contactBtn: 'Contacter le propriétaire',
 
             noRentals: 'Aucune annonce disponible actuellement',
