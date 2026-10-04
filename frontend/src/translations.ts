@@ -45,7 +45,11 @@ export const translations = {
             details: 'التفاصيل',
             contactBtn: 'تواصل مع المالك',
 
-            noRentals: 'لا توجد عروض متاحة حالياً',            
+            noRentals: 'لا توجد عروض متاحة حالياً',
+
+            location: 'الموقع',
+            price: 'السعر',
+            perMonth: '/ الشهر',      
         }
     },
     en: {
@@ -94,7 +98,11 @@ export const translations = {
             details: 'Details',
             contactBtn: 'Contact Owner',
 
-            noRentals: 'No listings available at the moment',                   
+            noRentals: 'No listings available at the moment',
+            
+            location: 'Location',
+            price: 'Price',
+            perMonth: '/ month',
         }
     },
     fr: {
@@ -143,6 +151,10 @@ export const translations = {
             contactBtn: 'Contacter le propriétaire',
 
             noRentals: 'Aucune annonce disponible actuellement',
+
+            location: 'Emplacement',
+            price: 'Prix',
+            perMonth: '/ mois',
         }
     },
 };

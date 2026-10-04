@@ -4,6 +4,7 @@ import {translations} from '../translations';
 import { PropertyMap, type MapMarker, type MapCameraProps } from '../Components/home/PropertyMap';
 import { HomeSearchPanel } from '../Components/home/HomeSearchPanel';
 import { FeaturedListing } from '../Components/home/FeaturedListings';
+import { PropertyDetailsDrawer } from '../Components/home/PropertyDetailsDrawer';
 
 
 
@@ -97,12 +98,24 @@ const CITIES = [
   },
 ];
 
+const DEFAULT_CAMERA : MapCameraProps = {
+  center: {
+    lat: 31.7917,
+    lng: -7.0926,
+  },
+  zoom: 5.5,
+  tilt: 0,
+  heading: 0,
+
+};
+
+
 const findCityCoords = (cityObj?: Record<Language, string>) =>{
   if (!cityObj){
     return CITIES.find((city) => city.en === 'Khouribga') || CITIES[0];
   }
     const match = CITIES.find((city)=> {
-        const matchesArabic = cityObj.ar && (
+      const matchesArabic = cityObj.ar && (
             city.ar === cityObj.ar || city.ar.includes(cityObj.ar) || cityObj.ar.includes(city.ar)
         );
 
@@ -160,23 +173,16 @@ export const HomePage: React.FC<HomePageProps> = ({
 
 
     // Details state
-    const [activeDetailItem, setActiveDetailItem] = useState<MapMarker | null>(null);
+    const [activeDetailItem, setActiveDetailItem] = useState<Listing | null>(null);
 
 
     // map state
 
-    const [cameraProps, setCameraProps] = useState<MapCameraProps>({
-      center: { // map center 
-        lat: 31.7917,
-        lng: -7.0926, 
-      },
-      zoom: 5.5, // morocoo north africa
-      tilt: 0, // camera titlllllll 
-      heading: 0, // direction camera west | east | south | North
-    });
+    const [cameraProps, setCameraProps] = useState<MapCameraProps>(DEFAULT_CAMERA);
+     
 
     // google maps api
-    const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEYS; //
+    const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY; //
 
     // convert listings to MapMarkers
 
@@ -236,8 +242,8 @@ export const HomePage: React.FC<HomePageProps> = ({
             lat: userLat,
             lng: userLng,
           },
-          zoom: 14,
-          tilt: 75,
+          zoom: 17.5,
+          tilt: 55,
           heading: 30,
         });
       },
@@ -248,9 +254,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   // search input
 
+
   const handleSearchChange = (value: string) =>{
     setSearchQuery(value);
 
+    if (value.trim() === ''){
+      setCameraProps(DEFAULT_CAMERA);
+      return ;
+    }
     const normalizedValue = value.toLocaleLowerCase();
     const foundCity = CITIES.find((city) => 
       city.ar.toLowerCase().includes(normalizedValue) ||
@@ -265,8 +276,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           lng: foundCity.lng,
         },
 
-        zoom: 17,
-        tilt: 75,
+        zoom: 17.5,
+        tilt: 55,
         heading: 45,
       }));
     }
@@ -312,15 +323,18 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   // marker click
 
-  const handleMarkerClick = (marker: MapMarker) => {setActiveDetailItem(marker)};
-
-  // contact map
-
-  const handlContactListing = (marker: MapMarker) => {
+  const handleMarkerClick = (marker: MapMarker) => {
     const listing = listings.find((item) => `listing-${item.id}` === marker.id);
     if (!listing){
       return;
     }
+
+    setActiveDetailItem(listing)
+  };
+
+  // contact map
+
+  const handlContactListing = (listing: Listing) => {
     onSelectListing(listing);
     setActiveDetailItem(null);
   }
@@ -429,17 +443,25 @@ export const HomePage: React.FC<HomePageProps> = ({
         featuredLabel={currentLang.featured}
         availableLabel={currentLang.available}
         detailsLabel={currentLang.detailsTitle}
-        onSelect={onSelectListing}
-      
-      
+        onSelect={setActiveDetailItem}
+      />
+      <PropertyDetailsDrawer 
+        item={activeDetailItem}
+        lang={lang}
+        title={currentLang.detailsTitle}
+        contactLabel={currentLang.contactBtn}
+        locationLabel={currentLang.location}
+        priceLabel={currentLang.price}
+        perMonthLabel={currentLang.perMonth}
+
+        onClose={() => setActiveDetailItem(null)}
+        onContact={handlContactListing}
       />
 
 
       </main>
       </div>
     );
-
-
     
 
 
