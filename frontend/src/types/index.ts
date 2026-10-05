@@ -35,3 +35,30 @@ export interface Listing {
 
 }
 
+export interface User {
+  id: number;
+
+  firstName: string;
+  lastName: string;
+  fullName: string;
+
+  email: string;
+  phone: string;
+
+  dateOfBirth: string;
+
+  cin?: string;
+
+  avatar?: string;
+
+  instagram?: string;
+  facebook?: string;
+  linkedin?: string;
+
+  bio?: string;
+
+  role?: 'user' | 'admin';
+
+  createdAt?: string;
+  updatedAt?: string;
+}

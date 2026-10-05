@@ -89,7 +89,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
                                 </div>
                                 {/*Icon*/}
                                 <div className="bg-white p-2.5 rounded-2xl shadow-2xl border-2 border-(--color-accent) flex items-center justify-center transition-all duration-300 group-hover:scale-[1.3]">
-                                    <HomeIcon className="w-5 h-5 text-(--color-primary)"/>
+                                    <HomeIcon className="w-5 h-5 text-red-500"/>
                                 </div>
                             </div>
                        </AdvancedMarker>

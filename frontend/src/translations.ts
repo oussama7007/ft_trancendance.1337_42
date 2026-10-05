@@ -1,5 +1,19 @@
 export const translations = {
     ar: {
+        //navbar
+        navbar: {
+            home: 'الرئيسية',
+            listings: 'العروض',
+            chat: 'المحادثات', 
+            profile: 'حسابي', 
+            signIn: 'تسجيل الدخول', 
+            signUp: 'إنشاء حساب',
+            logout: 'تسجيل الخروج', 
+            language: 'اللغة',
+            menu: 'القائمة',
+            closeMenu: 'إغلاق القائمة',
+            brandSubtitle: 'كراء السكن بسهولة', 
+        },
         // home page
         homePage: {
             // for pup
@@ -53,6 +67,19 @@ export const translations = {
         }
     },
     en: {
+        navbar: {
+            home: 'Home',
+            listings: 'Listings',
+            chat: 'Chat', 
+            profile: 'Profile',
+            signIn: 'Sign in', 
+            signUp: 'Sign up', 
+            logout: 'Logout', 
+            language: 'Language',
+            menu: 'Menu', 
+            closeMenu: 'Close menu',
+            brandSubtitle: 'Rent your home easily',
+        },
         // home page
         homePage: {
             ticker1: 'Discover your perfect home in Morocco',
@@ -106,6 +133,19 @@ export const translations = {
         }
     },
     fr: {
+        navbar: { 
+            home: 'Accueil',
+            listings: 'Annonces',
+            chat: 'Discussions',
+            profile: 'Profil', 
+            signIn: 'Se connecter',
+            signUp: 'Créer un compte',
+            logout: 'Se déconnecter',
+            language: 'Langue',
+            menu: 'Menu', 
+            closeMenu: 'Fermer le menu',
+            brandSubtitle: 'Louez votre logement facilement',
+        },
         // home page
         homePage: {
             ticker1: 'Découvrez votre logement idéal au Maroc',
