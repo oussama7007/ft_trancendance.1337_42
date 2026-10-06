@@ -5,6 +5,7 @@ import { mockListings } from './Pages/mockListings'
 import { Navbar } from './Components/Navbar'
 import type { Language, Listing, User } from './types'
 import { useState } from 'react'
+import { Footer } from './Components/Footer';
 
 
 // function App() {
@@ -102,7 +103,7 @@ function App (){
         }
         return ( // fallback
             <HomePage 
-                 setActivePage={setActivePage}
+                setActivePage={setActivePage}
                 lang={lang}
                 listings={mockListings}
                 onSelectListing={handleSelectListing}
@@ -122,6 +123,12 @@ function App (){
                 handleLogout={handleLogout}
             />
             {renderPage()}
+            <Footer
+                lang={lang}
+                setActivePage={setActivePage}
+            
+            
+            />
         </div>
         
     )

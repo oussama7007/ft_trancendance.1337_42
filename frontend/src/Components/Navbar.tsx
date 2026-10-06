@@ -39,17 +39,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
 
-            if (
-                languageRef.current &&
-                !languageRef.current.contains(target)
-            ) {
+            if (languageRef.current && !languageRef.current.contains(target))
+            {
                 setIsLanguageOpen(false);
             }
 
-            if (
-                userRef.current &&
-                !userRef.current.contains(target)
-            ) {
+            if (userRef.current && !userRef.current.contains(target))
+                 {
                 setIsUserOpen(false);
             }
         };

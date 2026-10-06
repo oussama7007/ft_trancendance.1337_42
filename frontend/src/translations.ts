@@ -14,6 +14,17 @@ export const translations = {
             closeMenu: 'إغلاق القائمة',
             brandSubtitle: 'كراء السكن بسهولة', 
         },
+        footer: {
+            footerDesc: 'منصة iRent.ma لمساعدتك على إيجاد السكن المناسب بسهولة في المغرب.',
+            footerAboutTitle: 'عن iRent',
+            footerContactTitle: 'تواصل معنا',
+            support: 'الدعم',
+            terms: 'شروط الاستخدام',
+            footerRights: '© 2026 iRent.ma. جميع الحقوق محفوظة.',
+            privacyPolicy: 'سياسة الخصوصية',
+            termsOfUse: 'شروط الاستخدام',
+            security: 'الأمان',
+        },
         // home page
         homePage: {
             // for pup
@@ -80,6 +91,17 @@ export const translations = {
             closeMenu: 'Close menu',
             brandSubtitle: 'Rent your home easily',
         },
+        footer: {
+            footerDesc: 'iRent.ma helps you find the right home easily across Morocco.',
+            footerAboutTitle: 'About iRent',
+            footerContactTitle: 'Contact Us',
+            support: 'Support',
+            terms: 'Terms of Service',
+            footerRights: '© 2026 iRent.ma. All rights reserved.',
+            privacyPolicy: 'Privacy Policy',
+            termsOfUse: 'Terms of Use',
+            security: 'Security',
+        },
         // home page
         homePage: {
             ticker1: 'Discover your perfect home in Morocco',
@@ -145,6 +167,17 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Fermer le menu',
             brandSubtitle: 'Louez votre logement facilement',
+        },
+        footer: {
+            footerDesc: 'iRent.ma vous aide à trouver facilement le logement qui vous convient au Maroc.',
+            footerAboutTitle: 'À propos de iRent',
+            footerContactTitle: 'Contactez-nous',
+            support: 'Support',
+            terms: 'Conditions d’utilisation',
+            footerRights: '© 2026 iRent.ma. Tous droits réservés.',
+            privacyPolicy: 'Politique de confidentialité',
+            termsOfUse: 'Conditions d’utilisation',
+            security: 'Sécurité',
         },
         // home page
         homePage: {
