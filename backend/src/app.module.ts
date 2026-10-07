@@ -6,6 +6,8 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 
+
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -16,7 +18,7 @@ import { AuthModule } from './auth/auth.module.js';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
+        host: configService.get<string>('DB_HOST'), 
         port: configService.get<number>('DB_PORT'),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
@@ -34,3 +36,4 @@ import { AuthModule } from './auth/auth.module.js';
   providers: [AppService],
 })
 export class AppModule {}
+
