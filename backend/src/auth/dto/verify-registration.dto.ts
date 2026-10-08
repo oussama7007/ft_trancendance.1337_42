@@ -1,9 +1,10 @@
-import { IsString } from 'class-validator';
+import { IsInt, IsString, IsPositive } from 'class-validator';
 
 export class VerifyRegistrationDto
 {
-  @IsString()
-  contact: string;
+  @IsInt()
+  @IsPositive()
+  sessionId: number;
 
   @IsString()
   code: string;
