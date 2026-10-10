@@ -1,7 +1,4 @@
-import { Injectable } from '@nestjs/common';
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-
-
 
 @Entity()
 export class User {
@@ -22,4 +19,10 @@ export class User {
 
   @Column({ nullable: true })
   cin?: string;
+
+  @Column({ unique: true })
+  contact: string;
+
+  @Column()
+  passwordHash: string;
 }
