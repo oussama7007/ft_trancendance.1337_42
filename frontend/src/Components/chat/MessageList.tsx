@@ -1,12 +1,18 @@
 import { translations } from "../../translations";
 import type { Language } from "../../types";
+import type { ChatMessage } from "./Chat";
 
 interface MessageListProps {
-  messages: string[];
+  messages: ChatMessage[];
+  currentUserId: number;
   lang: Language;
 }
 
-function MessageList({ messages, lang }: MessageListProps) {
+function MessageList({
+  messages,
+  currentUserId,
+  lang,
+}: MessageListProps) {
   const t = translations[lang].chat;
 
   if (messages.length === 0) {
@@ -21,12 +27,12 @@ function MessageList({ messages, lang }: MessageListProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[var(--color-background)] p-4 sm:p-6">
-      {messages.map((message, index) => {
-        const isMine = index % 2 === 1;
+      {messages.map((message) => {
+        const isMine = message.senderId === currentUserId;
 
         return (
           <div
-            key={`${index}-${message}`}
+            key={message.id}
             className={`flex w-full ${
               isMine ? "justify-end" : "justify-start"
             }`}
@@ -38,7 +44,7 @@ function MessageList({ messages, lang }: MessageListProps) {
                   : "rounded-es-sm border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] shadow-sm"
               }`}
             >
-              {message}
+              {message.content}
             </div>
           </div>
         );
