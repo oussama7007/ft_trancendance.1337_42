@@ -1,7 +1,14 @@
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+
+config({
+  path: fileURLToPath(new URL('../../.env', import.meta.url)),
+});
 import { DataSource } from 'typeorm';
 import { RegistrationSession } from './auth/registration-session-entity.js';
+import { User } from './auth/user.entity.js';
+
 
 export default new DataSource({
   type: 'postgres',
@@ -11,7 +18,8 @@ export default new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  entities: [RegistrationSession],
+  entities: [RegistrationSession, User],
 
   migrations: ['src/migrations/*.ts'],
+  synchronize: false,
 });
