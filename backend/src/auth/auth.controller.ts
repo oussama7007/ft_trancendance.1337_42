@@ -1,10 +1,14 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post,   HttpStatus, HttpCode, } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
 import { RequestVerificationDto } from './dto/request-verification.dto.js';
 import { VerifyRegistrationDto } from './dto/verify-registration.dto.js';
 import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
+
+
+import { LoginDto } from './dto/login.dto.js';
+
 
 @Controller('auth')
 export class AuthController {
@@ -29,4 +33,13 @@ export class AuthController {
   finishRegistration(@Body() data: FinishRegistrationDto) {
     return this.authService.finishRegistration(data);
   }
+
+
+  @HttpCode(HttpStatus.OK)
+  @Post('login')
+  login(@Body() data : LoginDto)
+  {
+    return this.authService.validateCredentials(data);
+  }
+
 }

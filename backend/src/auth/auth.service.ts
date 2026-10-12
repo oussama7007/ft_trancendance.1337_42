@@ -70,11 +70,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
+
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
+import { LoginDto } from './dto/login.dto.js';
 
 import { RegistrationSession } from './registration-session-entity.js';
 import { User } from './user.entity.js';
@@ -226,5 +229,25 @@ export class AuthService {
       userId: savedUser.id,
       message: 'Registration completed successfully',
     };
+  }
+
+
+
+
+  async validateCredentials(data : LoginDto){
+    const user = await this.userRepository.findOne({
+      where: {contact: data.contact.trim() },
+    });
+    if (!user)
+        throw new UnauthorizedException('Invalid contact or password');
+
+    const passwordMatches = await  bcrypt.compare(data.password, user.passwordHash,
+    );
+    if(!passwordMatches)
+        throw new UnauthorizedException('invalid contact or password');
+      return{
+        userId: user.id,
+        contact: user.contact, 
+      }
   }
 }
