@@ -1,24 +1,10 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
-
-import {Home, Search, User} from 'lucide-react';
-import './index.css'
+import Chat from './Components/chat/Chat'
+import type { Language } from './types';
 
 function App() {
-  return (
-    <div className="min-h-screen bg-white-900 flex items-center justify-center">
-      <h1 className="text-5xl font-bold text-irent-orange">
-        Hello iRent
+  const lang: Language = "en";
 
-        <Home  size={41}/>
-        <Search size={32}/>
-        <User size={32}/>
-      </h1>
-    </div>
-  )
+  return <Chat lang={lang} />
 }
 
 export default App
