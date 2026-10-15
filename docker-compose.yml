@@ -1,5 +1,5 @@
 services:
-  postgres:
+  database:
     image: postgres:17-alpine
     container_name: irent-postgres
     restart: unless-stopped
@@ -14,6 +14,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  backend:
+    build: ./backend
+    container_name: irent-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: database
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+    env_file:
+      - ./backend/.env
+    depends_on:
+      database:
+        condition: service_healthy
 
 volumes:
   postgres_data:

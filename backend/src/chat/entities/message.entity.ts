@@ -6,7 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Conversation } from './conversation.entity';
+import { Conversation } from './conversation.entity.js';
 
 @Entity('messages')
 export class Message {
