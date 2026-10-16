@@ -1,3 +1,4 @@
+import type { Relation } from 'typeorm';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -26,5 +27,5 @@ export class Conversation {
   updatedAt!: Date;
 
   @OneToMany(() => Message, (message) => message.conversation)
-  messages!: Message[];
+  messages!: Relation<Message[]>;
 }

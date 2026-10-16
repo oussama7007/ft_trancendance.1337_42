@@ -1,3 +1,4 @@
+import type { Relation } from 'typeorm';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -31,5 +32,5 @@ export class Message {
     { onDelete: 'CASCADE' },
   )
   @JoinColumn({ name: 'conversation_id' })
-  conversation!: Conversation;
+  conversation!: Relation<Conversation>;
 }
