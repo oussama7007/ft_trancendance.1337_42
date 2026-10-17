@@ -6,7 +6,7 @@ import { Navbar } from './Components/Navbar'
 import type { Language, Listing, User } from './types'
 import { useState } from 'react'
 import { Footer } from './Components/Footer';
-
+import { SignUpPage } from './Pages/SignUpPage';
 
 // function App() {
 //   return (
@@ -96,7 +96,7 @@ function App (){
             return (
                 <div className="flex min-h-screen items-center justify-center">
                     <h1 className="text-3xl font-black text-(--color-primary)">
-                        Sign up
+                         <SignUpPage />
                     </h1>
                 </div>
             );

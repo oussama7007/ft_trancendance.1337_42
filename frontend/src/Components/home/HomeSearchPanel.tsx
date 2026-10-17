@@ -335,7 +335,7 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
                         </button>
                         {isGenderOpen && (
                             <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 overflow-hidden z-50">
-                                {genderOptions.map((option, index) => {
+                                {genderOptions.map((option) => {
                                     const Icon = option.icon;
                                     return(
                                         <button type="button" key={option.value || 'gender-default'}

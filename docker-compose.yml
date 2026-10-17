@@ -1,4 +1,29 @@
 services:
+  database:
+    image: postgres:17
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: database
+      DB_PORT : ${DB_PORT}
+      DB_USERNAME : ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+    depends_on:
+      - database
   frontend:
     image: frontend
     build:
@@ -11,5 +36,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    # depends_on:
-    #   - backend
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
