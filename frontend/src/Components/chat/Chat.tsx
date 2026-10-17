@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
@@ -24,10 +25,8 @@ export interface Conversation {
 
 interface ChatProps {
   lang: Language;
+  currentUserId?: number;
 }
-
-// Temporary development identity. Replace with the authenticated user later.
-const CURRENT_USER_ID = 1;
 
 const TEST_USER_NAMES: Record<number, string> = {
   1: "Nouhaila",
@@ -44,7 +43,7 @@ function toChatMessage(message: ApiMessage): ChatMessage {
   };
 }
 
-function Chat({ lang }: ChatProps) {
+function Chat({ lang, currentUserId }: ChatProps) {
   const t = translations[lang].chat;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -58,24 +57,39 @@ function Chat({ lang }: ChatProps) {
   useEffect(() => {
     let cancelled = false;
 
+    if (currentUserId == null) {
+      setConversations([]);
+      setSelectedConversationId(null);
+      setError("Chat is waiting for the authenticated user.");
+      setIsLoading(false);
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
     async function loadConversations() {
       setIsLoading(true);
       setError(null);
 
       try {
+
+        if (currentUserId == null) return;
+
         const apiConversations =
-          await chatService.getConversations(CURRENT_USER_ID);
+          await chatService.getConversations(currentUserId);
 
         const loadedConversations = await Promise.all(
           apiConversations.map(async (conversation) => {
             const apiMessages = await chatService.getMessages(
               conversation.id,
-              CURRENT_USER_ID,
+              currentUserId,
             );
 
             const messages = apiMessages.map(toChatMessage);
+
             const otherUserId =
-              conversation.participantOneId === CURRENT_USER_ID
+              conversation.participantOneId === currentUserId
                 ? conversation.participantTwoId
                 : conversation.participantOneId;
 
@@ -84,7 +98,6 @@ function Chat({ lang }: ChatProps) {
               name: TEST_USER_NAMES[otherUserId] ?? `User ${otherUserId}`,
               lastMessage: messages.at(-1)?.content ?? "",
               messages,
-              // Real online presence is not implemented yet.
               isOnline: false,
             };
           }),
@@ -93,12 +106,15 @@ function Chat({ lang }: ChatProps) {
         if (cancelled) return;
 
         setConversations(loadedConversations);
-        setSelectedConversationId((currentId) => {
+
+        setSelectedConversationId((previousId) => {
           if (
-            currentId !== null &&
-            loadedConversations.some((conversation) => conversation.id === currentId)
+            previousId !== null &&
+            loadedConversations.some(
+              (conversation) => conversation.id === previousId,
+            )
           ) {
-            return currentId;
+            return previousId;
           }
 
           return loadedConversations[0]?.id ?? null;
@@ -123,7 +139,7 @@ function Chat({ lang }: ChatProps) {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, currentUserId]);
 
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
@@ -132,21 +148,27 @@ function Chat({ lang }: ChatProps) {
   async function handleSendMessage(text: string) {
     const content = text.trim();
 
-    if (!content || !selectedConversation) return;
+    if (
+      !content ||
+      !selectedConversation ||
+      currentUserId == null
+    ) {
+      return;
+    }
 
     setError(null);
 
     try {
       const savedMessage = await chatService.sendMessage(
         selectedConversation.id,
-        CURRENT_USER_ID,
+        currentUserId,
         content,
       );
 
       const message = toChatMessage(savedMessage);
 
-      setConversations((currentConversations) =>
-        currentConversations.map((conversation) =>
+      setConversations((previousConversations) =>
+        previousConversations.map((conversation) =>
           conversation.id === selectedConversation.id
             ? {
                 ...conversation,
@@ -158,7 +180,9 @@ function Chat({ lang }: ChatProps) {
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not send message.",
+        err instanceof Error
+          ? err.message
+          : "Could not send message.",
       );
     }
   }
@@ -166,117 +190,94 @@ function Chat({ lang }: ChatProps) {
   function handleSelectConversation(conversation: Conversation) {
     setSelectedConversationId(conversation.id);
     setShowConversationList(false);
-    setError(null);
-  }
-
-  const pageClass =
-    "flex min-h-screen items-center justify-center bg-[var(--color-background)] p-6";
-
-  if (isLoading) {
-    return (
-      <main dir={lang === "ar" ? "rtl" : "ltr"} className={pageClass}>
-        <p className="text-[var(--color-muted)]">Loading conversations...</p>
-      </main>
-    );
-  }
-
-  if (error && conversations.length === 0) {
-    return (
-      <main
-        dir={lang === "ar" ? "rtl" : "ltr"}
-        className={`${pageClass} flex-col gap-4`}
-      >
-        <p role="alert" className="text-center text-[var(--color-muted)]">
-          {error}
-        </p>
-        <button
-          type="button"
-          onClick={() => setReloadKey((key) => key + 1)}
-          className="rounded-xl bg-[var(--color-accent)] px-4 py-2 font-semibold text-white"
-        >
-          Try again
-        </button>
-      </main>
-    );
-  }
-
-  if (!selectedConversation) {
-    return (
-      <main dir={lang === "ar" ? "rtl" : "ltr"} className={pageClass}>
-        <p className="text-[var(--color-muted)]">{t.noConversations}</p>
-      </main>
-    );
   }
 
   return (
-    <main
-      dir={lang === "ar" ? "rtl" : "ltr"}
-      className="min-h-screen bg-[var(--color-background)] p-3 sm:p-6"
-    >
-      <div className="mx-auto flex h-[calc(100dvh-1.5rem)] max-w-7xl flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm sm:h-[calc(100dvh-3rem)]">
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[320px_minmax(0,1fr)]">
-          <aside
-            className={`min-h-0 flex-col border-[var(--color-border)] md:flex md:border-e ${
-              showConversationList ? "flex" : "hidden"
-            }`}
-          >
-            <ConversationList
-              conversations={conversations}
-              selectedConversation={selectedConversation}
-              onSelectConversation={handleSelectConversation}
-              lang={lang}
-            />
-          </aside>
+    <div className="chat-container">
+      <div className="chat-layout">
+        {showConversationList && (
+          <ConversationList
+            conversations={conversations}
+            selectedConversation={
+  selectedConversation ?? conversations[0]
+}
+            onSelectConversation={handleSelectConversation}
+            lang={lang}
+          />
+        )}
 
-          <section
-            className={`min-h-0 flex-col ${
-              showConversationList ? "hidden md:flex" : "flex"
-            }`}
-          >
-            <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-4 sm:p-5">
-              <button
-                type="button"
-                onClick={() => setShowConversationList(true)}
-                className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-accent-dark)] transition hover:bg-[var(--color-accent-soft)] md:hidden"
-                aria-label="Back to conversations"
-              >
-                {lang === "ar" ? "رجوع" : lang === "fr" ? "Retour" : "Back"}
-              </button>
+        <div className="chat-main">
+          {selectedConversation ? (
+            <>
+              <div className="chat-header">
+                {!showConversationList && (
+                  <button
+                    type="button"
+                    onClick={() => setShowConversationList(true)}
+                    aria-label="Back to conversations"
+                  >
+                    ←
+                  </button>
+                )}
 
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent-soft)] font-semibold text-[var(--color-accent-dark)]">
-                {selectedConversation.name.charAt(0).toUpperCase()}
+                <div>
+                  <h2>{selectedConversation.name}</h2>
+                  <p>
+                    {selectedConversation.isOnline ? "Online" : "Offline"}
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <h2 className="truncate font-semibold text-[var(--color-text)]">
-                  {selectedConversation.name}
-                </h2>
-                <p className="text-sm text-[var(--color-muted)]">
-                  {t.conversation}
-                </p>
-              </div>
+              {error && (
+                <div className="chat-error" role="alert">
+                  <p>{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => setReloadKey((key) => key + 1)}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {isLoading ? (
+                <p className="chat-loading">Loading conversations...</p>
+              ) : (
+                <>
+                  <MessageList
+                    messages={selectedConversation.messages}
+                    currentUserId={currentUserId ?? -1}
+                    lang={lang}
+                  />
+
+                  <MessageInput onSend={handleSendMessage} lang={lang} />
+                </>
+              )}
+            </>
+          ) : (
+            <div className="chat-empty">
+              {isLoading ? (
+                <p>Loading conversations...</p>
+              ) : error ? (
+                <>
+                  <p>{error}</p>
+                  {currentUserId != null && (
+                    <button
+                      type="button"
+                      onClick={() => setReloadKey((key) => key + 1)}
+                    >
+                      Retry
+                    </button>
+                  )}
+                </>
+              ) : (
+                <p>{t?.noConversations ?? "Select a conversation to start chatting."}</p>
+              )}
             </div>
-
-            {error && (
-              <p
-                role="alert"
-                className="border-b border-[var(--color-border)] px-4 py-2 text-sm text-red-600"
-              >
-                {error}
-              </p>
-            )}
-
-            <MessageList
-              messages={selectedConversation.messages}
-              currentUserId={CURRENT_USER_ID}
-              lang={lang}
-            />
-
-            <MessageInput onSend={handleSendMessage} lang={lang} />
-          </section>
+          )}
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

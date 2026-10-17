@@ -74,6 +74,7 @@ import {
 
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
@@ -94,6 +95,7 @@ export class AuthService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly jwtService: JwtService,
   ) {}
 
   // STEP 1: Save personal information temporarily.
@@ -245,9 +247,17 @@ export class AuthService {
     );
     if(!passwordMatches)
         throw new UnauthorizedException('invalid contact or password');
-      return{
-        userId: user.id,
-        contact: user.contact, 
-      }
+
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+    });
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        contact: user.contact,
+      },
+    };
   }
 }
