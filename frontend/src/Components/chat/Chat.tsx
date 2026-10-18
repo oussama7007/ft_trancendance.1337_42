@@ -60,7 +60,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
     if (currentUserId == null) {
       setConversations([]);
       setSelectedConversationId(null);
-      setError("Chat is waiting for the authenticated user.");
+      setError(null); // Chat is waiting for the authenticated user.
       setIsLoading(false);
 
       return () => {

@@ -5,7 +5,7 @@ import { Navbar } from './Components/Navbar'
 import type { Language, Listing, User } from './types'
 import { useState } from 'react'
 import { Footer } from './Components/Footer'
-// import Chat from './Components/chat/Chat';
+import Chat from './Components/chat/Chat';
 
 
 // function App() {
@@ -64,13 +64,7 @@ function App (){
             );
         }
         if (activePage === 'chat') {
-            return (
-                <div className="flex min-h-screen items-center justify-center">
-                    <h1 className="text-3xl font-black text-(--color-primary)">
-                        Chat
-                    </h1>
-                </div>
-            );
+            return <Chat lang={lang}/>;
         }
 
         if (activePage === 'profile') {
