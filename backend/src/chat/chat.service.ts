@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity.js';
 import { Message } from './entities/message.entity.js';
 import { InterestRequest, InterestRequestStatus } from './entities/interest-request.entity.js';
+import { User } from '../auth/user.entity.js';
 
 @Injectable()
 export class ChatService {
@@ -43,15 +44,48 @@ export class ChatService {
     return this.conversationRepository.save(conversation);
   }
 
-  async getConversations(userId: number): Promise<Conversation[]> {
+  async getConversations(userId: number) {
     this.validateId(userId, 'userId');
 
-    return this.conversationRepository
+    const result = await this.conversationRepository
       .createQueryBuilder('conversation')
+      .leftJoin(User, 'p1', 'p1.id = conversation.participantOneId')
+      .leftJoin(User, 'p2', 'p2.id = conversation.participantTwoId')
+      .select([
+        'conversation.id',
+        'conversation.participantOneId',
+        'conversation.participantTwoId',
+        'conversation.createdAt',
+        'conversation.updatedAt',
+        'p1.id',
+        'p1.firstName',
+        'p1.lastName',
+        'p2.id',
+        'p2.firstName',
+        'p2.lastName',
+      ])
       .where('conversation.participantOneId = :userId', { userId })
       .orWhere('conversation.participantTwoId = :userId', { userId })
       .orderBy('conversation.updatedAt', 'DESC')
-      .getMany();
+      .getRawAndEntities();
+
+    return result.entities.map((conv, index) => {
+      const raw = result.raw[index];
+
+      const p1FullName = raw.p1_firstName && raw.p1_lastName
+        ? `${raw.p1_firstName} ${raw.p1_lastName}`
+        : `User ${conv.participantOneId}`;
+
+      const p2FullName = raw.p2_firstName && raw.p2_lastName
+        ? `${raw.p2_firstName} ${raw.p2_lastName}`
+        : `User ${conv.participantTwoId}`;
+
+      return {
+        ...conv,
+        participantOneName: p1FullName,
+        participantTwoName: p2FullName,
+      };
+    });
   }
 
   async getMessages(

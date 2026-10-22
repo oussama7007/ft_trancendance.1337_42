@@ -6,6 +6,7 @@ import { ChatController } from './chat.controller.js';
 import { ChatService } from './chat.service.js';
 import { SharedJwtModule } from '../auth/jwt.module.js';
 import { InterestRequest } from './entities/interest-request.entity.js';
+import { ChatGateway } from './chat.gateway.js';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { InterestRequest } from './entities/interest-request.entity.js';
     SharedJwtModule,
   ],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [ChatService, ChatGateway],
   exports: [ChatService],
 })
 export class ChatModule {}

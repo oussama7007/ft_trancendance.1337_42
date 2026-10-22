@@ -31,6 +31,8 @@ export interface ApiConversation {
   id: number;
   participantOneId: number;
   participantTwoId: number;
+  participantOneUsername?: string;
+  participantTwoUsername?: string;
   createdAt: string;
   updatedAt: string;
 }

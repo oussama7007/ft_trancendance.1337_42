@@ -5,6 +5,9 @@ import MessageInput from "./MessageInput";
 import type { Language } from "../../types";
 import { chatService } from "../../services/chatService";
 import type { ApiMessage } from "../../services/chatService";
+import { io, Socket } from "socket.io-client";
+
+let socket: Socket;
 
 export interface ChatMessage {
   id: number;
@@ -26,12 +29,6 @@ interface ChatProps {
   currentUserId?: number;
 }
 
-const TEST_USER_NAMES: Record<number, string> = {
-  1: "Nouhaila",
-  2: "Monssif",
-  3: "Arwa",
-};
-
 function toChatMessage(message: ApiMessage): ChatMessage {
   return {
     id: message.id,
@@ -52,12 +49,47 @@ function Chat({ lang, currentUserId }: ChatProps) {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    socket = io("http://localhost:3000");
+
+    socket.on("newMessage", (message: { conversationId: number; senderId: number; content: string; createdAt: string }) => {
+      setConversations((previousConversations) =>
+        previousConversations.map((conv) => {
+          if (conv.id === Number(message.conversationId)) {
+            const newMsg: ChatMessage = {
+              id: Date.now(),
+              senderId: message.senderId,
+              content: message.content,
+              createdAt: message.createdAt,
+            };
+            return {
+              ...conv,
+              messages: [...conv.messages, newMsg],
+              lastMessage: newMsg.content,
+            };
+          }
+          return conv;
+        })
+      );
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedConversationId && socket) {
+      socket.emit("joinConversation", { conversationId: selectedConversationId });
+    }
+  }, [selectedConversationId]);
+
+  useEffect(() => {
     let cancelled = false;
 
     if (currentUserId == null) {
       setConversations([]);
       setSelectedConversationId(null);
-      setError(null); // Chat is waiting for the authenticated user.
+      setError(null);
       setIsLoading(false);
 
       return () => {
@@ -90,9 +122,14 @@ function Chat({ lang, currentUserId }: ChatProps) {
                 ? conversation.participantTwoId
                 : conversation.participantOneId;
 
+            const participantName =
+              conversation.participantOneId === currentUserId
+                ? (conversation as any).participantTwoName ?? `User ${otherUserId}`
+                : (conversation as any).participantOneName ?? `User ${otherUserId}`;
+
             return {
               id: conversation.id,
-              name: TEST_USER_NAMES[otherUserId] ?? `User ${otherUserId}`,
+              name: participantName,
               lastMessage: messages.at(-1)?.content ?? "",
               messages,
               isOnline: false,
@@ -164,14 +201,20 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
       const message = toChatMessage(savedMessage);
 
+      socket.emit("sendMessage", {
+        conversationId: selectedConversation.id,
+        senderId: currentUserId,
+        content: message.content,
+      });
+
       setConversations((previousConversations) =>
         previousConversations.map((conversation) =>
           conversation.id === selectedConversation.id
             ? {
-                ...conversation,
-                messages: [...conversation.messages, message],
-                lastMessage: message.content,
-              }
+              ...conversation,
+              messages: [...conversation.messages, message],
+              lastMessage: message.content,
+            }
             : conversation,
         ),
       );
@@ -196,8 +239,8 @@ function Chat({ lang, currentUserId }: ChatProps) {
           <ConversationList
             conversations={conversations}
             selectedConversation={
-  selectedConversation ?? conversations[0]
-}
+              selectedConversation ?? conversations[0]
+            }
             onSelectConversation={handleSelectConversation}
             lang={lang}
           />
