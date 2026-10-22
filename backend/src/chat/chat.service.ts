@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity.js';
 import { Message } from './entities/message.entity.js';
+import { InterestRequest, InterestRequestStatus } from './entities/interest-request.entity.js';
 
 @Injectable()
 export class ChatService {
@@ -16,7 +17,10 @@ export class ChatService {
 
     @InjectRepository(Message)
     private readonly messageRepository: Repository<Message>,
-  ) {}
+
+    @InjectRepository(InterestRequest)
+    private readonly interestRequestRepository: Repository<InterestRequest>,
+  ) { }
 
   async createConversation(
     participantOneId: number,
@@ -119,4 +123,68 @@ export class ChatService {
       throw new BadRequestException(`${field} must be a positive integer`);
     }
   }
+
+  async sendInterestRequest(tenantId: number, listingId: number, ownerId: number) {
+    if (tenantId === ownerId) {
+      throw new BadRequestException('You cannot send an interest request to yourself');
+    }
+
+    const existing = await this.interestRequestRepository.findOne({
+      where: { tenantId, listingId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const request = this.interestRequestRepository.create({
+      tenantId,
+      ownerId,
+      listingId,
+      status: InterestRequestStatus.PENDING,
+    });
+
+    return this.interestRequestRepository.save(request);
+  }
+
+  async getInterestStatus(tenantId: number, listingId: number) {
+    return this.interestRequestRepository.findOne({
+      where: { tenantId, listingId },
+    });
+  }
+
+  async getOwnerInterestRequests(ownerId: number) {
+    return this.interestRequestRepository.find({
+      where: { ownerId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async acceptInterestRequest(ownerId: number, requestId: number) {
+    const request = await this.interestRequestRepository.findOne({
+      where: { id: requestId, ownerId },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Interest request not found');
+    }
+
+    let conversation = await this.conversationRepository.findOne({
+      where: [
+        { participantOneId: request.tenantId, participantTwoId: ownerId },
+        { participantOneId: ownerId, participantTwoId: request.tenantId },
+      ],
+    });
+
+    if (!conversation) {
+      conversation = await this.createConversation(request.tenantId, ownerId);
+    }
+
+    request.status = InterestRequestStatus.ACCEPTED;
+    request.conversationId = conversation.id;
+    await this.interestRequestRepository.save(request);
+
+    return { request, conversation };
+  }
+
 }

@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ChatService } from './chat.service.js';
@@ -62,6 +63,46 @@ export class ChatController {
       conversationId,
       request.user.userId,
       content,
+    );
+  }
+
+  @Post('interest-requests')
+  sendInterestRequest(
+    @Req() request: AuthenticatedRequest,
+    @Body('listingId', ParseIntPipe) listingId: number,
+    @Body('ownerId', ParseIntPipe) ownerId: number,
+  ) {
+    return this.chatService.sendInterestRequest(
+      request.user.userId,
+      listingId,
+      ownerId,
+    );
+  }
+
+  @Get('interest-requests/status/:listingId')
+  getInterestStatus(
+    @Req() request: AuthenticatedRequest,
+    @Param('listingId', ParseIntPipe) listingId: number,
+  ) {
+    return this.chatService.getInterestStatus(
+      request.user.userId,
+      listingId,
+    );
+  }
+
+  @Get('interest-requests/owner')
+  getOwnerRequests(@Req() request: AuthenticatedRequest) {
+    return this.chatService.getOwnerInterestRequests(request.user.userId);
+  }
+
+  @Patch('interest-requests/:id/accept')
+  acceptRequest(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) requestId: number,
+  ) {
+    return this.chatService.acceptInterestRequest(
+      request.user.userId,
+      requestId,
     );
   }
 }

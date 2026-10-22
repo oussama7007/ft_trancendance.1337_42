@@ -1,9 +1,7 @@
-
 import { useEffect, useState } from "react";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import { translations } from "../../translations";
 import type { Language } from "../../types";
 import { chatService } from "../../services/chatService";
 import type { ApiMessage } from "../../services/chatService";
@@ -44,7 +42,6 @@ function toChatMessage(message: ApiMessage): ChatMessage {
 }
 
 function Chat({ lang, currentUserId }: ChatProps) {
-  const t = translations[lang].chat;
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] =
@@ -270,9 +267,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
                     </button>
                   )}
                 </>
-              ) : (
-                <p>{t?.noConversations ?? "Select a conversation to start chatting."}</p>
-              )}
+              ) : null}
             </div>
           )}
         </div>
