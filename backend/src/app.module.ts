@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ChatModule } from './chat/chat.module';
+import { HandshakeModule } from './handshake/handshake.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ChatModule } from './chat/chat.module';
       }),
     }),
     ChatModule,
+    HandshakeModule,
   ],
   controllers: [AppController],
   providers: [AppService],

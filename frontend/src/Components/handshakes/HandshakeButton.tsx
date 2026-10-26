@@ -5,8 +5,13 @@ interface HandshakeButtonProps
 {
   listingId: number;
   clientId: number;
+  // TODO(auth): temporary. It is the id of the logged-in user, passed in until
+  // real login exists. Remove it together with the one in handshakeService.ts.
+  userId: number;
 }
 
+// The text for each state: while something is loading, when the state could not
+// be loaded, and the four stages of a handshake.
 function getButtonText(handshake: Handshake | null, loading: boolean): string
 {
   if (loading)
@@ -22,9 +27,12 @@ function getButtonText(handshake: Handshake | null, loading: boolean): string
   return 'Propose Handshake';
 }
 
+// The whole handshake flow in one button: propose, approve, wait for the other
+// person, confirmed. It is disabled while a request runs, once the user has
+// said yes, and when the state could not be loaded.
 export default function HandshakeButton(props: HandshakeButtonProps)
 {
-  const { handshake, loading, error, approve } = useHandshake(props.listingId, props.clientId);
+  const { handshake, loading, error, approve } = useHandshake(props.listingId, props.clientId, props.userId);
 
   return (
     <div className="flex flex-col items-start gap-2">
