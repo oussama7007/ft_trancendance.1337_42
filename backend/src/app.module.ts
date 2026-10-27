@@ -6,6 +6,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 
+import { ListingsModule } from './listings/listings.module.js';
 
 
 @Module({
@@ -29,6 +30,7 @@ import { AuthModule } from './auth/auth.module.js';
     }),
 
     AuthModule,
+    ListingsModule,
   ],
 
   controllers: [AppController],

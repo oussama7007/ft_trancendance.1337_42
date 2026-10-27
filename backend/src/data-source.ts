@@ -9,6 +9,9 @@ import { DataSource } from 'typeorm';
 import { RegistrationSession } from './auth/registration-session-entity.js';
 import { User } from './auth/user.entity.js';
 
+import { Listing } from './listings/listing.entity.js';
+
+
 
 export default new DataSource({
   type: 'postgres',
@@ -18,7 +21,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  entities: [RegistrationSession, User],
+  entities: [RegistrationSession, User, Listing],
 
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
