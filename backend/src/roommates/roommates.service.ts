@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { MOCK_ROOMMATES, Roommate } from './mock-roommates';
-import { FilterRoommatesDto } from './filter-roommates.dto';
+import { MOCK_ROOMMATES, Roommate } from './mock-roommates.js';
+import { FilterRoommatesDto } from './filter-roommates.dto.js';
 
 @Injectable()
 export class RoommatesService

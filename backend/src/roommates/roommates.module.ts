@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { RoommatesController } from './roommates.controller';
-import { RoommatesService } from './roommates.service';
+import { RoommatesController } from './roommates.controller.js';
+import { RoommatesService } from './roommates.service.js';
 
 @Module({
   controllers: [RoommatesController],
