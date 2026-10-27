@@ -1,64 +1,111 @@
 @import "tailwindcss";
+/*create custom css === >> root: global variable */
+:root{ /*hnaaya adrary hdo varibales css , ila bgha ykhdm bxi color mn hado just y3ytt 3la smito 
+  
+  hka , mtalan anbdl background dial xihaja b tailwind andir haka : bg-[var(--color-primary)] 
+  
+  libgha yzid xi color hnaya yzido , bx lbghyna n xojiw yjina dkxi easy */
+  
+  
+   --color-primary: #1e3a5f;
+  --color-primary-dark: #152c47;
 
-@theme {
---color-irent-orange: #f4845f;
---color-irent-navy: #1e3a5f;
+  --color-accent: #f4845f;
+  --color-accent-dark: #e07553;
+  --color-accent-soft: #fff1ec;
+
+  --color-background: #eef3f7;
+  --color-surface: #ffffff;
+
+  --color-text: #111827;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+
+  --color-success: #059669;
+  --color-success-soft: #ecfdf5;
 }
-
-:root {
---color-primary: #1e3a5f;
---color-primary-dark: #152c47;
-
---color-accent: #f4845f;
---color-accent-dark: #e07553;
---color-accent-soft: #fff1ec;
-
---color-background: #eef3f7;
---color-surface: #ffffff;
-
---color-text: #111827;
---color-muted: #6b7280;
---color-border: #e5e7eb;
-
---color-success: #059669;
---color-success-soft: #ecfdf5;
-}
-
 @layer base {
-html {
-scroll-behavior: smooth;
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-text);
+    font-family: Arial, Helvetica, sans-serif;/*
+     parfois css mktkonx md3oma mn browser chrome ..., donc ana knzid hd webkit bx ngol l browser khdaam hd lkhasiya bttari9a dialk
+    ==> hnaya kngol lih l font lkhttota ykon na3imin o r9i9a omybanox mna9ttyni f bzff dial xaxat.
+    */
+    -webkit-font-smoothing: antialiased; 
+  }
+
+  button,
+  input,
+  textarea,
+  select {font: inherit}
+}
+/*scrollbar*/
+.scrollbar-hide::-webkit-scrollbar{ /*7ayd liya scrollbar myb9ax yban ga3 , google safar, edge */
+  display: none;
 }
 
-body {
-margin: 0;
-background: var(--color-background);
-color: var(--color-text);
-font-family: Arial, Helvetica, sans-serif;
--webkit-font-smoothing: antialiased;
-}
-
-button,
-input,
-textarea,
-select {
-font: inherit;
-}
-
-button {
-cursor: pointer;
-}
-
-button:disabled {
-cursor: not-allowed;
-}
-}
-
-/* Hide scrollbars while preserving scrolling. */
 .scrollbar-hide {
--ms-overflow-style: none;
-scrollbar-width: none;
+  -ms-overflow-style: none;/*internet explorer*/
+  scrollbar-width: none;/*firefox*/
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-display: none;
+
+@keyframes tickerLTR{/*les etapes animation*/
+  0%{
+    transform: translateX(-50%); /*left move*/
+  }
+
+  100%{
+    transform: translateX(0);
+  }
 }
+
+@keyframes tickerRTL{
+  0%{
+    transform: translateX(0);
+  }
+
+  100%{
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker{
+  display: flex;
+  width: max-content;
+}
+
+.ticker-ltr{
+  animation: tickerLTR 20s linear infinite;
+}
+.ticker-rtl{
+  animation: tickerRTL 20s linear infinite;/*3awed lanimation infinitly 20s f time dialha , o vitese constante*/
+}
+.animate-ticker:hover{
+  animation-play-state: paused;
+}
+
+@keyframes marker-bounce {
+  0%{
+    transform: translateY(0) rotateX(0deg);
+
+  }
+  50%{
+    transform: translateY(-8px) rotateX(8deg);
+  }
+  100%{
+    transform: translateY(0) rotateX(0deg);
+  }
+}
+
+.marker-3d-bounce {
+  animation: marker-bounce 2s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+

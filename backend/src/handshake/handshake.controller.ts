@@ -7,9 +7,9 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { CurrentUserId } from './decorators/current-user-id.decorator';
-import { HandshakeResponseDto } from './dto/handshake-response.dto';
-import { HandshakeService } from './handshake.service';
+import { CurrentUserId } from './decorators/current-user-id.decorator.js';
+import { HandshakeResponseDto } from './dto/handshake-response.dto.js';
+import { HandshakeService } from './handshake.service.js';
 
 // Routes for the handshake between a listing and a client. The frontend calls
 // them as /api/..., and the Vite proxy removes the /api prefix.

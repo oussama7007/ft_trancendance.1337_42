@@ -1,16 +1,31 @@
-import 'dotenv/config';
-import { DataSource } from 'typeorm';
 
-const dataSource = new DataSource({
+import { config } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+
+config({
+  path: fileURLToPath(new URL('../../.env', import.meta.url)),
+});
+import { DataSource } from 'typeorm';
+import { RegistrationSession } from './auth/registration-session-entity.js';
+import { User } from './auth/user.entity.js';
+
+import { Listing } from './listings/listing.entity.js';
+import { Conversation } from './chat/entities/conversation.entity.js';
+import { Message } from './chat/entities/message.entity.js';
+import { Handshake } from './handshake/entities/handshake.entity.js';
+
+
+
+export default new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? 5432),
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: ['src/**/*.entity.ts'],
+
+  entities: [RegistrationSession, User, Listing, Conversation, Message, Handshake],
+
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
 });
-
-export default dataSource;

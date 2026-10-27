@@ -1,8 +1,8 @@
-import type { Handshake } from './entities/handshake.entity';
+import type { Handshake } from './entities/handshake.entity.js';
 import type {
   HandshakeResponseDto,
   HandshakeStatus,
-} from './dto/handshake-response.dto';
+} from './dto/handshake-response.dto.js';
 
 // Pure helpers that turn a row into the answer the frontend expects. There is
 // no database here, which keeps the rules easy to test (handshake.utils.spec.ts).

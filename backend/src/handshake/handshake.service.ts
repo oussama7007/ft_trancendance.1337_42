@@ -5,9 +5,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
-import { HandshakeResponseDto } from './dto/handshake-response.dto';
-import { Handshake } from './entities/handshake.entity';
-import { toResponse } from './handshake.utils';
+import { HandshakeResponseDto } from './dto/handshake-response.dto.js';
+import { Handshake } from './entities/handshake.entity.js';
+import { toResponse } from './handshake.utils.js';
 
 // Temporary: until the listings code is merged, user 1 owns every listing.
 const OWNER_ID = 1;

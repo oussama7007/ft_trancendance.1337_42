@@ -1,5 +1,5 @@
-import type { Handshake } from './entities/handshake.entity';
-import { getStatus, hasUserApproved, toResponse } from './handshake.utils';
+import type { Handshake } from './entities/handshake.entity.js';
+import { getStatus, hasUserApproved, toResponse } from './handshake.utils.js';
 
 // Unit tests for the status rules in handshake.utils.ts. They need no database.
 //

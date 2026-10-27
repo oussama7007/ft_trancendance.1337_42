@@ -6,7 +6,8 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { Conversation } from './conversation.entity';
+import type { Relation } from 'typeorm';
+import { Conversation } from './conversation.entity.js';
 
 @Entity('messages')
 export class Message {
@@ -31,5 +32,6 @@ export class Message {
     { onDelete: 'CASCADE' },
   )
   @JoinColumn({ name: 'conversation_id' })
-  conversation!: Conversation;
+  // Relation<> keeps the circular import with Conversation working under ESM.
+  conversation!: Relation<Conversation>;
 }

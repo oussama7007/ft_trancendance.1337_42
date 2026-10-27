@@ -1,9 +1,15 @@
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
-import tailwindcss from '@tailwindcss/vite'
 
+
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(),
+    tailwindcss(),
+  ],
+  // Chat and handshake call the backend as /api/...; the proxy strips the
+  // prefix, so /api/listings/1/handshakes/2 reaches /listings/1/handshakes/2.
   server: {
     proxy: {
       '/api': {
