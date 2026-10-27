@@ -7,6 +7,7 @@ import type { Language, Listing, User } from './types'
 import { useState } from 'react'
 import { Footer } from './Components/Footer';
 import { SignUpPage } from './Pages/SignUpPage';
+import { LoginPage } from './Pages/LoginPage';
 
 // function App() {
 //   return (
@@ -84,13 +85,7 @@ function App (){
         }
 
         if (activePage === 'signin') {
-            return (
-                <div className="flex min-h-screen items-center justify-center">
-                    <h1 className="text-3xl font-black text-(--color-primary)">
-                        Sign in
-                    </h1>
-                </div>
-            );
+            return <LoginPage />;
         }
         if (activePage === 'signup') {
             return (
