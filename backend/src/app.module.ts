@@ -5,8 +5,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
-import { RoommatesModule } from './roommates/roommates.module.js';
 
+import { ListingsModule } from './listings/listings.module.js';
+import { RoommatesModule } from './roommates/roommates.module.js';
 
 
 @Module({
@@ -25,11 +26,12 @@ import { RoommatesModule } from './roommates/roommates.module.js';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
       }),
     }),
 
     AuthModule,
+    ListingsModule,
     RoommatesModule,
   ],
 

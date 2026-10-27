@@ -4,17 +4,12 @@ import { ValidationPipe } from '@nestjs/common';
 
 
 
-async function bootstrap()
-{
+async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
+  
   app.enableCors({ origin: 'http://localhost:5173' });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 await bootstrap();
-
-
-//bind -> 5321 --> nestjs ---> 
-// [/auth] -> [GET]  ->  [funct]
-// 		-> [POST] -> [func]
-// []

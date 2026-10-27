@@ -71,6 +71,9 @@ export const translations = {
             contactBtn: 'تواصل مع المالك',
 
             noRentals: 'لا توجد عروض متاحة حالياً',
+            loading: 'جاري التحميل...',
+            loadError: 'تعذر تحميل العروض. حاول مرة أخرى.',
+
 
             location: 'الموقع',
             price: 'السعر',
@@ -148,6 +151,9 @@ export const translations = {
             contactBtn: 'Contact Owner',
 
             noRentals: 'No listings available at the moment',
+            loading: 'Loading...',
+            loadError: 'Could not load listings. Please try again.',
+
             
             location: 'Location',
             price: 'Price',
@@ -224,6 +230,9 @@ export const translations = {
             contactBtn: 'Contacter le propriétaire',
 
             noRentals: 'Aucune annonce disponible actuellement',
+            loading: 'Chargement...',
+            loadError: "Impossible de charger les annonces. Veuillez réessayer.",
+
 
             location: 'Emplacement',
             price: 'Prix',

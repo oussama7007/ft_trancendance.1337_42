@@ -54,7 +54,7 @@ export const  SearchTabs = ({
                         }
                         ` }
                     >
-                    <Icon size={16} />
+                    <Icon size={16} className='text-sky-500' />
                     {tab.label}
                     </button>
                 );
