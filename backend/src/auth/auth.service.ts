@@ -22,6 +22,10 @@ import { RequestVerificationDto } from './dto/request-verification.dto.js';
 import { VerifyRegistrationDto } from './dto/verify-registration.dto.js';
 import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
+
+import { JwtService } from '@nestjs/jwt';
+
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -30,6 +34,8 @@ export class AuthService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly jwtService: JwtService, 
   ) {}
 
   async startRegistration(data: StartRegistrationDto) {
@@ -180,9 +186,19 @@ export class AuthService {
     );
     if(!passwordMatches)
         throw new UnauthorizedException('invalid contact or password');
-      return{
-        userId: user.id,
-        contact: user.contact, 
-      }
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+    });
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        dateOfBirth: user.dateOfBirth,
+        contact: user.contact,
+      },
+    };
   }
 }
