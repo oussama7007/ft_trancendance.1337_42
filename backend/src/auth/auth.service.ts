@@ -172,7 +172,24 @@ export class AuthService {
     };
   }
 
+    async getCurrentUser(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      dateOfBirth: user.dateOfBirth,
+      gender: user.gender,
+      contact: user.contact,
+    };
+  }
 
 
   async validateCredentials(data : LoginDto){

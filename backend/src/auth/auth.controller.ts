@@ -1,4 +1,4 @@
-import { Body, Controller, Post,   HttpStatus, HttpCode, } from '@nestjs/common';
+import { Body, Controller, Post,   HttpStatus, HttpCode, Get, Req, UseGuards} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
@@ -8,7 +8,8 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 
 import { LoginDto } from './dto/login.dto.js';
-
+import { JwtAuthGuard } from './jwt-auth.guard.js';
+import type { AuthenticatedRequest } from './jwt-auth.guard.js';
 
 @Controller('auth')
 export class AuthController {
@@ -42,4 +43,12 @@ export class AuthController {
     return this.authService.validateCredentials(data);
   }
 
+
+    @Get('me')
+  @UseGuards(JwtAuthGuard)
+  getCurrentUser(@Req() request: AuthenticatedRequest) {
+    if (request.user)
+      return this.authService.getCurrentUser(request.user.sub);
+    return null;
+  }
 }
