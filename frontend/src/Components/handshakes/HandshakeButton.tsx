@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { useHandshake } from '../../hooks/useHandshake';
 import type { Handshake } from '../../services/handshakeService';
 
@@ -33,15 +34,26 @@ function getButtonText(handshake: Handshake | null, loading: boolean): string
 export default function HandshakeButton(props: HandshakeButtonProps)
 {
   const { handshake, loading, error, approve } = useHandshake(props.listingId, props.clientId, props.userId);
+  const disabled = loading || !handshake || handshake.hasUserApproved;
+  const confirmed = handshake?.status === 'confirmed';
+
+  // iRent design: an orange call to action while the user can act, gray while
+  // nothing can be clicked, and green once the handshake is confirmed.
+  const look = confirmed
+    ? 'cursor-default bg-[#E8F5EE] text-[#178A4C]'
+    : disabled
+      ? 'cursor-not-allowed bg-[#F3F4F6] text-[#6B7280]'
+      : 'bg-[#EE7F4D] text-white shadow-[0_8px_18px_rgba(238,127,77,0.35)] hover:brightness-95';
 
   return (
     <div className="flex flex-col items-start gap-2">
       <button
         type="button"
         onClick={approve}
-        disabled={loading || !handshake || handshake.hasUserApproved}
-        className="rounded-lg bg-irent-orange px-4 py-2 font-medium text-white transition hover:bg-irent-orange/90 disabled:cursor-not-allowed disabled:opacity-60"
+        disabled={disabled}
+        className={`flex min-h-14 items-center justify-center gap-2 rounded-[18px] px-7 text-[17px] font-bold transition ${look}`}
       >
+        {confirmed && <Check size={20} strokeWidth={2} aria-hidden="true" />}
         {getButtonText(handshake, loading)}
       </button>
       {error && (
