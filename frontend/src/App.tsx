@@ -85,7 +85,10 @@ function App (){
         }
 
         if (activePage === 'signin') {
-            return <LoginPage />;
+            return <LoginPage 
+            onLoginSuccess={(user) => {console.log("Logged in user:", user);
+                setActivePage('home');
+            }}/>;
         }
         if (activePage === 'signup') {
             return (

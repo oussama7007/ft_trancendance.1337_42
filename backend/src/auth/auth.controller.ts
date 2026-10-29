@@ -1,4 +1,4 @@
-import { Body, Controller, Post,   HttpStatus, HttpCode, Get, Req, UseGuards} from '@nestjs/common';
+import { Body, Controller, Post, Res,  HttpStatus, HttpCode, Get, Req, UseGuards} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
@@ -10,6 +10,8 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { JwtAuthGuard } from './jwt-auth.guard.js';
 import type { AuthenticatedRequest } from './jwt-auth.guard.js';
+
+import type { Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -38,9 +40,21 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  login(@Body() data : LoginDto)
-  {
-    return this.authService.validateCredentials(data);
+  async login(@Body() data : LoginDto,
+  @Res({ passthrough: true }) response: Response,){
+    const result = await this.authService.validateCredentials(data);
+
+    response.cookie('access_token', result.accessToken,{
+      httpOnly: true, 
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000,
+      path: '/',
+    });
+    return {
+      user: result.user,
+    };
+
   }
 
 

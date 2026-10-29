@@ -13,7 +13,22 @@ import { Label } from "@/components/ui/label";
 // رابط الخادم الخلفي (Backend)
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-export function LoginPage() {
+
+type LoginUser = {
+    id: number;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    contact: string;
+};
+
+interface LoginPageProps {
+    onLoginSuccess: (user: LoginUser) => void;
+}
+
+
+
+export function LoginPage({ onLoginSuccess }: LoginPageProps) {
     // بيانات تسجيل الدخول
     const [contact, setContact] = useState("");
     const [password, setPassword] = useState("");
@@ -39,6 +54,7 @@ export function LoginPage() {
             const response = await fetch(`${API_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: 'include',
                 body: JSON.stringify({
                     contact: contact.trim(),
                     password: password,
@@ -53,14 +69,12 @@ export function LoginPage() {
             }
 
             // إذا كان الـ Backend يرجع JWT Token نقوم بحفظه في المتصفح
-            if (data.accessToken) {
-                localStorage.setItem("accessToken", data.accessToken);
-            } else if (data.access_token) {
-                localStorage.setItem("accessToken", data.access_token);
-            }
+            if (!data.user) {
+    setError("User information was not returned by the backend.");
+    return;
+}
 
-            setSuccess("Logged in successfully!");
-            console.log("Login response:", data);
+onLoginSuccess(data.user);
         } catch {
             setError("Cannot connect to the backend.");
         } finally {

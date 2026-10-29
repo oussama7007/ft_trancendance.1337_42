@@ -10,6 +10,8 @@ import type { Request } from 'express';
 
 type JwtPayload = {
   sub: number;
+  iat?: number;
+  exp?: number;
 };
 
 export interface AuthenticatedRequest extends Request {
@@ -24,17 +26,13 @@ export class JwtAuthGuard implements CanActivate {
     const request =
       context.switchToHttp().getRequest<AuthenticatedRequest>();
 
-    const authHeader = request.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing or invalid token');
-    }
 
-    const token = authHeader.slice(7).trim();
+  const token = request.cookies?.access_token;
 
-    if (!token) {
-      throw new UnauthorizedException('Token is missing');
-    }
+  if (typeof token !== 'string' || !token) {
+    throw new UnauthorizedException('Authentication cookie is missing');
+  }
 
     try {
       const payload =
