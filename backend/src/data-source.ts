@@ -13,6 +13,7 @@ import { Listing } from './listings/listing.entity.js';
 import { Conversation } from './chat/entities/conversation.entity.js';
 import { Message } from './chat/entities/message.entity.js';
 import { Handshake } from './handshake/entities/handshake.entity.js';
+import { Review } from './reviews/entities/review.entity.js';
 
 
 
@@ -24,7 +25,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  entities: [RegistrationSession, User, Listing, Conversation, Message, Handshake],
+  entities: [RegistrationSession, User, Listing, Conversation, Message, Handshake, Review],
 
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
