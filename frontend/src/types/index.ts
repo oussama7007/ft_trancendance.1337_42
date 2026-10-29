@@ -7,6 +7,14 @@ export type PropertyType =
     | 'riad'
     | 'villa';
 
+export type PriceRange = '' | '0-1500' | '1500-3000' | '3000+';
+
+export interface SearchFilters {
+    city: string;
+    type: PropertyType | '';
+    priceRange: PriceRange;
+}
+
 export interface Listing {
     id: number;
     ownerId: number;

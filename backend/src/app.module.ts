@@ -6,6 +6,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AuthModule } from './auth/auth.module.js';
 import { ChatModule } from './chat/chat.module.js';
+import { ListingsModule } from './listings/listings.module.js';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ChatModule } from './chat/chat.module.js';
 
     ChatModule,
     AuthModule,
+    ListingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
