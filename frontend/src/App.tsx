@@ -1,5 +1,5 @@
 import './index.css'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Footer } from './Components/Footer'
 import Chat from './Components/chat/Chat';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
@@ -22,6 +22,12 @@ function App() {
     const [lang, setLang] = useState<Language>('en');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+    useEffect(() => {
+        const dir = lang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.dir = dir;
+        document.documentElement.lang = lang;
+    }, [lang]);
+
     const handleLogout = () => {
         setCurrentUser(null);
         navigate('/');
@@ -31,8 +37,10 @@ function App() {
         console.log('Selected listing:', listing);
     };
 
+    const isRtl = lang === 'ar';
+
     return (
-        <div className="min-h-screen bg-white">
+        <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen bg-white">
             <Navbar
                 lang={lang}
                 setLang={setLang}
