@@ -4,7 +4,7 @@ import { HomePage } from './Pages/HomePage'
 import { mockListings } from './Pages/mockListings'
 import { Navbar } from './Components/Navbar'
 import type { Language, Listing, User } from './types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Footer } from './Components/Footer';
 import { SignUpPage } from './Pages/SignUpPage';
 import { LoginPage } from './Pages/LoginPage';
@@ -24,10 +24,77 @@ import { LoginPage } from './Pages/LoginPage';
 //     </div>
 //   )
 // }
+
+
+
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+type BackendUser = {
+    id: number;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    contact: string;
+    gender?: string;
+    cin?: string;
+};
+
+function mapBackendUser(user: BackendUser): User {
+    const isEmail = user.contact.includes('@');
+
+    return {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        fullName: `${user.firstName} ${user.lastName}`,
+        email: isEmail ? user.contact : '',
+        phone: isEmail ? '' : user.contact,
+        dateOfBirth: user.dateOfBirth,
+        cin: user.cin,
+    };
+}
+
+
+
+
+
 function App (){
     const [activePage, setActivePage] = useState('home');
     const [lang, setLang] = useState<Language>('en');
     const [currentUser, setCurrentUser] = useState <User | null>(null);
+    const [isAuthLoading, setIsAuthLoading] = useState(true);   
+
+    const [authError, setAuthError] = useState("");
+
+    useEffect(() => {
+            async function restoreSession() {
+                try {
+                    const response = await fetch(`${API_URL}/auth/me`, {
+                        method: "GET",
+                        credentials: "include",
+                    });
+
+                    if (!response.ok) {
+                        setCurrentUser(null);
+                        return;
+                    }
+
+                    const user: BackendUser = await response.json();
+
+                    setCurrentUser(mapBackendUser(user));
+                } catch (error) {
+                    console.error("Session restoration failed:", error);
+                    setCurrentUser(null);
+                } finally {
+                    setIsAuthLoading(false);
+                }
+            }
+
+            restoreSession();
+        }, []);
+
+
 
     const handleLogout = () => {
         setCurrentUser(null);
@@ -84,12 +151,30 @@ function App (){
             );
         }
 
+
         if (activePage === 'signin') {
-            return <LoginPage 
-            onLoginSuccess={(user) => {console.log("Logged in user:", user);
-                setActivePage('home');
-            }}/>;
+     
+            return (
+                <LoginPage
+                    onLoginSuccess={(loggedInUser) => {
+                        const isEmail = loggedInUser.contact.includes('@');
+
+                        setCurrentUser({
+                            id: loggedInUser.id,
+                            firstName: loggedInUser.firstName,
+                            lastName: loggedInUser.lastName,
+                            fullName: `${loggedInUser.firstName} ${loggedInUser.lastName}`,
+                            email: isEmail ? loggedInUser.contact : '',
+                            phone: isEmail ? '' : loggedInUser.contact,
+                            dateOfBirth: loggedInUser.dateOfBirth,
+                        });
+
+                        setActivePage('home');
+                    }}
+                />
+            );
         }
+
         if (activePage === 'signup') {
             return (
                 <div className="flex min-h-screen items-center justify-center">
