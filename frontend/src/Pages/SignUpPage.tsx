@@ -16,6 +16,16 @@ import { Label } from "@/components/ui/label";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 
+type RegistrationUser = {
+    id: number;
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    contact: string;
+    gender?: string;
+    cin?: string;
+};
+
 // ============================================================
 // HELPER FUNCTIONS (normal functions, like in C)
 // ============================================================
@@ -42,12 +52,17 @@ function barColor(step: number, currentStep: number) {
     return "bg-muted";
 }
 
-
+interface SignUpPageProps {
+    onGoToSignIn: () => void;
+    onRegistrationSuccess: (user: RegistrationUser) => void;
+}
 // ============================================================
 // THE PAGE
 // ============================================================
 
-export function SignUpPage() {
+export function SignUpPage({ onGoToSignIn,
+    onRegistrationSuccess,
+ }: SignUpPageProps) {
 
     // ----------------------------------------------------------
     // STATE = the variables of the page.
@@ -59,7 +74,7 @@ export function SignUpPage() {
 
     // Where we are in the signup
     const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
-    const [sessionId, setSessionId] = useState("");      // given by the backend after step 1
+    const [sessionId, setSessionId] = useState<number | null>(null)      // given by the backend after step 1
     const [isComplete, setIsComplete] = useState(false); // true when signup is finished
 
     // Step 1: personal info
@@ -102,7 +117,7 @@ export function SignUpPage() {
     // Put every variable back to its start value
     function resetSignup() {
         setCurrentStep(1);
-        setSessionId("");
+        setSessionId(null);
         setIsComplete(false);
 
         setFirstName("");
@@ -162,6 +177,10 @@ export function SignUpPage() {
                 return;
             }
 
+            if (typeof result.data.sessionId !== "number") {
+                setError("Invalid registration session.");
+                return;
+            }
             setSessionId(result.data.sessionId);
             setCurrentStep(2);
         } catch {
@@ -178,7 +197,11 @@ export function SignUpPage() {
     async function handleSendCode(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         clearMessages();
-
+        
+        if (sessionId === null) {
+            setError("Registration session is missing. Please restart signup.");
+            return;
+        }
         if (!contact.trim()) {
             setError("Please enter your email or phone number.");
             return;
@@ -214,7 +237,10 @@ export function SignUpPage() {
     async function handleVerification(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         clearMessages();
-
+        if (sessionId === null) {
+                setError("Registration session is missing. Please restart signup.");
+                return;
+        }
         setIsSubmitting(true);
 
         try {
@@ -245,6 +271,10 @@ export function SignUpPage() {
         event.preventDefault();
         clearMessages();
 
+        if (sessionId === null) {
+        setError("Registration session is missing. Please restart signup.");
+        return;
+        }
         if (!contactVerified) {
             setError("Please complete contact verification first.");
             setCurrentStep(2);
@@ -270,11 +300,33 @@ export function SignUpPage() {
             });
 
             if (!result.ok) {
-                setError(result.data.message || "Could not complete registration.");
-                return;
+            setError(result.data.message || "Could not complete registration.");
+            return;
             }
 
+        // Login automatically.
+        const loginResponse = await fetch(`${API_URL}/auth/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+                contact: contact.trim(),
+                password: password,
+            }),
+        });
+
+        const loginData = await loginResponse.json();
+
+        if (!loginResponse.ok || !loginData.user) {
             setIsComplete(true);
+            setSuccess("Account created. Please sign in manually.");
+            return;
+        }
+
+        // Notify App.tsx that registration and login succeeded.
+        onRegistrationSuccess(loginData.user);
         } catch {
             setError("Cannot connect to the backend.");
         } finally {
@@ -361,17 +413,35 @@ export function SignUpPage() {
                     )}
 
                     {/* FINAL SCREEN */}
+
                     {isComplete && (
                         <div className="space-y-4">
                             <p className="text-sm text-muted-foreground">
                                 Your account has been created successfully!
                             </p>
 
-                            <Button type="button" className="w-full" onClick={resetSignup}>
+                            <Button
+                                type="button"
+                                className="w-full"
+                                onClick={onGoToSignIn}
+                            >
+                                Sign in
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                onClick={resetSignup}
+                            >
                                 Register another account
+                            </Button>
+                            <Button type="button" onClick={onGoToSignIn}>
+                                Go to Sign In
                             </Button>
                         </div>
                     )}
+
 
                     {/* STEP 1 SCREEN */}
                     {showStep1 && (

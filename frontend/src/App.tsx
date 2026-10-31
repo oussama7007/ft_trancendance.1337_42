@@ -202,15 +202,16 @@ function App (){
         );
     }
 
-        if (activePage === 'signup') {
-            return (
-                <div className="flex min-h-screen items-center justify-center">
-                    <h1 className="text-3xl font-black text-(--color-primary)">
-                         <SignUpPage />
-                    </h1>
-                </div>
-            );
-        }
+            if (activePage === 'signup') {
+                return (
+                    <SignUpPage
+                        onGoToSignIn={() => setActivePage('signin')}
+                        onRegistrationSuccess={(user) => {
+                        setCurrentUser(mapBackendUser(user));
+                        setActivePage('home');}}
+                    />
+                );
+            }
         return ( // fallback
             <HomePage 
                 setActivePage={setActivePage}
