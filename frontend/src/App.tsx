@@ -8,6 +8,7 @@ import { ListingsPage } from './Pages/ListingsPage'
 import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
 import type { Language, Listing, User } from './types'
+import { RoommatesPage } from './Pages/RoommatesPage' // the roommate search results page
 
 function Placeholder({ title }: { title: string }) {
     return (
@@ -53,6 +54,8 @@ function App() {
                     }
                 />
                 <Route path="/listings" element={<ListingsPage lang={lang} />} />
+                {/* /roommates?city=...&maxBudget=... shows the matching rooms */}
+                <Route path="/roommates" element={<RoommatesPage />} />
                 <Route path="/chat" element={<Placeholder title="Chat" />} />
                 <Route path="/profile" element={<Placeholder title="Profile" />} />
                 <Route path="/signin" element={<Placeholder title="Sign in" />} />
