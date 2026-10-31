@@ -58,6 +58,23 @@ export class AuthController {
   }
 
 
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
+  logout(@Res({ passthrough: true }) response: Response) {
+      response.clearCookie('access_token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+      });
+
+      return {
+          message: 'Logged out successfully',
+      };
+  }
+
+
+
     @Get('me')
   @UseGuards(JwtAuthGuard)
   getCurrentUser(@Req() request: AuthenticatedRequest) {

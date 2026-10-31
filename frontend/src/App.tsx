@@ -67,7 +67,10 @@ function App (){
 
     const [authError, setAuthError] = useState("");
 
-    useEffect(() => {
+
+        useEffect(() => {
+            let isMounted = true;
+
             async function restoreSession() {
                 try {
                     const response = await fetch(`${API_URL}/auth/me`, {
@@ -75,31 +78,67 @@ function App (){
                         credentials: "include",
                     });
 
-                    if (!response.ok) {
-                        setCurrentUser(null);
+                    // No valid session.
+                    if (response.status === 401) {
+                        if (isMounted) {
+                            setCurrentUser(null);
+                        }
                         return;
+                    }
+
+                    // Other server errors.
+                    if (!response.ok) {
+                        throw new Error(`Session check failed: ${response.status}`);
                     }
 
                     const user: BackendUser = await response.json();
 
-                    setCurrentUser(mapBackendUser(user));
+                    if (isMounted) {
+                        setCurrentUser(mapBackendUser(user));
+                    }
                 } catch (error) {
                     console.error("Session restoration failed:", error);
-                    setCurrentUser(null);
+
+                    if (isMounted) {
+                        setCurrentUser(null);
+                        setAuthError("Could not verify your session.");
+                    }
                 } finally {
-                    setIsAuthLoading(false);
+                    if (isMounted) {
+                        setIsAuthLoading(false);
+                    }
                 }
             }
 
             restoreSession();
+
+            return () => {
+                isMounted = false;
+            };
         }, []);
 
 
+        const handleLogout = async () => {
+            setAuthError("");
 
-    const handleLogout = () => {
-        setCurrentUser(null);
-        setActivePage('home');
-    }
+            try {
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: "POST",
+                    credentials: "include",
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Logout failed: ${response.status}`);
+                }
+
+                setCurrentUser(null);
+                setActivePage('home');
+            } catch (error) {
+                console.error("Logout failed:", error);
+                setAuthError("Could not log out. Please try again.");
+            }
+        };
+
 
     const handleSelectListing = (listing: Listing) => {
         console.log('Selected listing:', listing);
@@ -153,27 +192,15 @@ function App (){
 
 
         if (activePage === 'signin') {
-     
-            return (
-                <LoginPage
-                    onLoginSuccess={(loggedInUser) => {
-                        const isEmail = loggedInUser.contact.includes('@');
-
-                        setCurrentUser({
-                            id: loggedInUser.id,
-                            firstName: loggedInUser.firstName,
-                            lastName: loggedInUser.lastName,
-                            fullName: `${loggedInUser.firstName} ${loggedInUser.lastName}`,
-                            email: isEmail ? loggedInUser.contact : '',
-                            phone: isEmail ? '' : loggedInUser.contact,
-                            dateOfBirth: loggedInUser.dateOfBirth,
-                        });
-
-                        setActivePage('home');
-                    }}
-                />
-            );
-        }
+        return (
+            <LoginPage
+                onLoginSuccess={(user) => {
+                    setCurrentUser(mapBackendUser(user));
+                    setActivePage('home');
+                }}
+            />
+        );
+    }
 
         if (activePage === 'signup') {
             return (
@@ -195,6 +222,13 @@ function App (){
             />
         );
     };
+    if (isAuthLoading) {
+            return (
+                <main className="flex min-h-screen items-center justify-center">
+                    <p>Checking your session...</p>
+                </main>
+            );
+        }
     return(
         <div className='min-h-screen bg-white'>
             <Navbar 
@@ -205,6 +239,11 @@ function App (){
                 currentUser={currentUser}
                 handleLogout={handleLogout}
             />
+            {authError && (
+                <p role="alert" className="p-3 text-center text-sm text-destructive">
+                    {authError}
+                </p>
+            )}
             {renderPage()}
             <Footer
                 lang={lang}
