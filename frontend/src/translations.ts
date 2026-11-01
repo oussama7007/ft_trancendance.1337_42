@@ -89,7 +89,13 @@ export const translations = {
             typeMessage: 'اكتب رسالة...',
             send: 'إرسال',
             noMessages: 'لا توجد رسائل بعد',
-            noConversations: 'لا توجد محادثات',
+            noConversationsTitle: 'لا توجد محادثات بعد',
+            noConversationsDesc: 'يبدو أنك لم تبدأ أي محادثة مع أي من المالكين بعد.',
+            selectToStart: 'اختر محادثة لبدء الدردشة',
+            loadingConversations: 'جاري تحميل المحادثات...',
+            loadError: 'تعذر تحميل المحادثات.',
+            sendError: 'تعذر إرسال الرسالة.',
+            retry: 'إعادة المحاولة',
         }
     },
     en: {
@@ -181,7 +187,13 @@ export const translations = {
             typeMessage: 'Type a message...',
             send: 'Send',
             noMessages: 'No messages yet',
-            noConversations: 'No conversations',
+            noConversationsTitle: 'No conversations yet',
+            noConversationsDesc: "Looks like you haven't initiated a conversation with any of our landlords yet.",
+            selectToStart: 'Select a conversation to start chatting',
+            loadingConversations: 'Loading conversations...',
+            loadError: 'Could not load conversations.',
+            sendError: 'Could not send message.',
+            retry: 'Retry',
         }
     },
     fr: {
@@ -272,7 +284,13 @@ export const translations = {
             typeMessage: 'Écrire un message...',
             send: 'Envoyer',
             noMessages: 'Aucun message pour le moment',
-            noConversations: 'Aucune conversation',
+            noConversationsTitle: 'Aucune conversation pour le moment',
+            noConversationsDesc: "Il semble que vous n'ayez encore entamé aucune conversation avec l'un de nos propriétaires.",
+            selectToStart: 'Sélectionnez une conversation pour commencer à discuter',
+            loadingConversations: 'Chargement des conversations...',
+            loadError: 'Impossible de charger les conversations.',
+            sendError: 'Impossible d’envoyer le message.',
+            retry: 'Réessayer',
         }
     },
 };

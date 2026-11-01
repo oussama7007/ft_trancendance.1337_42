@@ -31,8 +31,8 @@ export interface ApiConversation {
   id: number;
   participantOneId: number;
   participantTwoId: number;
-  participantOneUsername?: string;
-  participantTwoUsername?: string;
+  participantOneName?: string;
+  participantTwoName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,9 +46,14 @@ export interface ApiMessage {
 }
 
 export const chatService = {
-  getConversations(userId: number) {
+  getConversations(userId: number, search?: string) {
+    const params = new URLSearchParams({ userId: String(userId) });
+    if (search && search.trim() !== '') {
+      params.append('search', search.trim());
+    }
+
     return request<ApiConversation[]>(
-      `/chat/conversations?userId=${userId}`,
+      `/chat/conversations?${params.toString()}`,
     );
   },
 

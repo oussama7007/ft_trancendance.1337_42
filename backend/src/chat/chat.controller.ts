@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
   Patch,
+  Query,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ChatService } from './chat.service.js';
@@ -38,8 +39,11 @@ export class ChatController {
   }
 
   @Get('conversations')
-  getConversations(@Req() request: AuthenticatedRequest) {
-    return this.chatService.getConversations(request.user.userId);
+  getConversations(
+    @Req() request: AuthenticatedRequest,
+    @Query('search') search?: string,
+  ) {
+    return this.chatService.getConversations(request.user.userId, search);
   }
 
   @Get('conversations/:id/messages')

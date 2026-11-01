@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Brackets } from 'typeorm';
 import { Conversation } from './entities/conversation.entity.js';
 import { Message } from './entities/message.entity.js';
 import { InterestRequest, InterestRequestStatus } from './entities/interest-request.entity.js';
@@ -44,10 +44,10 @@ export class ChatService {
     return this.conversationRepository.save(conversation);
   }
 
-  async getConversations(userId: number) {
+  async getConversations(userId: number, search?: string) {
     this.validateId(userId, 'userId');
 
-    const result = await this.conversationRepository
+    const queryBuilder = this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoin(User, 'p1', 'p1.id = conversation.participantOneId')
       .leftJoin(User, 'p2', 'p2.id = conversation.participantTwoId')
@@ -64,8 +64,24 @@ export class ChatService {
         'p2.firstName',
         'p2.lastName',
       ])
-      .where('conversation.participantOneId = :userId', { userId })
-      .orWhere('conversation.participantTwoId = :userId', { userId })
+      .where(
+        new Brackets((qb) => {
+          qb.where('conversation.participantOneId = :userId', { userId })
+            .orWhere('conversation.participantTwoId = :userId', { userId });
+        }),
+      );
+
+    if (search && search.trim() !== '') {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('LOWER(p1.firstName) LIKE :search OR LOWER(p1.lastName) LIKE :search', { search: searchTerm })
+            .orWhere('LOWER(p2.firstName) LIKE :search OR LOWER(p2.lastName) LIKE :search', { search: searchTerm });
+        }),
+      );
+    }
+
+    const result = await queryBuilder
       .orderBy('conversation.updatedAt', 'DESC')
       .getRawAndEntities();
 
