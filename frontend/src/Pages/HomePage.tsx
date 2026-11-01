@@ -298,14 +298,21 @@ useEffect(() => {
   };
 
   const handlSearchClick = () => {
+    // Roommate tab: open the roommates page with the city and the budget the user typed,
+    // for example /roommates?city=rabat&maxBudget=2000
+    if (activeTab === 'roommate') {
+      const roommateParams = new URLSearchParams();
+      if (roommateLocation.trim()) roommateParams.set('city', roommateLocation.trim());
+      // only send the budget when it is a real number above 0, so "abc" is ignored
+      if (Number(budget) > 0) roommateParams.set('maxBudget', String(Number(budget)));
+      navigate({ pathname: '/roommates', search: roommateParams.toString() });
+      return;
+    }
+
     const homeFilters: SearchFilters = { city: searchQuery, type: propertyType, priceRange };
-    const target: SearchFilters =
-      activeTab === 'roommate'
-        ? { city: roommateLocation, type: '', priceRange: '' }
-        : homeFilters;
 
     navigate({ pathname: '/', search: filtersToParams(homeFilters).toString() }, { replace: true });
-    navigate({ pathname: '/listings', search: filtersToParams(target).toString() });
+    navigate({ pathname: '/listings', search: filtersToParams(homeFilters).toString() });
   };
 
 const filteredMarkers = useMemo(() => {
