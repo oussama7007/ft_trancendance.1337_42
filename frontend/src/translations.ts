@@ -15,15 +15,13 @@ export const translations = {
             brandSubtitle: 'كراء السكن بسهولة', 
         },
         footer: {
+            legalTitle: 'قانوني',
             footerDesc: 'منصة iRent.ma لمساعدتك على إيجاد السكن المناسب بسهولة في المغرب.',
-            footerAboutTitle: 'عن iRent',
             footerContactTitle: 'تواصل معنا',
-            support: 'الدعم',
             terms: 'شروط الاستخدام',
             footerRights: '© 2026 iRent.ma. جميع الحقوق محفوظة.',
             privacyPolicy: 'سياسة الخصوصية',
-            termsOfUse: 'شروط الاستخدام',
-            security: 'الأمان',
+            address: 'خريبكة، المغرب',
         },
         // home page
         homePage: {
@@ -41,6 +39,7 @@ export const translations = {
             locationPlaceholder : 'المدينة أو الحي',
             roommateLocationPlaceholder: 'فين باغي تسكن؟',
             tabList: 'جميع العروض',
+            tabAddListing: 'أضف عرض',
 
             available: 'متاح',
             propType: 'نوع السكن',
@@ -96,6 +95,9 @@ export const translations = {
             loadError: 'تعذر تحميل المحادثات.',
             sendError: 'تعذر إرسال الرسالة.',
             retry: 'إعادة المحاولة',
+            perMonth: '/ الشهر',
+            currency: 'درهم',
+            close: 'إغلاق',
         }
     },
     en: {
@@ -113,15 +115,13 @@ export const translations = {
             brandSubtitle: 'Rent your home easily',
         },
         footer: {
+            legalTitle: 'Legal',
             footerDesc: 'iRent.ma helps you find the right home easily across Morocco.',
-            footerAboutTitle: 'About iRent',
             footerContactTitle: 'Contact Us',
-            support: 'Support',
             terms: 'Terms of Service',
             footerRights: '© 2026 iRent.ma. All rights reserved.',
             privacyPolicy: 'Privacy Policy',
-            termsOfUse: 'Terms of Use',
-            security: 'Security',
+            address: 'Khouribga, Morocco',
         },
         // home page
         homePage: {
@@ -135,6 +135,7 @@ export const translations = {
             tabHome: 'Housing',
             tabRoommate: 'Roommate',
             tabList: 'All Listings',
+            tabAddListing: 'Add listing',
 
             locationPlaceholder: 'City or district',
             roommateLocationPlaceholder: 'Where do you want to live?',
@@ -194,6 +195,8 @@ export const translations = {
             loadError: 'Could not load conversations.',
             sendError: 'Could not send message.',
             retry: 'Retry',
+            currency: 'DH',
+            close: 'Close',
         }
     },
     fr: {
@@ -211,15 +214,13 @@ export const translations = {
             brandSubtitle: 'Louez votre logement facilement',
         },
         footer: {
+            legalTitle: 'Mentions légales',
             footerDesc: 'iRent.ma vous aide à trouver facilement le logement qui vous convient au Maroc.',
-            footerAboutTitle: 'À propos de iRent',
             footerContactTitle: 'Contactez-nous',
-            support: 'Support',
             terms: 'Conditions d’utilisation',
             footerRights: '© 2026 iRent.ma. Tous droits réservés.',
             privacyPolicy: 'Politique de confidentialité',
-            termsOfUse: 'Conditions d’utilisation',
-            security: 'Sécurité',
+            address: 'Khouribga, Maroc',
         },
         // home page
         homePage: {
@@ -233,6 +234,7 @@ export const translations = {
             tabHome: 'Logement',
             tabRoommate: 'Colocation',
             tabList: 'Toutes les annonces',
+            tabAddListing: 'Ajouter une annonce',
 
             locationPlaceholder: 'Ville ou quartier',
             roommateLocationPlaceholder: 'Où souhaitez-vous habiter ?',
@@ -262,7 +264,7 @@ export const translations = {
             available: 'Disponible',
 
             detailsTitle: 'Détails du logement',
-            details: 'Details',
+            details: 'Détails',
             contactBtn: 'Contacter le propriétaire',
 
             noRentals: 'Aucune annonce disponible actuellement',
@@ -291,6 +293,8 @@ export const translations = {
             loadError: 'Impossible de charger les conversations.',
             sendError: 'Impossible d’envoyer le message.',
             retry: 'Réessayer',
+            currency: 'DH',
+            close: 'Fermer',
         }
     },
 };

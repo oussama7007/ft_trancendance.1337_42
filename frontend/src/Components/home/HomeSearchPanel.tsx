@@ -15,6 +15,7 @@ interface HomeLabels {
     tabHome: string;
     tabRoommate: string;
     tabList: string;
+    tabAddListing: string;
 
     locationPlaceholder: string;
     roommateLocationPlaceholder: string;
@@ -145,7 +146,7 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
                 labels={{
                     home : labels.tabHome,
                     roommate: labels.tabRoommate,
-                    list: labels.tabList,
+                    list: labels.tabAddListing,
                 }}
             />
 
@@ -210,7 +211,7 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
                                                 onRoommateGenderChange(option.value);
                                                 closeOtherMenus();
                                             }}
-                                            className={`w-full py-2.5 text-xs font-bold cursor-pointer transition flex items-center gap-2 text-left 
+                                            className={`w-full py-2.5 text-xs font-bold cursor-pointer transition flex items-center gap-2 text-start 
                                                 ${option.value === roommateGender 
                                                     ? 'bg-(--color-accent-soft) text-(--color-accent)' 
                                                     : 'text-gray-700 hover:bg-(--color-accent-soft) hover:text-(--color-accent)'

@@ -1,4 +1,4 @@
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, useRef} from 'react';
 import type { Language, Listing, SearchFilters } from '../types';
 import {translations} from '../translations';
 import { PropertyMap, type MapMarker, type MapCameraProps } from '../Components/home/PropertyMap';
@@ -9,6 +9,7 @@ import { PropertyDetailsDrawer } from '../Components/home/PropertyDetailsDrawer'
 import { fetchListings } from '../api/listings';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { filtersFromParams, filtersToParams } from '../utils/searchFilters';
+import { CITIES } from '../data/cities';
 
 interface HomePageProps {
     lang: Language;
@@ -24,78 +25,6 @@ type PriceRange = '' | '0-1500' | '1500-3000' | '3000+';
 
 type GenderPreference = '' | 'any' | 'male' | 'female';
 
-const CITIES = [
-    {
-    ar: 'الرباط',
-    fr: 'Rabat',
-    en: 'Rabat',
-    lat: 34.0209,
-    lng: -6.8416,
-  },
-  {
-    ar: 'الدار البيضاء',
-    fr: 'Casablanca',
-    en: 'Casablanca',
-    lat: 33.5883,
-    lng: -7.6114,
-  },
-  {
-    ar: 'مراكش',
-    fr: 'Marrakech',
-    en: 'Marrakech',
-    lat: 31.6295,
-    lng: -7.9811,
-  },
-  {
-    ar: 'خريبكة',
-    fr: 'Khouribga',
-    en: 'Khouribga',
-    lat: 32.8817,
-    lng: -6.9063,
-  },
-  {
-    ar: 'طنجة',
-    fr: 'Tangier',
-    en: 'Tangier',
-    lat: 35.7595,
-    lng: -5.834,
-  },
-  {
-    ar: 'فاس',
-    fr: 'Fez',
-    en: 'Fez',
-    lat: 34.0181,
-    lng: -5.0078,
-  },
-  {
-    ar: 'أكادير',
-    fr: 'Agadir',
-    en: 'Agadir',
-    lat: 30.4278,
-    lng: -9.5981,
-  },
-  {
-    ar: 'مكناس',
-    fr: 'Meknes',
-    en: 'Meknes',
-    lat: 33.8938,
-    lng: -5.5473,
-  },
-  {
-    ar: 'وجدة',
-    fr: 'Oujda',
-    en: 'Oujda',
-    lat: 34.6812,
-    lng: -1.9036,
-  },
-  {
-    ar: 'تطوان',
-    fr: 'Tetouan',
-    en: 'Tetouan',
-    lat: 35.5889,
-    lng: -5.3626,
-  },
-];
 
 const DEFAULT_CAMERA : MapCameraProps = {
   center: {
@@ -131,7 +60,7 @@ const findCityCoords = (cityObj?: Record<Language, string>) =>{
         CITIES[0]);
 };
 
-let hasDetectedLocation = false;
+// let hasDetectedLocation = false;
 
 const detectNearestCity= (lat: number, lng: number)=>{
     let nearest = CITIES[0];
@@ -169,9 +98,34 @@ export const HomePage: React.FC<HomePageProps> = ({
 
     const [activeDetailItem, setActiveDetailItem] = useState<Listing | null>(null);
 
-    const [cameraProps, setCameraProps] = useState<MapCameraProps>(DEFAULT_CAMERA);
+    const initialQuery = searchQuery.trim().toLowerCase();
+    const initialCity = initialQuery
+        ? CITIES.find(
+            (city) =>
+                city.fr.toLowerCase().includes(initialQuery) ||
+                city.en.toLowerCase().includes(initialQuery) ||
+                city.ar.toLowerCase().includes(initialQuery),
+        )
+        : undefined;
+    const [cameraProps, setCameraProps] = useState<MapCameraProps>(() =>
+        initialCity
+        ? {
+        center: {
+        lat: initialCity.lat,
+        lng: initialCity.lng,
+        },
+        zoom: 17.5,
+        tilt: 55,
+        heading: 45,
+        }
+        : DEFAULT_CAMERA
+    );
+
+    // const [cameraProps, setCameraProps] = useState<MapCameraProps>(DEFAULT_CAMERA);
 
     const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+    const hasDetectedLocation = useRef(false);
 
 const [listings, setListings] = useState<Listing[]>([]);
 
@@ -204,7 +158,7 @@ useEffect(() => {
   };
 }, [searchQuery, propertyType, priceRange]);
 
-    const mapMarkers = useMemo<MapMarker[]>(()=>{
+  const mapMarkers = useMemo<MapMarker[]>(()=>{
       return (listings || []).map((item, index) => {
 
       const cityMatch = findCityCoords(item.city);
@@ -242,10 +196,12 @@ useEffect(() => {
 
   useEffect(()=>{
 
-    if (hasDetectedLocation || initialFilters.city || !navigator.geolocation) {
+    if (hasDetectedLocation.current || initialFilters.city || !navigator.geolocation) {
       return;
     }
-    hasDetectedLocation = true;
+    hasDetectedLocation.current = true;
+
+    // console.log(hasDetectedLocation.current);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -276,7 +232,7 @@ useEffect(() => {
       setCameraProps(DEFAULT_CAMERA);
       return ;
     }
-    const normalizedValue = value.toLocaleLowerCase();
+    const normalizedValue = value.toLowerCase();
     const foundCity = CITIES.find((city) =>
       city.ar.toLowerCase().includes(normalizedValue) ||
       city.fr.toLowerCase().includes(normalizedValue) ||
@@ -308,11 +264,10 @@ useEffect(() => {
     navigate({ pathname: '/listings', search: filtersToParams(target).toString() });
   };
 
-const filteredMarkers = useMemo(() => {
-  return mapMarkers.filter(
+const filteredMarkers = mapMarkers.filter(
     (marker) => activeTab === 'list' || marker.category === activeTab,
-  );
-}, [mapMarkers, activeTab]);
+);
+
 
   const handleMarkerClick = (marker: MapMarker) => {
     const listing = listings.find((item) => `listing-${item.id}` === marker.id);
@@ -329,10 +284,9 @@ const filteredMarkers = useMemo(() => {
   }
 
     return(
-      <div dir={isRTL ? 'rtl' : 'ltr'} className='w-screen min-h-screen font-sans bg-(--color-background) relative'>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className='min-h-screen font-sans bg-(--color-background) relative'>
 
-        <div className='w-full bg-(--color-accent) text-white py-2.5'>
-          <div className='overflow-hidden w-full whitespace-nowrap '  >
+        <div className='overflow-hidden whitespace-nowrap bg-(--color-accent) text-white py-2.5'>
             <div className={`animate-ticker items-center ${isRTL ? 'ticker-rtl' : 'ticker-ltr'}`}>
                 <div className='flex items-center gap-12 px-6'>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
@@ -344,19 +298,18 @@ const filteredMarkers = useMemo(() => {
                 </div>
                 <div className='flex items-center gap-12 px-6'>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currentLang.ticker2}
+                    {currentLang.ticker1}
                   </span>
                   <span className='text-xs md:text-sm font-black tracking-wider'>
-                    {currentLang.ticker1}
+                    {currentLang.ticker2}
                   </span>
                 </div>
             </div>
-          </div>
         </div>
 
-      <main className='w-full flex-1 flex flex-col px-4 md:px-8 pb-8 pt-6 md:pt-8 max-w-[1600px] mx-auto'>
+      <main className='flex flex-col px-4 md:px-8 pb-8 pt-6 md:pt-8 max-w-[1600px] mx-auto'>
 
-        <section className='text-center pb-4 px-2 shrink-0 max-w-2xl mx-auto'>
+        <section className='text-center pb-4 px-2 max-w-2xl mx-auto'>
           <h1 className='text-lg md:text-xl font-black text-gray-900 tracking-tight'>
             {currentLang.titleMain}{' '}
             <span className='text-(--color-accent)'>
@@ -370,10 +323,10 @@ const filteredMarkers = useMemo(() => {
 
         <HomeSearchPanel
          activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => { if (tab !== 'list') setActiveTab(tab); }}
 
           isLoggedIn={isLoggedIn}
-          onNavigate={(page) => navigate('/' + page)}
+          onNavigate={(path) => navigate(path)}
 
           searchQuery={searchQuery}
           onSearchQueryChange={
@@ -422,6 +375,7 @@ const filteredMarkers = useMemo(() => {
           onMarkerClick={
             handleMarkerClick
           }
+          currencyLabel={currentLang.currency}
         />
 
       <FeaturedListing
@@ -440,6 +394,7 @@ const filteredMarkers = useMemo(() => {
         locationLabel={currentLang.location}
         priceLabel={currentLang.price}
         perMonthLabel={currentLang.perMonth}
+        closeLabel={currentLang.close}
 
         onClose={() => setActiveDetailItem(null)}
         onContact={handlContactListing}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Building2, House, Sofa, Landmark, Castle, MapPin, ChevronDown, Wallet } from 'lucide-react';
+import { MapPin, ChevronDown, Wallet } from 'lucide-react';
 import type { PriceRange, PropertyType } from '../../types';
+import { propertyOptions } from '../../data/propertyOptions';
 
 type PropertyFilter = PropertyType | '';
 
@@ -33,14 +34,6 @@ interface HomeFilterFieldsProps {
 
     labels: HomeFilterLabels;
 }
-
-const propertyOptions = [
-    { value: 'apartment' as const, icon: Building2, labelKey: 'apt' as const, color: 'text-sky-500' },
-    { value: 'house' as const, icon: House, labelKey: 'house' as const, color: 'text-emerald-500' },
-    { value: 'studio' as const, icon: Sofa, labelKey: 'studio' as const, color: 'text-violet-500' },
-    { value: 'riad' as const, icon: Landmark, labelKey: 'riad' as const, color: 'text-amber-600' },
-    { value: 'villa' as const, icon: Castle, labelKey: 'villa' as const, color: 'text-rose-500' },
-];
 
 const priceOptions = [
     { value: '' as const, labelKey: 'priceAny' as const },
@@ -120,7 +113,7 @@ export const HomeFilterFields: React.FC<HomeFilterFieldsProps> = ({
                                         onPropertyTypeChange(option.value);
                                         closeMenus();
                                     }}
-                                    className="w-full px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-(--color-accent-soft) hover:text-(--color-accent) cursor-pointer transition border-t border-gray-50 flex items-center gap-2 text-left"
+                                    className="w-full px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-(--color-accent-soft) hover:text-(--color-accent) cursor-pointer transition border-t border-gray-50 flex items-center gap-2 text-start"
                                 >
                                     <Icon className={`w-4 h-4 ${option.color}`} />
                                     {labels[option.labelKey]}
@@ -165,7 +158,7 @@ export const HomeFilterFields: React.FC<HomeFilterFieldsProps> = ({
                                     onPriceRangeChange(option.value);
                                     closeMenus();
                                 }}
-                                className={`w-full px-4 py-2.5 text-xs font-bold cursor-pointer transition text-left ${
+                                className={`w-full px-4 py-2.5 text-xs font-bold cursor-pointer transition text-start ${
                                     index > 0 ? 'border-t border-gray-50' : ''
                                 } ${
                                     option.value === priceRange

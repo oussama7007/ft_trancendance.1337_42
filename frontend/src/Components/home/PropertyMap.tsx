@@ -4,6 +4,7 @@ import { Home as HomeIcon } from 'lucide-react';
 
 
 
+
 export interface MapMarker{
     id: string;
     city: {
@@ -46,6 +47,7 @@ interface PropertyMapProps {
     markers: MapMarker[];
     cameraProps: MapCameraProps;
     apiKey: string;
+    currencyLabel: string;
 
     onCameraChanged: (camera: MapCameraProps) => void;
     onMarkerClick: (marker: MapMarker) => void;
@@ -58,6 +60,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     apiKey,
     onCameraChanged,
     onMarkerClick,
+    currencyLabel,
 }) => {
     return (
             <div className="w-full h-[65vh] md:h-[80vh]  min-h-[380px] md:min-h-[550px] mt-4 rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
@@ -85,7 +88,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
                             <div className="marker-3d-bounce group cursor-pointer flex flex-col items-center py-2">
                                 {/*Price*/}
                                 <div className="bg-(--color-accent) text-white font-black text-xs md:text-sm px-3.5 py-1.5 rounded-full shadow-2xl border-2 border-white mb-1.5 whitespace-nowrap transition-all duration-300 scale-100 group-hover:scale-[1.35] group-hover:-translate-y-2 origin-bottom">
-                                    {marker.price} DH
+                                    {marker.price} {currencyLabel}
                                 </div>
                                 {/*Icon*/}
                                 <div className="bg-white p-2.5 rounded-2xl shadow-2xl border-2 border-(--color-accent) flex items-center justify-center transition-all duration-300 group-hover:scale-[1.3]">

@@ -21,6 +21,7 @@ interface PropertyDetailsDrawerProps {
     locationLabel: string;
     priceLabel: string;
     perMonthLabel: string;
+    closeLabel: string;
 
     onClose: () => void;
     onContact: (item: Listing) => void;
@@ -36,6 +37,7 @@ export const PropertyDetailsDrawer: React.FC<
   priceLabel,
   perMonthLabel,
   contactLabel,
+  closeLabel,
   onClose,
   onContact,
 }) => {
@@ -121,19 +123,19 @@ export const PropertyDetailsDrawer: React.FC<
         <button
             type="button"
             onClick={onClose}
-            aria-label="Close property details"
+            aria-label={closeLabel}
             className="absolute inset-0  bg-black/30 backdrop-blur-[2px] pointer-events-auto cursor-default"
         />
 
         {/* Drawer */}
         <aside
             className={`
-            absolute top-0 bottom-0
-            w-full max-w-[430px]
-            bg-white shadow-2xl
-            overflow-y-auto
-            pointer-events-auto
-            ${lang === 'ar' ? 'right-0' : 'left-0'}
+                absolute top-0 bottom-0 start-0
+                w-full max-w-[430px]
+                bg-white shadow-2xl
+                overflow-y-auto
+                pointer-events-auto
+
             `}
         >
 
@@ -154,7 +156,7 @@ export const PropertyDetailsDrawer: React.FC<
                     type="button"
                     onClick={onClose}
                     className="w-9 h-9 shrink-0 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition cursor-pointer"
-                    aria-label="Close"
+                    aria-label={closeLabel}
                 >
                     <X className="w-4 h-4 text-gray-700" />
                 </button>
@@ -176,7 +178,7 @@ export const PropertyDetailsDrawer: React.FC<
                 )}
 
                 {/* Price */}
-                <div className="absolute bottom-4 left-4 bg-white rounded-xl px-4 py-2.5 shadow-lg">
+                <div className="absolute bottom-4 start-4 bg-white rounded-xl px-4 py-2.5 shadow-lg">
                     <div className="flex items-center gap-2">
 
                         <Wallet className="w-4 h-4 text-(--color-accent)" />
