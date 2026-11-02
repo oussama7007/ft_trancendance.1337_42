@@ -121,6 +121,7 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang }) => {
                 locationLabel={t.location}
                 priceLabel={t.price}
                 perMonthLabel={t.perMonth}
+                closeLabel={t.close}
                 onClose={() => setActiveDetailItem(null)}
                 onContact={(listing) => {
                     console.log('Contact:', listing);

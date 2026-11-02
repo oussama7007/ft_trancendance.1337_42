@@ -1,6 +1,7 @@
 import { MapPin, ArrowRight } from "lucide-react";
 import type React from "react";
 import type { Language, Listing } from "../types";
+import { translations } from '../translations';
 
 interface ListingCardProps {
     item: Listing;
@@ -37,8 +38,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 )}
 
                 {/* Price */}
-                <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-(--color-accent) font-black text-xs px-3 py-1.5 rounded-xl shadow-md">
-                    {item.price} DH
+                <span className="absolute top-3 end-3 bg-white/90 backdrop-blur-md text-(--color-accent) font-black text-xs px-3 py-1.5 rounded-xl shadow-md">
+                    {item.price} {translations[lang].homePage.currency}
                 </span>
             </div>
 
@@ -61,9 +62,9 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                         {availableLabel}
                     </span>
 
-                    <span className="text-[10px] font-black text-(--color-accent) group-hover:translate-x-1 transition flex items-center gap-1">
+                    <span className="text-[10px] font-black text-(--color-accent) group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition flex items-center gap-1">
                         {detailsLabel}
-                        <ArrowRight className="w-3.5 h-3.5" />
+                        <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                     </span>
                 </div>
             </div>

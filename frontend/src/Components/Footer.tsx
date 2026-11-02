@@ -22,9 +22,9 @@ export const Footer: React.FC<FooterProps> = ({
       dir={isRTL ? 'rtl' : 'ltr'}
       className="mt-12 border-t border-gray-100 bg-white px-6 py-12"
     >
-      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 md:grid-cols-4">
+      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-8 md:grid-cols-3">
 
-        <div className="col-span-1 md:col-span-2">
+        <div>
           <h3 className="mb-2 text-xl font-black tracking-wide text-gray-900">
             i
             <span className="text-(--color-accent) transition-colors duration-300 hover:text-gray-900">
@@ -47,28 +47,6 @@ export const Footer: React.FC<FooterProps> = ({
 
         <div>
           <h4 className="mb-4 text-sm font-extrabold uppercase tracking-wider text-gray-900">
-            {t.footer.footerAboutTitle}
-          </h4>
-
-          <ul className="space-y-3 text-sm text-gray-600">
-
-            <li>
-              <Link to="/support" className="cursor-pointer transition-all duration-200 hover:translate-x-1 hover:text-(--color-accent)">
-                {t.footer.support}
-              </Link>
-            </li>
-
-            <li>
-              <Link to="/terms" className="cursor-pointer transition-all duration-200 hover:translate-x-1 hover:text-(--color-accent)">
-                {t.footer.terms}
-              </Link>
-            </li>
-
-          </ul>
-        </div>
-
-        <div>
-          <h4 className="mb-4 text-sm font-extrabold uppercase tracking-wider text-gray-900">
             {t.footer.footerContactTitle}
           </h4>
 
@@ -76,7 +54,7 @@ export const Footer: React.FC<FooterProps> = ({
 
             <li className="flex items-center gap-2 transition-colors duration-200 hover:text-gray-900">
                 <MapPin className="h-4 w-4 shrink-0 text-(--color-accent)" />
-                <span>Khouribga, Morocco</span>
+                <span>{t.footer.address}</span>
             </li>
 
             <li>
@@ -91,29 +69,32 @@ export const Footer: React.FC<FooterProps> = ({
 
           </ul>
         </div>
+
+        <div>
+          <h4 className="mb-4 text-sm font-extrabold uppercase tracking-wider text-gray-900">
+            {t.footer.legalTitle}
+          </h4>
+
+          <ul className="space-y-3 text-sm text-gray-600">
+
+            <li>
+              <Link to="/privacy" className="cursor-pointer transition-all duration-200 hover:text-(--color-accent)">
+                {t.footer.privacyPolicy}
+              </Link>
+            </li>
+
+            <li>
+              <Link to="/terms" className="cursor-pointer transition-all duration-200 hover:text-(--color-accent)">
+                {t.footer.terms}
+              </Link>
+            </li>
+
+          </ul>
+        </div>
       </div>
 
-      <div className="mx-auto mt-8 flex max-w-[1600px] flex-col items-center justify-between border-t border-gray-100 pt-5 text-xs text-gray-400 sm:flex-row">
-
-        <p>
-          {t.footer.footerRights}
-        </p>
-
-        <div className="mt-4 flex items-center gap-2.5 sm:mt-0">
-
-          <Link to="/privacy" className="cursor-pointer transition-colors duration-200 hover:text-(--color-accent)">
-            {t.footer.privacyPolicy}
-          </Link>
-
-          <Link to="/terms" className="cursor-pointer transition-colors duration-200 hover:text-(--color-accent)">
-            {t.footer.termsOfUse}
-          </Link>
-
-          <Link to="/security" className="cursor-pointer transition-colors duration-200 hover:text-(--color-accent)">
-            {t.footer.security}
-          </Link>
-
-        </div>
+      <div className="mx-auto mt-8 max-w-[1600px] border-t border-gray-100 pt-5 text-center text-xs text-gray-400">
+        <p>{t.footer.footerRights}</p>
       </div>
     </footer>
   );
