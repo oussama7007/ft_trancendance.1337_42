@@ -55,10 +55,9 @@ The framework and ORM modules are shared with the team. The languages, RTL and m
   1. Moved the last hard-coded texts into the dictionary (page titles, footer address, currency `DH`, `aria-label` of the drawer).
   2. `<html lang>`, `<html dir>` and the page title follow the chosen language.
   3. The choice is saved in `localStorage`; the first visit uses the browser language, then English.
-  4. The map receives the language, so its labels match the site.
-  5. Checked every page in the 3 languages and fixed a missing French word (`Détails`).
+  4. Checked every page in the 3 languages and fixed a missing French word (`Détails`).
 - **Adding a text:** add the same key in `ar`, `fr` and `en`, then use `translations[lang].section.key`.
-- **Limits:** the map language changes after a refresh (Google Maps loads once); numbers and dates are not formatted per language (not required).
+- **Limits:** the labels drawn by Google Maps (street and city names) use Google's own language and are not part of our dictionary; numbers and dates are not formatted per language (not required).
 
 ### Right-to-left support (Minor, 1 pt)
 - **Why:** Arabic is read from right to left, so the layout must mirror, not only the text.
@@ -156,4 +155,4 @@ Each text is stored once per language, so a listing can be searched and shown in
 
 - Listings are read-only for now (they come from the seed data); `ownerId` is not a foreign key yet.
 - Markers are placed around the centre of the city, not at the exact address.
-- The map language changes after a page refresh.
+- The text drawn by Google Maps itself (street and city names) is not translated by us.

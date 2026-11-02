@@ -376,7 +376,6 @@ const filteredMarkers = mapMarkers.filter(
             handleMarkerClick
           }
           currencyLabel={currentLang.currency}
-          lang={lang}
         />
 
       <FeaturedListing

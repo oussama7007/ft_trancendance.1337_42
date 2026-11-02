@@ -1,7 +1,6 @@
 import React from "react";
 import {APIProvider, AdvancedMarker, Map} from '@vis.gl/react-google-maps';
 import { Home as HomeIcon } from 'lucide-react';
-import type { Language } from '../../types';
 
 
 
@@ -49,7 +48,6 @@ interface PropertyMapProps {
     cameraProps: MapCameraProps;
     apiKey: string;
     currencyLabel: string;
-    lang: Language;
 
     onCameraChanged: (camera: MapCameraProps) => void;
     onMarkerClick: (marker: MapMarker) => void;
@@ -63,11 +61,10 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     onCameraChanged,
     onMarkerClick,
     currencyLabel,
-    lang, 
 }) => {
     return (
             <div className="w-full h-[65vh] md:h-[80vh]  min-h-[380px] md:min-h-[550px] mt-4 rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
-            <APIProvider apiKey={apiKey} language={lang}>
+            <APIProvider apiKey={apiKey}>
                 <Map
                     center={cameraProps.center}
                     zoom={cameraProps.zoom}
