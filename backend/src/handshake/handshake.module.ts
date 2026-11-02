@@ -10,6 +10,6 @@ import { HandshakeService } from './handshake.service.js';
   imports: [TypeOrmModule.forFeature([Handshake])],
   controllers: [HandshakeController],
   providers: [HandshakeService],
-  exports: [HandshakeService],
+  exports: [HandshakeService]
 })
 export class HandshakeModule {}

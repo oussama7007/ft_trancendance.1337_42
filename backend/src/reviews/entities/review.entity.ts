@@ -5,7 +5,12 @@ import
   PrimaryGeneratedColumn,
   CreateDateColumn,
   Unique,
+  ManyToOne,
+  JoinColumn
 } from 'typeorm';
+
+import { User } from '../../auth/user.entity.js';
+import { Handshake } from '../../handshake/entities/handshake.entity.js';
 
 export type ReviewRole = 'owner' | 'roommate';
 
@@ -37,4 +42,12 @@ export class Review
 
     @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt: Date;
+
+    @ManyToOne(() => User)
+    @JoinColumn({ name: 'reviewer_id' })
+    reviewer: User;
+
+    @ManyToOne(() => Handshake)
+    @JoinColumn({ name: 'handshake_id' })
+    handshake: Handshake;
 }

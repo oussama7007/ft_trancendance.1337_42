@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Unique,
+  ManyToOne,
+  JoinColumn
 } from 'typeorm';
+import { Listing } from '../../listings/listing.entity.js';
 
 // A handshake between one listing and one client. The two yes answers are
 // stored separately and the status is derived from them (handshake.utils.ts),
@@ -48,4 +51,8 @@ export class Handshake {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
+
+  @ManyToOne(() => Listing)
+  @JoinColumn({ name: 'listing_id' })
+  listing: Listing;
 }

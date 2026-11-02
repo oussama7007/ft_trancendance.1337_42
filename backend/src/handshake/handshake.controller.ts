@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
-  Post,
+  Post
 } from '@nestjs/common';
 import { CurrentUserId } from './decorators/current-user-id.decorator.js';
 import { HandshakeResponseDto } from './dto/handshake-response.dto.js';

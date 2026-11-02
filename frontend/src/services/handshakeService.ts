@@ -34,5 +34,5 @@ export const handshakeService =
   approve(listingId: number, clientId: number, userId: number): Promise<Handshake>
   {
     return request(`/listings/${listingId}/handshakes/${clientId}/approve`, 'POST', userId);
-  },
+  }
 };

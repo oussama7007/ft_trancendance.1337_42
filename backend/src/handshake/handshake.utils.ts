@@ -1,7 +1,7 @@
 import type { Handshake } from './entities/handshake.entity.js';
 import type {
   HandshakeResponseDto,
-  HandshakeStatus,
+  HandshakeStatus
 } from './dto/handshake-response.dto.js';
 
 // Pure helpers that turn a row into the answer the frontend expects. There is
