@@ -98,13 +98,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
     const [activeDetailItem, setActiveDetailItem] = useState<Listing | null>(null);
 
-    const initialCity = CITIES.find(
-        (city) =>
-        
-        city.fr.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        city.en.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        city.ar.toLowerCase().includes(searchQuery.toLowerCase()) 
-        );
+    const initialQuery = searchQuery.trim().toLowerCase();
+    const initialCity = initialQuery
+        ? CITIES.find(
+            (city) =>
+                city.fr.toLowerCase().includes(initialQuery) ||
+                city.en.toLowerCase().includes(initialQuery) ||
+                city.ar.toLowerCase().includes(initialQuery),
+        )
+        : undefined;
     const [cameraProps, setCameraProps] = useState<MapCameraProps>(() =>
         initialCity
         ? {
