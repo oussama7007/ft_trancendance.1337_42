@@ -7,6 +7,8 @@ export interface Roommate {
   roommates: string[];
   genderPreference?: string;
   hasWifi: boolean;
+  lat: number;
+  lng: number;
 }
 
 export const MOCK_ROOMMATES: Roommate[] = [
@@ -19,6 +21,8 @@ export const MOCK_ROOMMATES: Roommate[] = [
     roommates: ['Amine', 'Yassine'],
     genderPreference: 'male',
     hasWifi: true,
+    lat: 33.5786,
+    lng: -7.6343,
   },
   {
     id: 2,
@@ -29,6 +33,8 @@ export const MOCK_ROOMMATES: Roommate[] = [
     roommates: ['Salma'],
     genderPreference: 'female',
     hasWifi: true,
+    lat: 33.5985,
+    lng: -7.645,
   },
   {
     id: 3,
@@ -39,5 +45,7 @@ export const MOCK_ROOMMATES: Roommate[] = [
     roommates: ['Mehdi', 'Hamza'],
     genderPreference: 'male',
     hasWifi: false,
+    lat: 33.9986,
+    lng: -6.853,
   },
 ];

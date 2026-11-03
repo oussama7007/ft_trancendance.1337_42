@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsNumber, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class FilterRoommatesDto
@@ -16,4 +16,8 @@ export class FilterRoommatesDto
   @IsNumber()
   @Min(0)
   maxBudget?: number;
+
+  @IsOptional()
+  @IsIn(['male', 'female'])
+  gender?: string;
 }

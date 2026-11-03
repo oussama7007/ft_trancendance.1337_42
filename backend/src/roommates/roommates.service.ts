@@ -18,6 +18,9 @@ export class RoommatesService
       if (filters.maxBudget && room.price > filters.maxBudget) {
         return false;
       }
+      if (filters.gender && room.genderPreference && room.genderPreference !== filters.gender) {
+        return false;
+      }
       return true;
     });
   }
