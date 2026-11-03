@@ -7,6 +7,10 @@ import { FeaturedListing } from '../Components/home/FeaturedListings';
 import { PropertyDetailsDrawer } from '../Components/home/PropertyDetailsDrawer';
 
 import { fetchListings } from '../api/listings';
+import { fetchRoommates } from '../api/roommates';
+import type { Roommate } from '../types/roommate';
+import { RoommateResults } from '../Components/roommates/RoommateResults';
+import { RoommateDetailsModal } from '../Components/roommates/RoommateDetailsModal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { filtersFromParams, filtersToParams } from '../utils/searchFilters';
 
@@ -131,6 +135,28 @@ const findCityCoords = (cityObj?: Record<Language, string>) =>{
         CITIES[0]);
 };
 
+const findCityByName = (value: string) => {
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue === '') {
+    return undefined;
+  }
+  return CITIES.find((city) =>
+    city.ar.toLowerCase().includes(normalizedValue) ||
+    city.fr.toLowerCase().includes(normalizedValue) ||
+    city.en.toLowerCase().includes(normalizedValue)
+  );
+};
+
+const cameraForRooms = (rooms: Roommate[]): MapCameraProps => ({
+  center: {
+    lat: rooms.reduce((sum, room) => sum + room.lat, 0) / rooms.length,
+    lng: rooms.reduce((sum, room) => sum + room.lng, 0) / rooms.length,
+  },
+  zoom: rooms.length === 1 ? 15 : 12.5,
+  tilt: 45,
+  heading: 0,
+});
+
 let hasDetectedLocation = false;
 
 const detectNearestCity= (lat: number, lng: number)=>{
@@ -169,6 +195,10 @@ export const HomePage: React.FC<HomePageProps> = ({
 
     const [activeDetailItem, setActiveDetailItem] = useState<Listing | null>(null);
 
+    const [roommates, setRoommates] = useState<Roommate[]>([]);
+    const [activeRoommate, setActiveRoommate] = useState<Roommate | null>(null);
+    const [hasRoommateError, setHasRoommateError] = useState(false);
+
     const [cameraProps, setCameraProps] = useState<MapCameraProps>(DEFAULT_CAMERA);
 
     const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -203,6 +233,65 @@ useEffect(() => {
     controller.abort();
   };
 }, [searchQuery, propertyType, priceRange]);
+
+useEffect(() => {
+  if (activeTab !== 'roommate') {
+    return;
+  }
+  const controller = new AbortController();
+
+  const timeoutId = setTimeout(async () => {
+    const typedCity = findCityByName(roommateLocation);
+    try {
+      const data = await fetchRoommates(
+        {
+          city: typedCity ? typedCity.en : roommateLocation,
+          maxBudget: Number(budget) > 0 ? Number(budget) : undefined,
+          gender: roommateGender === 'male' || roommateGender === 'female' ? roommateGender : undefined,
+        },
+        controller.signal,
+      );
+      setRoommates(data);
+      setHasRoommateError(false);
+
+      if (roommateLocation.trim() !== '' && data.length > 0) {
+        setCameraProps(cameraForRooms(data));
+      } else if (typedCity) {
+        setCameraProps({ center: { lat: typedCity.lat, lng: typedCity.lng }, zoom: 12.5, tilt: 45, heading: 0 });
+      } else {
+        setCameraProps(DEFAULT_CAMERA);
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error(error); // technical detail for developers, in the browser console only
+      setRoommates([]);
+      setHasRoommateError(true); // the user only sees a simple message under the map
+    }
+  }, 300);
+
+  return () => {
+    clearTimeout(timeoutId);
+    controller.abort();
+  };
+}, [activeTab, roommateLocation, budget, roommateGender]);
+
+const roommateMarkers = useMemo<MapMarker[]>(() => {
+  return roommates.map((room) => {
+    const city = findCityCoords({ ar: '', fr: room.city, en: room.city });
+    const place = `${room.district} - ${room.city}`;
+    return {
+      id: `roommate-${room.id}`,
+      city: { ar: city.ar, fr: city.fr, en: city.en },
+      lat: room.lat,
+      lng: room.lng,
+      title: { ar: place, fr: place, en: place },
+      price: room.price,
+      category: 'roommate',
+      type: 'apartment',
+      description: { ar: place, fr: place, en: place },
+    };
+  });
+}, [roommates]);
 
     const mapMarkers = useMemo<MapMarker[]>(()=>{
       return (listings || []).map((item, index) => {
@@ -298,14 +387,10 @@ useEffect(() => {
   };
 
   const handlSearchClick = () => {
-    // Roommate tab: open the roommates page with the city and the budget the user typed,
-    // for example /roommates?city=rabat&maxBudget=2000
     if (activeTab === 'roommate') {
-      const roommateParams = new URLSearchParams();
-      if (roommateLocation.trim()) roommateParams.set('city', roommateLocation.trim());
-      // only send the budget when it is a real number above 0, so "abc" is ignored
-      if (Number(budget) > 0) roommateParams.set('maxBudget', String(Number(budget)));
-      navigate({ pathname: '/roommates', search: roommateParams.toString() });
+      if (roommates.length > 0) {
+        setCameraProps(cameraForRooms(roommates));
+      }
       return;
     }
 
@@ -328,6 +413,13 @@ const filteredMarkers = useMemo(() => {
     }
 
     setActiveDetailItem(listing)
+  };
+
+  const handleRoommateMarkerClick = (marker: MapMarker) => {
+    const room = roommates.find((item) => `roommate-${item.id}` === marker.id);
+    if (room) {
+      setActiveRoommate(room);
+    }
   };
 
   const handlContactListing = (listing: Listing) => {
@@ -422,23 +514,41 @@ const filteredMarkers = useMemo(() => {
         />
 
         <PropertyMap
-          markers={filteredMarkers}
+          markers={activeTab === 'roommate' ? roommateMarkers : filteredMarkers}
           cameraProps={cameraProps}
           apiKey={googleMapsApiKey}
           onCameraChanged= {setCameraProps}
           onMarkerClick={
-            handleMarkerClick
+            activeTab === 'roommate' ? handleRoommateMarkerClick : handleMarkerClick
           }
         />
 
-      <FeaturedListing
-        listings={listings}
-        lang={lang}
-        featuredLabel={currentLang.featured}
-        availableLabel={currentLang.available}
-        detailsLabel={currentLang.detailsTitle}
-        onSelect={setActiveDetailItem}
+      {activeTab === 'roommate' ? (
+        <RoommateResults
+          rooms={roommates}
+          hasError={hasRoommateError}
+          title={currentLang.roomsTitle}
+          emptyLabel={currentLang.roomsEmpty}
+          errorLabel={currentLang.roomsError}
+          onSelect={setActiveRoommate}
+        />
+      ) : (
+        <FeaturedListing
+          listings={listings}
+          lang={lang}
+          featuredLabel={currentLang.featured}
+          availableLabel={currentLang.available}
+          detailsLabel={currentLang.detailsTitle}
+          onSelect={setActiveDetailItem}
+        />
+      )}
+
+      <RoommateDetailsModal
+        room={activeRoommate}
+        labels={currentLang}
+        onClose={() => setActiveRoommate(null)}
       />
+
       <PropertyDetailsDrawer
         item={activeDetailItem}
         lang={lang}
