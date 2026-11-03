@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { ChatModule } from './chat/chat.module.js';
 import { HandshakeModule } from './handshake/handshake.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
 
 
 @Module({
@@ -35,6 +36,7 @@ import { HandshakeModule } from './handshake/handshake.module.js';
     ListingsModule,
     ChatModule,
     HandshakeModule,
+    ReviewsModule
   ],
 
   controllers: [AppController],
