@@ -5,6 +5,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 
 import { HomePage } from './Pages/HomePage'
 import { ListingsPage } from './Pages/ListingsPage'
+import { ProfilePage } from './Pages/ProfilePage'
 import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
 import type { Language, Listing, User } from './types'
@@ -54,7 +55,7 @@ function App() {
                 />
                 <Route path="/listings" element={<ListingsPage lang={lang} />} />
                 <Route path="/chat" element={<Placeholder title="Chat" />} />
-                <Route path="/profile" element={<Placeholder title="Profile" />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/signin" element={<Placeholder title="Sign in" />} />
                 <Route path="/signup" element={<Placeholder title="Sign up" />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
