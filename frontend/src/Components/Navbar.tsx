@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--color-accent) shadow-md">
                         <span className="text-lg font-black text-white">iR</span>
                     </div>
-                    <div className="hidden text-left sm:block">
+                    <div className="hidden text-start sm:block">
                         <div className="text-xl font-black tracking-tight text-(--color-primary)">
                             iRent
                         </div>
@@ -167,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </button>
 
                         {isLanguageOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl" >
+                            <div className="absolute end-0 top-full mt-2 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl" >
                                 {languages.map((language) => (
                                     <button key={language.code} type="button"
                                         onClick={()=> handleLanguageChange(language.code)}
@@ -216,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </button>
 
                         {isUserOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl">
+                            <div className="absolute end-0 top-full mt-2 w-48 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl">
                                 <button type="button" onClick={() => goToPage('/profile')}
                                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-100">
                                     <UserCircle size={18}/>
@@ -224,7 +224,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 </button>
 
                                 <button type="button" onClick={handleLogout}
-                                    className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-bold text-red-500 transition hover:bg-red-50">
+                                    className="w-full rounded-lg px-3 py-2.5 text-start text-sm font-bold text-red-500 transition hover:bg-red-50">
                                     {t.navbar.logout}
                                 </button>
                             </div>

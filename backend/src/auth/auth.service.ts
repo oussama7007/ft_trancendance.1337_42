@@ -1,67 +1,3 @@
-// import { Injectable } from '@nestjs/common';
-// import { InjectRepository } from '@nestjs/typeorm';
-// import { Repository } from 'typeorm';
-// import { randomInt } from 'node:crypto';
-// import { RegistrationSession } from './registration-session-entity.js';
-// import { StartRegistrationDto } from './dto/start-registration.dto.js';
-// import { RequestVerificationDto } from './dto/request-verification.dto.js';
-
-
-// @Injectable()
-// export class AuthService {
-//   constructor(
-//     @InjectRepository(RegistrationSession)
-//     private readonly registrationSessionRepository: Repository<RegistrationSession>,
-//   ) {}
-
-//   async startRegistration(data: StartRegistrationDto) {
-//     const session = this.registrationSessionRepository.create(data);
-
-//     return await this.registrationSessionRepository.save(session);
-//   }
-
-//   private getContactType(contact: string)
-//   {
-//     if (contact.includes('@'))
-//       return 'email';
-
-//     if (/^\+?[0-9\s]{8,20}$/.test(contact))
-//       return 'phone';
-
-//     return 'invalid';
-//   }
-
-//     async requestVerification(data: RequestVerificationDto)
-//     {
-//       const session = await this.registrationSessionRepository.findOne({
-//         where: { id: data.sessionId },
-//       });
-
-//       if (!session)
-//         throw new Error('Registration session not found');
-
-//       const contactType = this.getContactType(data.contact);
-
-//       if (contactType === 'invalid')
-//         throw new Error('Invalid email or phone number');
-
-//       const code = randomInt(100000, 1000000).toString();
-
-//       session.contact = data.contact;
-//       session.verificationCode = code;
-//       session.verificationCodeExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
-//       session.isVerified = false;
-
-//       await this.registrationSessionRepository.save(session);
-
-//       console.log(`[DEV] Verification code for ${data.contact}: ${code}`);
-
-//       return {
-//         sessionId: session.id,
-//         message: 'Verification code generated',
-//       };
-//     }
-// }
 
 
 
@@ -86,6 +22,10 @@ import { RequestVerificationDto } from './dto/request-verification.dto.js';
 import { VerifyRegistrationDto } from './dto/verify-registration.dto.js';
 import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
+
+import { JwtService } from '@nestjs/jwt';
+
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -94,9 +34,10 @@ export class AuthService {
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+
+    private readonly jwtService: JwtService, 
   ) {}
 
-  // STEP 1: Save personal information temporarily.
   async startRegistration(data: StartRegistrationDto) {
     const session = this.registrationSessionRepository.create(data);
 
@@ -231,7 +172,24 @@ export class AuthService {
     };
   }
 
+    async getCurrentUser(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      dateOfBirth: user.dateOfBirth,
+      gender: user.gender,
+      contact: user.contact,
+    };
+  }
 
 
   async validateCredentials(data : LoginDto){
@@ -245,9 +203,19 @@ export class AuthService {
     );
     if(!passwordMatches)
         throw new UnauthorizedException('invalid contact or password');
-      return{
-        userId: user.id,
-        contact: user.contact, 
-      }
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
+    });
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        dateOfBirth: user.dateOfBirth,
+        contact: user.contact,
+      },
+    };
   }
 }
