@@ -1,14 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { User } from '../auth/user.entity.js';
+import { CreateListingDto } from './dto/create-listing.dto.js';
 import { Listing } from './listing.entity.js';
 import { FilterListingsDto } from './dto/filter-listings.dto.js';
+import { uploadsBaseUrl } from './upload-options.js';
 
 @Injectable()
 export class ListingsService {
   constructor(
     @InjectRepository(Listing)
     private readonly listingRepository: Repository<Listing>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   async findAll(filters: FilterListingsDto) {
@@ -38,8 +43,60 @@ export class ListingsService {
     return listings.map((l) => this.toResponse(l));
   }
 
+  async findByOwner(ownerId: number) {
+    const listings = await this.listingRepository.find({
+      where: { ownerId },
+      order: { id: 'DESC' },
+    });
+
+    return listings.map((listing) => this.toResponse(listing));
+  }
+
+  async create(ownerId: number, data: CreateListingDto) {
+    const uploadedFiles = data.video ? [...data.images, data.video] : data.images;
+
+    if (!uploadedFiles.every((url) => url.startsWith(uploadsBaseUrl()))) {
+      throw new BadRequestException('Images and video must be uploaded first');
+    }
+
+    const owner = await this.userRepository.findOneBy({ id: ownerId });
+
+    if (!owner) {
+      throw new NotFoundException('User not found');
+    }
+
+    const listing = await this.listingRepository.save(
+      this.listingRepository.create({
+        ownerId,
+        ownerName: `${owner.firstName} ${owner.lastName}`,
+        titleAr: data.title,
+        titleFr: data.title,
+        titleEn: data.title,
+        descriptionAr: data.description,
+        descriptionFr: data.description,
+        descriptionEn: data.description,
+        cityAr: data.cityAr,
+        cityFr: data.cityFr,
+        cityEn: data.cityEn,
+        district: data.district,
+        districtEnFr: data.district,
+        type: data.type,
+        price: data.price,
+        bedrooms: data.bedrooms,
+        hasWifi: data.hasWifi,
+        imageUrl: data.images[0],
+        images: data.images,
+        video: data.video,
+        lat: data.lat,
+        lng: data.lng,
+      }),
+    );
+
+    return this.toResponse(listing);
+  }
+
   // same struct libghay  frontend (Listing فـ types/index.ts)
-  private toResponse(l: Listing) {
+  toResponse(l: Listing) {
     return {
       id: l.id,
       ownerId: l.ownerId,
