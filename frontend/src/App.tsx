@@ -14,6 +14,7 @@ import { LegalPage } from './Pages/LegalPage'
 import { HomePage } from './Pages/HomePage'
 import { ListingsPage } from './Pages/ListingsPage'
 import { NewListingPage } from './Pages/NewListingPage'
+import { ProfilePage } from './Pages/ProfilePage'
 import { LoginPage } from './Pages/LoginPage'
 import { SignUpPage } from './Pages/SignUpPage'
 
@@ -51,17 +52,6 @@ function mapBackendUser(user: BackendUser): User {
         dateOfBirth: user.dateOfBirth,
         cin: user.cin,
     };
-}
-
-// Used for pages that are not implemented yet.
-function Placeholder({ title }: { title: string }) {
-    return (
-        <div className="flex min-h-screen items-center justify-center">
-            <h1 className="text-3xl font-black text-(--color-primary)">
-                {title}
-            </h1>
-        </div>
-    );
 }
 
 // Supported application languages.
@@ -268,7 +258,7 @@ function App() {
 
                 <Route
                     path="/profile"
-                    element={<Placeholder title={t.navbar.profile} />}
+                    element={<ProfilePage />}
                 />
 
                 {/* Teammate's login implementation */}
