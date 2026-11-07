@@ -14,6 +14,7 @@ import {
 import { LegalPage } from './Pages/LegalPage'
 import { HomePage } from './Pages/HomePage'
 import { ListingsPage } from './Pages/ListingsPage'
+import { NewListingPage } from './Pages/NewListingPage'
 import { LoginPage } from './Pages/LoginPage'
 import { SignUpPage } from './Pages/SignUpPage'
 
@@ -242,6 +243,15 @@ function App() {
                 <Route
                     path="/listings"
                     element={<ListingsPage lang={lang} />}
+                />
+
+                <Route
+                    path="/listings/new"
+                    element={
+                        currentUser
+                            ? <NewListingPage lang={lang} />
+                            : <Navigate to="/signin" replace />
+                    }
                 />
 
                 {/* Existing placeholder pages */}
