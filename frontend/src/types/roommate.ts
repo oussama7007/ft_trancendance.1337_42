@@ -1,13 +1,18 @@
-export interface Roommate
-{
+import type { Listing } from './index';
+
+export type GenderChoice = 'any' | 'male' | 'female';
+
+export interface Roommate {
   id: number;
-  city: string;
-  district: string;
-  price: number;
-  ownerName: string;
-  roommates: string[];
-  genderPreference?: string;
-  hasWifi: boolean;
-  lat: number;
-  lng: number;
+  monthlyShare: number;
+  peopleWanted: number;
+  genderPreference: GenderChoice;
+  listing: Listing;
+}
+
+export interface NewRoommatePost {
+  listingId: number;
+  monthlyShare: number;
+  peopleWanted: number;
+  genderPreference: GenderChoice;
 }

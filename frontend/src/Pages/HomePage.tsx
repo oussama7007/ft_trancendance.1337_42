@@ -7,6 +7,13 @@ import { FeaturedListing } from '../Components/home/FeaturedListings';
 import { PropertyDetailsDrawer } from '../Components/home/PropertyDetailsDrawer';
 
 import { fetchListings } from '../api/listings';
+import { RoommateChoice } from '../Components/roommates/RoommateChoice';
+import { RoommateDetailsModal } from '../Components/roommates/RoommateDetailsModal';
+import { RoommateResults } from '../Components/roommates/RoommateResults';
+import { PostRoomWizard } from '../Components/roommates/PostRoomWizard';
+import { useRoommateSearch } from '../hooks/useRoommateSearch';
+import type { Roommate } from '../types/roommate';
+import { cameraForRooms, roomsToMarkers } from '../utils/roommateMap';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { filtersFromParams, filtersToParams } from '../utils/searchFilters';
 import { CITIES } from '../data/cities';
@@ -88,7 +95,10 @@ export const HomePage: React.FC<HomePageProps> = ({
     const currentLang = translations[lang].homePage;
     const isRTL = lang === 'ar';
 
-    const [activeTab, setActiveTab] = useState<HomeTab>('home');
+    const [activeTab, setActiveTab] = useState<HomeTab>(searchParams.get('tab') === 'roommate' ? 'roommate' : 'home');
+    const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+    const [isPostingRoom, setIsPostingRoom] = useState(false);
+    const [activeRoom, setActiveRoom] = useState<Roommate | null>(null);
     const [searchQuery, setSearchQuery] = useState(initialFilters.city);
     const [propertyType, setPropertyType] = useState<PropertyType>(initialFilters.type);
     const [priceRange, setPriceRange] = useState<PriceRange>(initialFilters.priceRange);
@@ -97,6 +107,14 @@ export const HomePage: React.FC<HomePageProps> = ({
     const [roommateGender, setRoommateGender] = useState<GenderPreference>('');
 
     const [activeDetailItem, setActiveDetailItem] = useState<Listing | null>(null);
+
+    const showRooms = activeTab === 'roommate' && isJoiningRoom;
+    const { rooms, hasError: hasRoomsError, reload: reloadRooms } = useRoommateSearch({
+      enabled: showRooms,
+      city: roommateLocation,
+      budget,
+      gender: roommateGender,
+    });
 
     const initialQuery = searchQuery.trim().toLowerCase();
     const initialCity = initialQuery
@@ -253,15 +271,62 @@ useEffect(() => {
     }
   };
 
+  useEffect(() => {
+    if (showRooms && roommateLocation.trim() !== '' && rooms.length > 0) {
+      setCameraProps(cameraForRooms(rooms));
+    }
+  }, [showRooms, roommateLocation, rooms]);
+
+  const handleJoinRoom = () => {
+    setIsJoiningRoom(true);
+    setCameraProps(DEFAULT_CAMERA);
+  };
+
+  const handlePostRoom = () => {
+    if (isLoggedIn) {
+      setIsPostingRoom(true);
+    } else {
+      navigate('/signin');
+    }
+  };
+
+  const handleRoomPosted = () => {
+    setIsPostingRoom(false);
+    setIsJoiningRoom(true);
+    reloadRooms();
+  };
+
+  const handleRoomContact = (room: Roommate) => {
+    navigate(isLoggedIn ? `/chat?listing=${room.listing.id}` : '/signin');
+  };
+
+  const handleRoomMarkerClick = (marker: MapMarker) => {
+    const room = rooms.find((item) => `roommate-${item.id}` === marker.id);
+    if (room) {
+      setActiveRoom(room);
+    }
+  };
+
+  const handleTabChange = (tab: HomeTab) => {
+    if (tab === 'list') {
+      navigate(isLoggedIn ? '/listings/new' : '/signin');
+    } else {
+      setActiveTab(tab);
+    }
+  };
+
   const handlSearchClick = () => {
+    if (activeTab === 'roommate') {
+      if (rooms.length > 0) {
+        setCameraProps(cameraForRooms(rooms));
+      }
+      return;
+    }
+
     const homeFilters: SearchFilters = { city: searchQuery, type: propertyType, priceRange };
-    const target: SearchFilters =
-      activeTab === 'roommate'
-        ? { city: roommateLocation, type: '', priceRange: '' }
-        : homeFilters;
 
     navigate({ pathname: '/', search: filtersToParams(homeFilters).toString() }, { replace: true });
-    navigate({ pathname: '/listings', search: filtersToParams(target).toString() });
+    navigate({ pathname: '/listings', search: filtersToParams(homeFilters).toString() });
   };
 
 const filteredMarkers = mapMarkers.filter(
@@ -323,7 +388,7 @@ const filteredMarkers = mapMarkers.filter(
 
         <HomeSearchPanel
          activeTab={activeTab}
-          onTabChange={(tab) => { if (tab !== 'list') setActiveTab(tab); }}
+          onTabChange={handleTabChange}
 
           isLoggedIn={isLoggedIn}
           onNavigate={(path) => navigate(path)}
@@ -364,20 +429,35 @@ const filteredMarkers = mapMarkers.filter(
             handlSearchClick
           }
 
+          showRoommateSearch={isJoiningRoom}
+          roommateChoice={
+            <RoommateChoice
+              lang={lang}
+              isJoining={isJoiningRoom}
+              onJoin={handleJoinRoom}
+              onPost={handlePostRoom}
+            />
+          }
+
           labels={currentLang}
         />
 
         <PropertyMap
-          markers={filteredMarkers}
+          markers={showRooms ? roomsToMarkers(rooms) : filteredMarkers}
           cameraProps={cameraProps}
           apiKey={googleMapsApiKey}
           onCameraChanged= {setCameraProps}
           onMarkerClick={
-            handleMarkerClick
+            showRooms ? handleRoomMarkerClick : handleMarkerClick
           }
           currencyLabel={currentLang.currency}
         />
 
+      {showRooms && (
+        <RoommateResults lang={lang} rooms={rooms} hasError={hasRoomsError} onSelect={setActiveRoom} />
+      )}
+
+      {activeTab !== 'roommate' && (
       <FeaturedListing
         listings={listings}
         lang={lang}
@@ -386,6 +466,23 @@ const filteredMarkers = mapMarkers.filter(
         detailsLabel={currentLang.detailsTitle}
         onSelect={setActiveDetailItem}
       />
+      )}
+
+      <RoommateDetailsModal
+        lang={lang}
+        room={activeRoom}
+        onClose={() => setActiveRoom(null)}
+        onContact={handleRoomContact}
+      />
+
+      {isPostingRoom && (
+        <PostRoomWizard
+          lang={lang}
+          onClose={() => setIsPostingRoom(false)}
+          onPosted={handleRoomPosted}
+        />
+      )}
+
       <PropertyDetailsDrawer
         item={activeDetailItem}
         lang={lang}
