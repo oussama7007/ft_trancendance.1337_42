@@ -24,7 +24,7 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 
 import { JwtService } from '@nestjs/jwt';
-
+import { MailService } from '../mail/mail.service.js';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +36,8 @@ export class AuthService {
     private readonly userRepository: Repository<User>,
 
     private readonly jwtService: JwtService, 
+
+    private readonly mailService: MailService,
   ) {}
 
   async startRegistration(data: StartRegistrationDto) {
@@ -92,8 +94,7 @@ export class AuthService {
 
     await this.registrationSessionRepository.save(session);
 
-    // Development only: replace with real email/SMS delivery later.
-    console.log(`[DEV] Verification code for ${contact}: ${code}`);
+    await this.mailService.sendVerificationCode(contact, code);
 
     return {
       sessionId: session.id,
