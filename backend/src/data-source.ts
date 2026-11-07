@@ -10,6 +10,7 @@ import { RegistrationSession } from './auth/registration-session-entity.js';
 import { User } from './auth/user.entity.js';
 
 import { Listing } from './listings/listing.entity.js';
+import { RoommatePost } from './roommates/roommate-post.entity.js';
 
 
 
@@ -21,7 +22,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  entities: [RegistrationSession, User, Listing],
+  entities: [RegistrationSession, User, Listing, RoommatePost],
 
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

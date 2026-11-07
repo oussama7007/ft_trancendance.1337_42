@@ -1,26 +1,25 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import type { AuthenticatedRequest } from '../auth/jwt-auth.guard.js';
+import { CreateRoommatePostDto } from './dto/create-roommate-post.dto.js';
+import { FilterRoommatesDto } from './dto/filter-roommates.dto.js';
 import { RoommatesService } from './roommates.service.js';
-import { FilterRoommatesDto } from './filter-roommates.dto.js';
-import { Roommate } from './mock-roommates.js';
 
-// This is Responsible for request of /roomates
 @Controller('roommates')
-export class RoommatesController
-{
+export class RoommatesController {
   constructor(private readonly roommatesService: RoommatesService) {}
 
   @Get()
-  getRoommates(@Query() query: FilterRoommatesDto): Roommate[] {
-    return this.roommatesService.filter(query);
+  search(@Query() filters: FilterRoommatesDto) {
+    return this.roommatesService.search(filters);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  createPost(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: CreateRoommatePostDto,
+  ) {
+    return this.roommatesService.createPost(request.user!.sub, data);
   }
 }
-
-// 			/roommates?city=rabat&district=maarif&maxbudget=2500
-/* 
-	{
-		city=rabt,
-		
-	}
-*/
-// app.res.send(object)
-

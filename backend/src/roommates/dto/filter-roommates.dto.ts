@@ -1,19 +1,14 @@
-import { IsIn, IsOptional, IsString, IsNumber, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class FilterRoommatesDto
-{
+export class FilterRoommatesDto {
   @IsOptional()
   @IsString()
   city?: string;
 
   @IsOptional()
-  @IsString()
-  district?: string;
-
-  @IsOptional()
   @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(0)
   maxBudget?: number;
 

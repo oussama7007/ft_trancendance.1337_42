@@ -1,27 +1,96 @@
-import { Injectable } from '@nestjs/common';
-import { MOCK_ROOMMATES, Roommate } from './mock-roommates.js';
-import { FilterRoommatesDto } from './filter-roommates.dto.js';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Listing } from '../listings/listing.entity.js';
+import { ListingsService } from '../listings/listings.service.js';
+import { CreateRoommatePostDto } from './dto/create-roommate-post.dto.js';
+import { FilterRoommatesDto } from './dto/filter-roommates.dto.js';
+import { RoommatePost } from './roommate-post.entity.js';
 
 @Injectable()
-export class RoommatesService
-{
-  private roommates: Roommate[] = MOCK_ROOMMATES;
+export class RoommatesService {
+  constructor(
+    @InjectRepository(RoommatePost)
+    private readonly postRepository: Repository<RoommatePost>,
+    @InjectRepository(Listing)
+    private readonly listingRepository: Repository<Listing>,
+    private readonly listingsService: ListingsService,
+  ) {}
 
-  filter(filters: FilterRoommatesDto): Roommate[] {
-    return this.roommates.filter((room) => {
-      if (filters.city && room.city.toLowerCase() !== filters.city.toLowerCase()) {
-        return false;
-      }
-      if (filters.district && room.district.toLowerCase() !== filters.district.toLowerCase()) {
-        return false;
-      }
-      if (filters.maxBudget && room.price > filters.maxBudget) {
-        return false;
-      }
-      if (filters.gender && room.genderPreference && room.genderPreference !== filters.gender) {
-        return false;
-      }
-      return true;
+  async search(filters: FilterRoommatesDto) {
+    const query = this.postRepository
+      .createQueryBuilder('post')
+      .innerJoinAndSelect('post.listing', 'listing');
+
+    if (filters.city) {
+      query.andWhere(
+        '(listing.cityAr ILIKE :city OR listing.cityFr ILIKE :city OR listing.cityEn ILIKE :city)',
+        { city: `%${filters.city.trim()}%` },
+      );
+    }
+
+    if (filters.maxBudget !== undefined) {
+      query.andWhere('post.monthlyShare <= :maxBudget', {
+        maxBudget: filters.maxBudget,
+      });
+    }
+
+    if (filters.gender) {
+      query.andWhere("post.genderPreference IN ('any', :gender)", {
+        gender: filters.gender,
+      });
+    }
+
+    const posts = await query.orderBy('post.id', 'DESC').getMany();
+
+    return posts.map((post) => this.toResponse(post));
+  }
+
+  async createPost(ownerId: number, data: CreateRoommatePostDto) {
+    const listing = await this.listingRepository.findOneBy({
+      id: data.listingId,
     });
+
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.ownerId !== ownerId) {
+      throw new ForbiddenException('This listing belongs to someone else');
+    }
+
+    const alreadyPosted = await this.postRepository.existsBy({
+      listing: { id: listing.id },
+    });
+
+    if (alreadyPosted) {
+      throw new ConflictException('This listing is already posted');
+    }
+
+    const post = await this.postRepository.save(
+      this.postRepository.create({
+        listing,
+        monthlyShare: data.monthlyShare,
+        peopleWanted: data.peopleWanted,
+        genderPreference: data.genderPreference,
+      }),
+    );
+
+    return this.toResponse(post);
+  }
+
+  private toResponse(post: RoommatePost) {
+    return {
+      id: post.id,
+      monthlyShare: post.monthlyShare,
+      peopleWanted: post.peopleWanted,
+      genderPreference: post.genderPreference,
+      listing: this.listingsService.toResponse(post.listing),
+    };
   }
 }
