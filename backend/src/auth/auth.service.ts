@@ -10,6 +10,7 @@ import {
 
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { randomInt } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
@@ -23,7 +24,6 @@ import { VerifyRegistrationDto } from './dto/verify-registration.dto.js';
 import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 
-import { JwtService } from '@nestjs/jwt';
 import { MailService } from '../mail/mail.service.js';
 
 @Injectable()

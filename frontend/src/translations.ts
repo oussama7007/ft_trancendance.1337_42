@@ -132,9 +132,27 @@ export const translations = {
 
             location: 'الموقع',
             price: 'السعر',
-            perMonth: '/ الشهر',
+            perMonth: '/ الشهر',      
             currency: 'درهم',
             close: 'إغلاق',
+        },
+        /************* Chat [ar] *************/
+        chat: {
+            title: 'المحادثات',
+            conversation: 'محادثة',
+            search: 'البحث في المحادثات...',
+            online: 'متصل',
+            offline: 'غير متصل',
+            typeMessage: 'اكتب رسالة...',
+            send: 'إرسال',
+            noMessages: 'لا توجد رسائل بعد',
+            noConversationsTitle: 'لا توجد محادثات بعد',
+            noConversationsDesc: 'يبدو أنك لم تبدأ أي محادثة مع أي من المالكين بعد.',
+            selectToStart: 'اختر محادثة لبدء الدردشة',
+            loadingConversations: 'جاري تحميل المحادثات...',
+            loadError: 'تعذر تحميل المحادثات.',
+            sendError: 'تعذر إرسال الرسالة.',
+            retry: 'إعادة المحاولة',
         }
     },
     en: {
@@ -272,6 +290,24 @@ export const translations = {
             perMonth: '/ month',
             currency: 'DH',
             close: 'Close',
+        },
+        /************* Chat [en] *************/
+        chat: {
+            title: 'Messages',
+            conversation: 'Conversation',
+            search: 'Search conversations...',
+            online: 'Online',
+            offline: 'Offline',
+            typeMessage: 'Type a message...',
+            send: 'Send',
+            noMessages: 'No messages yet',
+            noConversationsTitle: 'No conversations yet',
+            noConversationsDesc: "Looks like you haven't initiated a conversation with any of our landlords yet.",
+            selectToStart: 'Select a conversation to start chatting',
+            loadingConversations: 'Loading conversations...',
+            loadError: 'Could not load conversations.',
+            sendError: 'Could not send message.',
+            retry: 'Retry',
         }
     },
     fr: {
@@ -408,7 +444,24 @@ export const translations = {
             perMonth: '/ mois',
             currency: 'DH',
             close: 'Fermer',
+        },
+        /************* Chat [fr] *************/
+        chat: {
+            title: 'Messages',
+            conversation: 'Conversation',
+            search: 'Rechercher des conversations...',
+            online: 'En ligne',
+            offline: 'Hors ligne',
+            typeMessage: 'Écrire un message...',
+            send: 'Envoyer',
+            noMessages: 'Aucun message pour le moment',
+            noConversationsTitle: 'Aucune conversation pour le moment',
+            noConversationsDesc: "Il semble que vous n'ayez encore entamé aucune conversation avec l'un de nos propriétaires.",
+            selectToStart: 'Sélectionnez une conversation pour commencer à discuter',
+            loadingConversations: 'Chargement des conversations...',
+            loadError: 'Impossible de charger les conversations.',
+            sendError: 'Impossible d’envoyer le message.',
+            retry: 'Réessayer',
         }
     },
 };
-

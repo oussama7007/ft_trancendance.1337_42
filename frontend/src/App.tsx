@@ -1,5 +1,4 @@
 
-import './App.css'
 import './index.css'
 
 import { useState, useEffect } from 'react'
@@ -20,6 +19,7 @@ import { SignUpPage } from './Pages/SignUpPage'
 
 import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
+import Chat from './Components/chat/Chat'
 
 import type { Language, Listing, User } from './types'
 import { translations } from './translations'
@@ -206,8 +206,10 @@ function App() {
         );
     }
 
+    const isRtl = lang === 'ar';
+
     return (
-        <div className="min-h-screen bg-white">
+        <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen bg-white">
             <Navbar
                 lang={lang}
                 setLang={setLang}
@@ -257,7 +259,11 @@ function App() {
                 {/* Existing placeholder pages */}
                 <Route
                     path="/chat"
-                    element={<Placeholder title={t.navbar.chat} />}
+                    element={
+                        currentUser
+                            ? <Chat lang={lang} currentUserId={currentUser.id} />
+                            : <Navigate to="/signin" replace />
+                    }
                 />
 
                 <Route

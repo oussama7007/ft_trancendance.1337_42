@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   MapPin,
   Wallet,
   MessageCircle,
   Home,
+  Clock,
+  CheckCircle2,
 } from 'lucide-react';
 
 import type { Language, Listing } from '../../types';
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 
 interface PropertyDetailsDrawerProps {
@@ -27,7 +31,7 @@ interface PropertyDetailsDrawerProps {
 
 export const PropertyDetailsDrawer: React.FC<
   PropertyDetailsDrawerProps> = 
- ({
+  ({
   item,
   lang,
   title,
@@ -39,12 +43,78 @@ export const PropertyDetailsDrawer: React.FC<
   onClose,
   onContact,
 }) => {
+  const [requestStatus, setRequestStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED'>('NONE');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!item) {
+      setRequestStatus('NONE');
+      return;
+    }
+
+    const fetchInterestStatus = async () => {
+      try {
+        const res = await fetch(`${API_URL}/chat/interest-requests/status/${item.id}`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            setRequestStatus(data.status);
+          } else {
+            setRequestStatus('NONE');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch interest status', err);
+      }
+    };
+
+    fetchInterestStatus();
+  }, [item]);
+
   if (!item) {
     return null;
   }
 
   const propertyTitle = item.title[lang];
   const city = item.city[lang];
+
+  const handleContactClick = async () => {
+    if (requestStatus === 'ACCEPTED') {
+      onContact(item);
+      return;
+    }
+
+    if (requestStatus === 'PENDING') {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ownerId = (item as any).ownerId || 1; 
+
+      const res = await fetch(`${API_URL}/chat/interest-requests`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          listingId: item.id,
+          ownerId: ownerId,
+        }),
+      });
+
+      if (res.ok) {
+        setRequestStatus('PENDING');
+      }
+    } catch (err) {
+      console.error('Failed to send interest request', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none">
@@ -170,15 +240,35 @@ export const PropertyDetailsDrawer: React.FC<
                 </div>
             </div>
 
-            {/* Contact */}
+            {/* Contact / Request Button */}
             <button
                 type="button"
-                onClick={() => onContact(item)}
-                className="w-full mt-6 py-3.5 px-5 rounded-xl bg-(--color-accent) hover:bg-(--color-accent-dark) text-white font-black text-sm flex items-center justify-center gap-2 shadow-md transition cursor-pointer"
+                onClick={handleContactClick}
+                disabled={loading || requestStatus === 'PENDING'}
+                className={`w-full mt-6 py-3.5 px-5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition cursor-pointer ${
+                  requestStatus === 'PENDING'
+                    ? 'bg-amber-500 text-white cursor-not-allowed'
+                    : requestStatus === 'ACCEPTED'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-(--color-accent) hover:bg-(--color-accent-dark) text-white'
+                }`}
             >
-                <MessageCircle className="w-4 h-4" />
-
-                {contactLabel}
+                {requestStatus === 'PENDING' ? (
+                    <>
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        Pending request to the owner
+                    </>
+                ) : requestStatus === 'ACCEPTED' ? (
+                    <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        Chat Unlocked - Open Chat
+                    </>
+                ) : (
+                    <>
+                        <MessageCircle className="w-4 h-4" />
+                        {contactLabel}
+                    </>
+                )}
             </button>
 
             </div>

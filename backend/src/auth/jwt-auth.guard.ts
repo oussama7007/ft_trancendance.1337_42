@@ -1,4 +1,3 @@
-
 import {
   CanActivate,
   ExecutionContext,
@@ -15,7 +14,7 @@ type JwtPayload = {
 };
 
 export interface AuthenticatedRequest extends Request {
-  user?: JwtPayload;
+  user?: JwtPayload & { userId: number };
 }
 
 @Injectable()
@@ -23,29 +22,35 @@ export class JwtAuthGuard implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request =
-      context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const token = this.findToken(request);
 
-
-
-  const token = request.cookies?.access_token;
-
-  if (typeof token !== 'string' || !token) {
-    throw new UnauthorizedException('Authentication cookie is missing');
-  }
+    if (!token) {
+      throw new UnauthorizedException('Authentication token is missing');
+    }
 
     try {
-      const payload =
-        await this.jwtService.verifyAsync<JwtPayload>(token);
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
 
-      if (typeof payload.sub !== 'number') {
+      if (!Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
         throw new Error('Invalid user ID in token');
       }
 
-      request.user = payload;
+      request.user = { ...payload, userId: payload.sub };
       return true;
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
+  }
+
+  private findToken(request: AuthenticatedRequest): string | undefined {
+    const cookieToken = request.cookies?.access_token;
+
+    if (typeof cookieToken === 'string' && cookieToken) {
+      return cookieToken;
+    }
+
+    const [type, bearerToken] = request.headers.authorization?.split(' ') ?? [];
+    return type === 'Bearer' ? bearerToken : undefined;
   }
 }
