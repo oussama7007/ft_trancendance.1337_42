@@ -170,7 +170,7 @@ export const translations = {
             brandSubtitle: 'Rent your home easily',
         },
         
-        roommates: {
+        roommates: { 
             joinRoom: 'Join a room',
             postRoom: 'Post a room',
             roomsTitle: 'Rooms available',
