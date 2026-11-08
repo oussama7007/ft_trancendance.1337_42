@@ -169,6 +169,7 @@ export const translations = {
             closeMenu: 'Close menu',
             brandSubtitle: 'Rent your home easily',
         },
+        
         roommates: {
             joinRoom: 'Join a room',
             postRoom: 'Post a room',
