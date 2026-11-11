@@ -261,7 +261,7 @@ function App() {
                     path="/profile"
                     element={
                         currentUser
-                            ? <ProfilePage user={currentUser} />
+                            ? <ProfilePage user={currentUser} lang={lang}/>
                             : <Navigate to="/signin" replace />
                     }
                 />

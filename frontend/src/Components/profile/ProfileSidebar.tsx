@@ -8,48 +8,57 @@ import {
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
+
+
+import type { ProfileTranslations } from '../../translations';
+
+interface ProfileSidebarProps {
+    t: ProfileTranslations['sidebar'];
+}
+
 // Pages that already exist in the application.
 const navigationItems = [
     // TODO [DASHBOARD TEAMMATE]:
     // Replace this destination with the Dashboard route when implemented.
-    { label: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { key: 'dashboard', path: '/', icon: LayoutDashboard },
 
     // PROFILE: Implemented by the Profile developer.
-    { label: 'Profile', path: '/profile', icon: UserRound },
+    { key: 'profile', path: '/profile', icon: UserRound },
 
     // TODO [CHAT TEAMMATE]:
     // Integrate the Chat / Messages page here.
-    { label: 'Messages', path: '/chat', icon: MessageCircle },
-];
+    { key: 'messages', path: '/chat', icon: MessageCircle },
+] as const ;
 
 // Future pages. Keep their icons visible until implementation.
 const futureItems = [
     // TODO [FAVORITES TEAMMATE]:
     // Implement the user's favorite properties and connect the route.
-    { label: 'Favorites', icon: Heart },
+    { key: 'Favorites', icon: Heart },
 
     // TODO [SETTINGS TEAMMATE]:
     // Implement the user's account settings and connect the route.
-    { label: 'Settings', icon: Settings },
-];
+    { key: 'Settings', icon: Settings },
+] as const;
 
-export function ProfileSidebar() {
+export function ProfileSidebar({t} : ProfileSidebarProps) {
     return (
         <aside className="h-fit rounded-2xl border border-(--color-border) bg-(--color-surface) p-2 shadow-sm">
             <nav
-                aria-label="Main navigation"
+                aria-label={t.navigation}
                 className="flex flex-row justify-around gap-1 md:flex-col md:justify-start"
             >
                 {navigationItems.map((item) => {
                     const Icon = item.icon;
+                    const label = t[item.key];
 
                     return (
                         <NavLink
-                            key={item.label}
+                            key={item.key}
                             to={item.path}
                             end={item.path === '/'}
-                            title={item.label}
-                            aria-label={item.label}
+                            title={label}
+                            aria-label={label}
                             className={({ isActive }) =>
                                 `flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${
                                     isActive
@@ -67,14 +76,15 @@ export function ProfileSidebar() {
 
                 {futureItems.map((item) => {
                     const Icon = item.icon;
+                     const label = t[item.key];
 
                     return (
                         <button
-                            key={item.label}
+                            key={item.key}
                             type="button"
-                            title={`${item.label} (coming soon)`}
-                            aria-label={`${item.label}, coming soon`}
-                            disabled
+                            title={`${label} (${t.comingSoon})`}
+                            aria-label={`${label}, ${t.comingSoon}`}
+                            // disabled
                             className="flex h-12 w-12 cursor-not-allowed items-center justify-center rounded-xl text-(--color-muted) opacity-60"
                         >
                             <Icon size={22} strokeWidth={1.9} />
