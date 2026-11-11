@@ -15,12 +15,13 @@ interface ProfilePageProps {
     lang: Language;
 }
 
-export function ProfilePage({ user, lang }: ProfilePageProps) {
+export function ProfilePage({ user, lang, }: ProfilePageProps) {
     // These states keep the new image and description visible in this page.
     // They are preview states only until the backend profile endpoints exist.
     const t = translations[lang].profile;
     const [avatar, setAvatar] = useState(user.avatar);
     const [description, setDescription] = useState(user.bio ?? '');
+
 
     return (
         <main 

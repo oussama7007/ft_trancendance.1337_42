@@ -76,9 +76,9 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
     ? new Date(user.createdAt).toLocaleDateString(locale)
     : null;
     const isMale = user.gender?.toLowerCase() === 'male';
-    const isFemale = user.gender?.toLowerCase() === 'female';
-    const GenderIcon = isMale ? Mars : isFemale ? Venus : UserRound;
-    const genderLabel = isMale? t.male : isFemale ? t.female : t.notSpecified;
+    
+    const GenderIcon = isMale ? Mars : Venus;
+    const genderLabel = isMale? t.male : t.female;
 
     return (
         <section className="flex flex-col items-center gap-5 rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 shadow-sm sm:flex-row sm:items-center sm:gap-7 sm:p-7">
@@ -91,7 +91,7 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
 
             <div className="min-w-0 text-center sm:text-start">
                 <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-(--color-accent)">
-                    Tenant profile
+                    {t.title}
                 </p>
                 <h1 className="break-words text-2xl font-extrabold text-(--color-primary) sm:text-3xl">
                     {fullName}
@@ -100,7 +100,7 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
                 <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm text-(--color-muted) sm:justify-start">
                     <span className="inline-flex items-center gap-2">
                         <UserRound size={18} className="text-(--color-accent)" />
-                        {age === null ? 'Age not available' : `Age: ${age}`}
+                        {formattedAge}
                     </span>
 
                     <span className="inline-flex items-center gap-2">
@@ -111,7 +111,7 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
                     {user.createdAt && (
                         <span className="inline-flex items-center gap-2">
                             <CalendarDays size={18} className="text-(--color-accent)" />
-                            Tenant since {new Date(user.createdAt).toLocaleDateString()}
+                            {t.tenantSince} {formattedCreatedAt}
                         </span>
                     )}
                 </div>

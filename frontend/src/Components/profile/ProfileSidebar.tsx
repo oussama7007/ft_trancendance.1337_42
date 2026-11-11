@@ -34,11 +34,11 @@ const navigationItems = [
 const futureItems = [
     // TODO [FAVORITES TEAMMATE]:
     // Implement the user's favorite properties and connect the route.
-    { key: 'Favorites', icon: Heart },
+    { key: 'favorites', icon: Heart },
 
     // TODO [SETTINGS TEAMMATE]:
     // Implement the user's account settings and connect the route.
-    { key: 'Settings', icon: Settings },
+    { key: 'settings', icon: Settings },
 ] as const;
 
 export function ProfileSidebar({t} : ProfileSidebarProps) {

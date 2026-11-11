@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { CreditCard, Eye, EyeOff } from 'lucide-react';
+import type { ProfileTranslations } from '../../translations';
+
+
 
 interface CINCardProps {
     cin?: string;
+    t: ProfileTranslations['cin'];
 }
 
-export function CINCard({ cin }: CINCardProps) {
+export function CINCard({ cin, t }: CINCardProps) {
     const [isVisible, setIsVisible] = useState(false);
 
     // Keep the CIN hidden by default because it is personal information.
@@ -13,7 +17,7 @@ export function CINCard({ cin }: CINCardProps) {
         ? isVisible
             ? cin
             : `${'*'.repeat(Math.max(cin.length - 3, 0))}${cin.slice(-3)}`
-        : 'Not provided';
+        : t.notProvided;
 
     return (
         <section className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 shadow-sm sm:p-6">
@@ -21,13 +25,13 @@ export function CINCard({ cin }: CINCardProps) {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-(--color-accent-soft) text-(--color-accent)">
                     <CreditCard size={19} />
                 </div>
-                <h2 className="text-lg font-bold text-(--color-primary)">Identity card</h2>
+                <h2 className="text-lg font-bold text-(--color-primary)">{t.title}</h2>
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-xl bg-(--color-background) p-4">
                 <div className="min-w-0">
                     <p className="text-xs font-semibold uppercase tracking-wide text-(--color-muted)">
-                        CIN number
+                        {t.show}
                     </p>
                     <p className="mt-1 break-all font-semibold tracking-wider text-(--color-primary)">
                         {displayedCIN}
@@ -46,7 +50,7 @@ export function CINCard({ cin }: CINCardProps) {
                 )}
             </div>
             <p className="mt-3 text-xs leading-5 text-(--color-muted)">
-                Your identity number is only visible in your authenticated profile.
+                {t.privacy}
             </p>
         </section>
     );

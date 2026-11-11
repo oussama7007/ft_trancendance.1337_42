@@ -2,8 +2,11 @@
 import { ExternalLink, Globe, Share2 } from 'lucide-react';
 import type { User } from '../../types';
 
+import type { ProfileTranslations } from '../../translations';
+
 interface SocialMediaCardProps {
     user: User;
+    t: ProfileTranslations['social']
 }
 
 interface SocialLink {
@@ -43,7 +46,7 @@ function getSafeSocialUrl(value: string, domain: string): string | null {
     }
 }
 
-export function SocialMediaCard({ user }: SocialMediaCardProps) {
+export function SocialMediaCard({ user , t}: SocialMediaCardProps) {
     const links: SocialLink[] = [];
 
     // Add LinkedIn only when the user has provided a valid URL.
@@ -81,7 +84,7 @@ export function SocialMediaCard({ user }: SocialMediaCardProps) {
                 </div>
 
                 <h2 className="text-lg font-bold text-(--color-primary)">
-                    Social Media
+                    {t.title}
                 </h2>
             </div>
 
@@ -118,7 +121,7 @@ export function SocialMediaCard({ user }: SocialMediaCardProps) {
                 </div>
             ) : (
                 <p className="rounded-xl bg-(--color-background) px-4 py-5 text-sm leading-6 text-(--color-muted)">
-                    No social media profiles have been added yet.
+                    {t.empty}
                 </p>
             )}
 

@@ -1,13 +1,15 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Camera, UserRound } from 'lucide-react';
+import type { ProfileTranslations } from '../../translations';
 
 interface AvatarUploadProps {
     avatar?: string;
     fullName: string;
     onAvatarChange: (newAvatar: string) => void;
+    t: ProfileTranslations['avatar'];
 }
 
-export function AvatarUpload({ avatar, fullName, onAvatarChange }: AvatarUploadProps) {
+export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUploadProps) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [error, setError] = useState('');
 
@@ -22,13 +24,13 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange }: AvatarUploadP
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
         if (!allowedTypes.includes(file.type)) {
-            setError('Choose a JPG, PNG, or WebP image.');
+            setError(t.invalidType);
             event.target.value = '';
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            setError('The image must be smaller than 5 MB.');
+            setError(t.tooLarge);
             event.target.value = '';
             return;
         }
