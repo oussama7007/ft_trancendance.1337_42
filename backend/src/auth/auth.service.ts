@@ -186,6 +186,7 @@ export class AuthService {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      cin: user.cin,
       dateOfBirth: user.dateOfBirth,
       gender: user.gender,
       contact: user.contact,
