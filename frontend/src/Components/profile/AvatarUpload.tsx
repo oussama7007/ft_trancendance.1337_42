@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Camera, UserRound } from 'lucide-react';
 import type { ProfileTranslations } from '../../translations';
+import { Avatar } from '../../components/ui/avatar';
 
 interface AvatarUploadProps {
     avatar?: string;
