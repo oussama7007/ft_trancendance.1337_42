@@ -1,14 +1,17 @@
 import { Star } from 'lucide-react';
+import { translations } from '../../translations';
+import type { Language } from '../../types';
 
 interface StarRatingProps
 {
   value: number;
   size?: number;
+  lang?: Language;
   onChange?: (value: number) => void;
 }
 
-// Five stars. Pass onChange to make them clickable.
-export default function StarRating({ value, size = 18, onChange }: StarRatingProps)
+// Five stars. Pass onChange to make them clickable
+export default function StarRating({ value, size = 18, lang = 'en', onChange }: StarRatingProps)
 {
   const stars = [1, 2, 3, 4, 5];
 
@@ -20,8 +23,8 @@ export default function StarRating({ value, size = 18, onChange }: StarRatingPro
 
         const icon = (
           <span className="relative inline-block" style={{ width: size, height: size }}>
-            <Star size={size} className="absolute left-0 top-0 text-[#D9DCE1]" fill="currentColor" strokeWidth={0} />
-            <span className="absolute left-0 top-0 overflow-hidden" style={{ width: `${fill}%`, height: size }}>
+            <Star size={size} className="absolute start-0 top-0 text-[#D9DCE1]" fill="currentColor" strokeWidth={0} />
+            <span className="absolute start-0 top-0 overflow-hidden" style={{ width: `${fill}%`, height: size }}>
               <Star size={size} className="text-[#EE7F4D]" fill="currentColor" strokeWidth={0} />
             </span>
           </span>
@@ -31,7 +34,13 @@ export default function StarRating({ value, size = 18, onChange }: StarRatingPro
           return <span key={star}>{icon}</span>;
 
         return (
-          <button key={star} type="button" onClick={() => onChange(star)} aria-label={`${star} stars`} className="transition hover:scale-110">
+          <button
+            key={star}
+            type="button"
+            onClick={() => onChange(star)}
+            aria-label={translations[lang].reviews.stars.replace('{count}', String(star))}
+            className="transition hover:scale-110"
+          >
             {icon}
           </button>
         );

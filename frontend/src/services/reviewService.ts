@@ -1,3 +1,5 @@
+import type { Language } from '../types';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export type ReviewRole = 'owner' | 'roommate';
@@ -11,7 +13,7 @@ export interface Review
   comment: string;
   role: ReviewRole;
   reviewer: { id: number; name: string };
-  listingTitle: string;
+  listingTitle: Record<Language, string>;
   createdAt: string;
 }
 

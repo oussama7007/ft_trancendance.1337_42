@@ -22,7 +22,11 @@ export function toReviewResponse(review: Review): ReviewResponseDto
             id: review.reviewerId,
             name: formatName(review.reviewer.firstName, review.reviewer.lastName),
         },
-        listingTitle: review.handshake.listing.titleEn,
+        listingTitle: {
+            ar: review.handshake.listing.titleAr,
+            fr: review.handshake.listing.titleFr,
+            en: review.handshake.listing.titleEn,
+        },
         createdAt: review.createdAt,
     };
 }

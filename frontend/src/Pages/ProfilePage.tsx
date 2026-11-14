@@ -1,25 +1,26 @@
 import { useSearchParams } from 'react-router-dom';
 import { BadgeCheck, CalendarDays, MapPin, MessageCircle } from 'lucide-react';
 import ReviewsSection from '../Components/reviews/ReviewsSection';
+import type { Language } from '../types';
 
 // Temporary page to try the reviews, until the real profile page is merged.
 // Open /profile?viewer=6 to look at it as someone else (user 6 can leave a review).
-export function ProfilePage()
+export function ProfilePage({ lang }: { lang: Language })
 {
   const [searchParams] = useSearchParams();
   const viewer = Number(searchParams.get('viewer') ?? 6);
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] px-4 py-9 lg:px-9">
+    <div className="min-h-screen bg-[#F4F5F7] px-4 py-6 sm:py-9 lg:px-9">
       <div className="mx-auto max-w-[1360px]">
-        <ReviewsSection profileUserId={1} profileName="KhayBrother" currentUserId={viewer}>
-          <div className="flex flex-col items-center rounded-[28px] bg-white p-9 shadow-[0_2px_12px_rgba(23,49,92,0.06)]">
+        <ReviewsSection profileUserId={1} profileName="KhayBrother" currentUserId={viewer} lang={lang}>
+          <div className="flex flex-col items-center rounded-[28px] bg-white p-6 shadow-[0_2px_12px_rgba(23,49,92,0.06)] sm:p-9">
             <div className="relative flex h-25 w-25 items-center justify-center rounded-full bg-[#E5E7EB] text-4xl font-bold text-[#1F2328]">
               K
-              <span className="absolute right-1 bottom-1 h-5 w-5 rounded-full border-4 border-white bg-[#22A559]" />
+              <span className="absolute end-1 bottom-1 h-5 w-5 rounded-full border-4 border-white bg-[#22A559]" />
             </div>
             <div className="mt-5 flex items-center gap-2">
-              <h1 className="text-[32px] font-extrabold text-[#1F2328]">KhayBrother</h1>
+              <h1 className="text-[26px] font-extrabold sm:text-[32px] text-[#1F2328]">KhayBrother</h1>
               <BadgeCheck size={26} className="text-[#EE7F4D]" />
             </div>
             <p className="text-[18px] text-[#178A4C]">Student · Mohammed V University</p>

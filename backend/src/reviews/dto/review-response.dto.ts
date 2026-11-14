@@ -28,8 +28,8 @@ export class ReviewResponseDto
 
     reviewer: ReviewerDto;
 
-    // The green line on the card, for example "Studio in Agdal".
-    listingTitle: string;
+    // The green line on the card, in the three languages.
+    listingTitle: { ar: string; fr: string; en: string };
 
     // Travels as a date string in the JSON.
     createdAt: Date;
