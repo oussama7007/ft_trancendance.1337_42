@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { useReviews } from '../../hooks/useReviews';
 import { translations } from '../../translations';
 import type { Language } from '../../types';
@@ -14,21 +13,17 @@ interface ReviewsSectionProps
   lang: Language;
   // TODO(auth): temporary, the logged-in user until real login exists
   currentUserId?: number;
-  children?: ReactNode;
 }
 
 // Everything about reviews on a profile page, in one piece
-export default function ReviewsSection({ profileUserId, profileName, lang, currentUserId, children }: ReviewsSectionProps)
+export default function ReviewsSection({ profileUserId, profileName, lang, currentUserId }: ReviewsSectionProps)
 {
   const { tab, setTab, result, error, reviewRole, submit } = useReviews(profileUserId, currentUserId);
   const t = translations[lang].reviews;
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[445px_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-6 lg:gap-8">
-        {children}
-        {result && <RatingSummary average={result.summary.average} count={result.summary.count} lang={lang} />}
-      </aside>
+    <div className="flex min-w-0 flex-col gap-5">
+      {result && <RatingSummary average={result.summary.average} count={result.summary.count} lang={lang} />}
 
       <section className="min-w-0 rounded-[28px] bg-white shadow-[0_2px_12px_rgba(23,49,92,0.06)]">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#EEF0F3] px-5 py-6 sm:px-10 sm:py-8">

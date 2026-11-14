@@ -46,6 +46,7 @@ function mapBackendUser(user: BackendUser): User {
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
+        gender: user.gender,
         fullName: `${user.firstName} ${user.lastName}`,
         email: isEmail ? user.contact : '',
         phone: isEmail ? '' : user.contact,
@@ -258,7 +259,11 @@ function App() {
 
                 <Route
                     path="/profile"
-                    element={<ProfilePage />}
+                    element={
+                        currentUser
+                            ? <ProfilePage user={currentUser} lang={lang}/>
+                            : <Navigate to="/signin" replace />
+                    }
                 />
 
                 {/* Teammate's login implementation */}
