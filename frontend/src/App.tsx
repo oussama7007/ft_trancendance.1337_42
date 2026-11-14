@@ -271,6 +271,7 @@ function App() {
                     path="/signin"
                     element={
                         <LoginPage
+                            lang={lang}
                             onLoginSuccess={(user) => {
                                 setCurrentUser(mapBackendUser(user));
                                 navigate('/');

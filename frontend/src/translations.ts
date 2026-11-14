@@ -1,5 +1,18 @@
 export const translations = {
     ar: {
+        auth: {
+            signInTitle: 'تسجيل الدخول',
+            signInDescription: 'أدخل بريدك الإلكتروني أو رقم هاتفك وكلمة المرور للدخول إلى حسابك.',
+            contact: 'البريد الإلكتروني أو رقم الهاتف',
+            contactPlaceholder: 'example@email.com',
+            password: 'كلمة المرور',
+            signIn: 'تسجيل الدخول',
+            signingIn: 'جارٍ تسجيل الدخول...',
+            missingFields: 'يرجى إدخال معلومات الاتصال وكلمة المرور.',
+            invalidCredentials: 'معلومات الدخول غير صحيحة.',
+            missingUser: 'لم يتم استلام معلومات المستخدم من الخادم.',
+            connectionError: 'تعذر الاتصال بالخادم.',
+        },
         //navbar
         navbar: {
             home: 'الرئيسية',
@@ -211,6 +224,19 @@ export const translations = {
                 },
             },
     en: {
+        auth: {
+            signInTitle: 'Sign in',
+            signInDescription: 'Enter your email or phone number and password to access your account.',
+            contact: 'Email or phone number',
+            contactPlaceholder: 'you@example.com',
+            password: 'Password',
+            signIn: 'Sign in',
+            signingIn: 'Signing in...',
+            missingFields: 'Please enter your contact and password.',
+            invalidCredentials: 'Invalid credentials.',
+            missingUser: 'User information was not returned by the backend.',
+            connectionError: 'Cannot connect to the backend.',
+        },
         profile: {
             sidebar: {
                 navigation: 'Main navigation',
@@ -422,6 +448,19 @@ export const translations = {
         }
     },
     fr: {
+        auth: {
+            signInTitle: 'Se connecter',
+            signInDescription: 'Saisissez votre e-mail ou numéro de téléphone et votre mot de passe pour accéder à votre compte.',
+            contact: 'E-mail ou numéro de téléphone',
+            contactPlaceholder: 'vous@exemple.com',
+            password: 'Mot de passe',
+            signIn: 'Se connecter',
+            signingIn: 'Connexion en cours...',
+            missingFields: 'Veuillez saisir vos coordonnées et votre mot de passe.',
+            invalidCredentials: 'Identifiants incorrects.',
+            missingUser: "Les informations de l'utilisateur n'ont pas été reçues.",
+            connectionError: 'Impossible de se connecter au serveur.',
+        },
         profile: {
                 sidebar: {
                     navigation: 'Navigation principale',
