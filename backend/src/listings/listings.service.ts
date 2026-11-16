@@ -1,8 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Listing } from './listing.entity.js';
 import { FilterListingsDto } from './dto/filter-listings.dto.js';
+
+const SORT_COLUMNS = {
+  id: 'listing.id',
+  price: 'listing.price',
+  bedrooms: 'listing.bedrooms',
+} as const;
+
+
+const DEFAULT_LIMIT = 12;
+
 
 @Injectable()
 export class ListingsService {
@@ -12,12 +22,27 @@ export class ListingsService {
   ) {}
 
   async findAll(filters: FilterListingsDto) {
+
+    if (
+      filters.minPrice !== undefined &&
+      filters.maxPrice !== undefined &&
+      filters.minPrice > filters.maxPrice
+    ) {
+      throw new BadRequestException('minPrice must be <= maxPrice');
+    }
+
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? DEFAULT_LIMIT;
+    const sortColumn = SORT_COLUMNS[filters.sortBy ?? 'id'];
+    const sortOrder = filters.sortOrder ?? 'DESC';
+
     const qb = this.listingRepository.createQueryBuilder('listing');
 
-    if (filters.city) {
+    const city = filters.city?.trim();
+    if (city) {
       qb.andWhere(
         '(listing.cityAr ILIKE :city OR listing.cityFr ILIKE :city OR listing.cityEn ILIKE :city)',
-        { city: `%${filters.city.trim()}%` },
+        { city: `%${city}%` },
       );
     }
 
@@ -33,9 +58,24 @@ export class ListingsService {
       qb.andWhere('listing.price <= :maxPrice', { maxPrice: filters.maxPrice });
     }
 
-    const listings = await qb.orderBy('listing.id', 'DESC').getMany();
+    if (filters.minBedrooms !== undefined){
+      qb.andWhere('listing.bedrooms >= :minBedrooms',
+        {minBedrooms: filters.minBedrooms},
+      );
+    }
 
-    return listings.map((l) => this.toResponse(l));
+    qb.orderBy(sortColumn, sortOrder);// ORDER BY listing.price ASC
+    if (sortColumn !== SORT_COLUMNS.id){// ila kano 3ndhom same price... zid rttbhom 3la hsab id desc
+      qb.addOrderBy(SORT_COLUMNS.id, 'DESC');// ORDER BY bedromsASC, id DESC
+    }
+
+    qb.skip((page - 1) * limit).take(limit);
+    const [items, total] = await qb.getManyAndCount();
+
+    return {
+      data:items.map((l) => this.toResponse(l)),
+      meta: {total, page, limit, totalPage: Math.ceil(total / limit)},
+    };
   }
 
   // same struct libghay  frontend (Listing فـ types/index.ts)
