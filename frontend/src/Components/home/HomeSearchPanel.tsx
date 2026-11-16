@@ -69,6 +69,8 @@ interface HomeSearchPanelProps {
     onRoommateGenderChange: (value: GenderPreference) => void;
 
     onSearch: () => void;
+    roommateChoice: React.ReactNode;
+    showRoommateSearch: boolean;
 
     labels: HomeLabels;
 }
@@ -126,6 +128,8 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
     onRoommateGenderChange,
 
     onSearch,
+    roommateChoice,
+    showRoommateSearch,
     labels,
 
 }) => {
@@ -150,6 +154,9 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
                 }}
             />
 
+            {activeTab === 'roommate' && roommateChoice}
+
+            {(activeTab !== 'roommate' || showRoommateSearch) && (
             <div className="bg-white p-3.5 rounded-2xl shadow-xl flex flex-col md:flex-row items-center gap-3 border border-gray-200/65 relative">
             {/*=========================home Search*/}
                 {activeTab === 'home' && (
@@ -235,6 +242,7 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
                         
                 </button>
             </div>
+            )}
         </div>
     );
 };

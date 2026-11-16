@@ -1,4 +1,5 @@
 @import "tailwindcss";
+
 /*create custom css === >> root: global variable */
 :root{ /*hnaaya adrary hdo varibales css , ila bgha ykhdm bxi color mn hado just y3ytt 3la smito 
   
@@ -7,7 +8,7 @@
   libgha yzid xi color hnaya yzido , bx lbghyna n xojiw yjina dkxi easy */
   
   
-   --color-primary: #1e3a5f;
+  --color-primary: #1e3a5f;
   --color-primary-dark: #152c47;
 
   --color-accent: #f4845f;
@@ -108,4 +109,3 @@
   animation: marker-bounce 2s ease-in-out infinite;
   transform-origin: bottom center;
 }
-
