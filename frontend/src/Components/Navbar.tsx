@@ -89,24 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         },
     ];
 
-    const languages: {
-        code: Language;
-        label: string;
-    } [] = [
-        {
-            code: 'en',
-            label: 'EN',
-        },
-        {
-            code: 'fr',
-            label: 'FR',
-        },
-        {
-            code: 'ar',
-            label: 'AR',
-        },
-
-    ];
+const languages: Language[] = ['en', 'fr', 'ar'];
 
     const handleLanguageChange = (newLang: Language) => {
         setLang(newLang);
@@ -160,7 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             >
                             <Globe size={18} className="text-sky-500"/>
                             <span>
-                                {lang.toUpperCase()}
+                                {t.navbar.languages[lang]}
                             </span>
 
                             <ChevronDown size={15} className={`transition-transform ${isLanguageOpen ? 'rotate-180' : ''}`}/>
@@ -169,16 +152,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                         {isLanguageOpen && (
                             <div className="absolute end-0 top-full mt-2 w-32 overflow-hidden rounded-xl border border-gray-100 bg-white p-1 shadow-xl" >
                                 {languages.map((language) => (
-                                    <button key={language.code} type="button"
-                                        onClick={()=> handleLanguageChange(language.code)}
+                                    <button key={language} type="button"
+                                        onClick={()=> handleLanguageChange(language)}
                                         className={`flex w-full items-center rounded-lg px-3 py-2 text-sm font-bold transition
                                             ${
-                                                lang === language.code
+                                                lang === language
                                                 ? 'bg-(--color-accent) text-white' : 'text-gray-600 hover:bg-gray-100'
                                             }
                                             `}
                                         >
-                                            {language.label}
+                                            {t.navbar.languages[language]}
                                     </button>
                                 ))}
                             </div>
@@ -264,12 +247,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                     <div className="flex items-center gap-2">
                         {languages.map((language) => (
-                            <button key={language.code} type="button" onClick={() => handleLanguageChange(language.code)}
+                            <button key={language} type="button" onClick={() => handleLanguageChange(language)}
                                 className={`flex-1 rounded-xl px-3 py-2.5 text-sm font-bold
-                                    ${lang === language.code ? 'bg-(--color-accent) text-white' : 'bg-gray-100 text-gray-600'}
+                                    ${lang === language ? 'bg-(--color-accent) text-white' : 'bg-gray-100 text-gray-600'}
                                 `}
                             >
-                                {language.label}
+                                {t.navbar.languages[language]}
                             </button>
                         ))}
                     </div>

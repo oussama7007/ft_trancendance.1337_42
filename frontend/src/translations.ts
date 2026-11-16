@@ -12,7 +12,13 @@ export const translations = {
             language: 'اللغة',
             menu: 'القائمة',
             closeMenu: 'إغلاق القائمة',
-            brandSubtitle: 'كراء السكن بسهولة', 
+            brandSubtitle: 'كراء السكن بسهولة',
+            languages: {
+                en: 'الإنجليزية',
+                fr: 'الفرنسية',
+                ar: 'العربية',
+            },
+            
         },
         footer: {
             legalTitle: 'قانوني',
@@ -79,6 +85,13 @@ export const translations = {
             perMonth: '/ الشهر',
             currency: 'درهم',
             close: 'إغلاق',
+            bedrooms:'غرف النوم',
+            sorting: {
+                newest: 'الأحدث',
+                priceLowToHigh: 'السعر: من الأقل إلى الأعلى',
+                priceHighToLow: 'السعر: من الأعلى إلى الأقل',
+                mostBedrooms: 'الأكثر غرفًا',
+            },
         }
     },
     en: {
@@ -94,6 +107,11 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Close menu',
             brandSubtitle: 'Rent your home easily',
+            languages: {
+                en: 'English',
+                fr: 'French',
+                ar: 'Arabic',
+            },
         },
         footer: {
             legalTitle: 'Legal',
@@ -160,6 +178,13 @@ export const translations = {
             perMonth: '/ month',
             currency: 'DH',
             close: 'Close',
+            bedrooms: 'Bedrooms',
+            sorting: {
+                newest: 'Newest',
+                priceLowToHigh: 'Price: low to high',
+                priceHighToLow: 'Price: high to low',
+                mostBedrooms: 'Most bedrooms',
+            },
         }
     },
     fr: {
@@ -175,6 +200,14 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Fermer le menu',
             brandSubtitle: 'Louez votre logement facilement',
+            en: 'Anglais',
+            fr: 'Français',
+            ar: 'Arabe',
+            languages: {
+            en: 'Anglais',
+            fr: 'Français',
+            ar: 'Arabe',
+        },
         },
         footer: {
             legalTitle: 'Mentions légales',
@@ -240,6 +273,13 @@ export const translations = {
             perMonth: '/ mois',
             currency: 'DH',
             close: 'Fermer',
+            bedrooms: 'Chambres',
+            sorting: {
+                newest: 'Plus récentes',
+                priceLowToHigh: 'Prix croissant',
+                priceHighToLow: 'Prix décroissant',
+                mostBedrooms: 'Plus de chambres',
+            },
         }
     },
 };
