@@ -10,6 +10,8 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
+
+import { PasswordField } from "@/Components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,21 +137,17 @@ return (
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="password">
-                            {t.password}
-                        </Label>
-
-                        <Input
+                        <PasswordField
                             id="password"
-                            type="password"
-                            dir="ltr"
+                            label={t.password}
+                    
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={setPassword}
                             autoComplete="current-password"
-                            required
+                            showPasswordText={t.showPassword}
+                            hidePasswordText={t.hidePassword}
                         />
-                    </div>
+                 
 
                     <Button
                         type="submit"

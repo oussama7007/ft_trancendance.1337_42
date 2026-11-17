@@ -39,12 +39,43 @@ export class AuthService {
 
     private readonly mailService: MailService,
   ) {}
+  
+
+  private validateDateOfBirth(dateOfBirth: string): void {
+        const birthDate = new Date(dateOfBirth);
+
+        if (isNaN(birthDate.getTime())) {
+            throw new BadRequestException('Invalid date of birth');
+        }
+
+        const today = new Date(
+            new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Africa/Casablanca',
+            }).format(new Date()),
+        );
+
+        const minimumDate = new Date(today);
+        minimumDate.setFullYear(today.getFullYear() - 18);
+
+        if (birthDate > minimumDate) {
+            throw new BadRequestException(
+                'You must be at least 18 years old',
+            );
+        }
+  } 
+
 
   async startRegistration(data: StartRegistrationDto) {
+    
+    
+    
+    this.validateDateOfBirth(data.dateOfBirth);
+    
+    
     const session = this.registrationSessionRepository.create(data);
 
-    const savedSession =
-      await this.registrationSessionRepository.save(session);
+
+    const savedSession = await this.registrationSessionRepository.save(session);
 
     return {
       sessionId: savedSession.id,

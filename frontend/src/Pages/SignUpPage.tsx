@@ -16,7 +16,8 @@ import { PasswordField } from "@/Components/auth/PasswordField";
 import { PasswordStrength } from "@/Components/auth/PasswordStrength";
 import { isPasswordValid } from "@/utils/password";
 
-
+import type { Language } from '@/types';
+import { translations } from '@/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -50,17 +51,44 @@ function barColor(step: number, currentStep: number) {
     }
     return "bg-muted";
 }
+function getTodayDate(): string {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Casablanca',
+    }).format(new Date());
+}
 
+function isValidDateOfBirth(value: string): boolean {
+    if (!value) return false;
+
+    const [year, month, day] = value.split('-').map(Number);
+    const birthDate = new Date(year, month - 1, day);
+
+    if (
+        birthDate.getFullYear() !== year ||
+        birthDate.getMonth() !== month - 1 ||
+        birthDate.getDate() !== day
+    ) {
+        return false;
+    }
+
+    const today = new Date(getTodayDate() + 'T00:00:00');
+    const minimumDate = new Date(today);
+    minimumDate.setFullYear(today.getFullYear() - 18);
+
+    return birthDate <= minimumDate;
+}
 interface SignUpPageProps {
     onGoToSignIn: () => void;
     onRegistrationSuccess: (user: RegistrationUser) => void;
+    lang: Language;
 }
 
 
 export function SignUpPage({ onGoToSignIn,
-    onRegistrationSuccess,
+    onRegistrationSuccess, lang
  }: SignUpPageProps) {
 
+    const t = translations[lang].auth;
 
 
     const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
@@ -126,6 +154,11 @@ export function SignUpPage({ onGoToSignIn,
     async function handlePersonalInfo(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         clearMessages();
+
+        if (!isValidDateOfBirth(dateOfBirth)) {
+                setError("You must be at least 18 years old.");
+                return;
+            }
 
         if (!gender) {
             setError("Please select your gender.");
@@ -305,17 +338,17 @@ export function SignUpPage({ onGoToSignIn,
     let description = "";
 
     if (isComplete) {
-        title = "Account created!";
-        description = "Your registration is complete.";
+        title = t.accountCreatedTitle;
+        description = t.registrationCompleteDescription;
     } else if (currentStep === 1) {
-        title = "Create your account";
-        description = "Enter your personal information to get started.";
+        title = t.createAccountTitle;
+        description = t.personalInfoDescription;
     } else if (currentStep === 2) {
-        title = "Verify your contact";
-        description = "Enter your contact details and verify them.";
+        title = t.verifyContactTitle;
+        description = t.verifyContactDescription;
     } else {
-        title = "Create your password";
-        description = "Choose a password for your account.";
+        title = t.createPasswordTitle;
+        description = t.createPasswordDescription;
     }
 
 
@@ -326,14 +359,14 @@ export function SignUpPage({ onGoToSignIn,
 
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+        <main dir={lang === "ar" ? "rtl" : "ltr"} className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
             <Card className="w-full max-w-lg">
 
                 <CardHeader className="space-y-3">
                     {!isComplete && (
                         <>
                             <p className="text-sm text-muted-foreground">
-                                Step {currentStep} of 3
+                                {t.step} {currentStep} {t.of} 3
                             </p>
 
                             <div className="flex gap-2">
@@ -366,7 +399,7 @@ export function SignUpPage({ onGoToSignIn,
                     {isComplete && (
                         <div className="space-y-4">
                             <p className="text-sm text-muted-foreground">
-                                Your account has been created successfully!
+                                {t.accountCreated}
                             </p>
 
                             <Button
@@ -374,7 +407,7 @@ export function SignUpPage({ onGoToSignIn,
                                 className="w-full"
                                 onClick={onGoToSignIn}
                             >
-                                Sign in
+                                {t.signIn}
                             </Button>
 
                             <Button
@@ -383,11 +416,11 @@ export function SignUpPage({ onGoToSignIn,
                                 className="w-full"
                                 onClick={resetSignup}
                             >
-                                Register another account
+                                {t.registerAnother}
                             </Button>
-                            <Button type="button" onClick={onGoToSignIn}>
+                            {/* <Button type="button" onClick={onGoToSignIn}>
                                 Go to Sign In
-                            </Button>
+                            </Button> */}
                         </div>
                     )}
 
@@ -397,7 +430,7 @@ export function SignUpPage({ onGoToSignIn,
                         <form onSubmit={handlePersonalInfo} className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
-                                    <Label htmlFor="firstName">First name</Label>
+                                    <Label htmlFor="firstName">{t.firstName}</Label>
                                     <Input
                                         id="firstName"
                                         value={firstName}
@@ -407,7 +440,7 @@ export function SignUpPage({ onGoToSignIn,
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="lastName">Last name</Label>
+                                    <Label htmlFor="lastName">{t.lastName}</Label>
                                     <Input
                                         id="lastName"
                                         value={lastName}
@@ -418,10 +451,16 @@ export function SignUpPage({ onGoToSignIn,
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="dateOfBirth">Date of birth</Label>
+                                <Label htmlFor="dateOfBirth">{t.dateOfBirth}</Label>
                                 <Input
                                     id="dateOfBirth"
                                     type="date"
+                                    dir="ltr"
+                                    max={(() => {
+                                        const date = new Date(getTodayDate() + 'T00:00:00');
+                                        date.setFullYear(date.getFullYear() - 18);
+                                        return date.toLocaleDateString('en-CA');
+                                    })()}
                                     value={dateOfBirth}
                                     onChange={(e) => setDateOfBirth(e.target.value)}
                                     required
@@ -429,7 +468,7 @@ export function SignUpPage({ onGoToSignIn,
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="gender">Gender</Label>
+                                <Label htmlFor="gender">{t.gender}</Label>
                                 <select
                                     id="gender"
                                     value={gender}
@@ -438,10 +477,10 @@ export function SignUpPage({ onGoToSignIn,
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 >
                                     <option value="" disabled>
-                                        Select gender
+                                        {t.selectGender}
                                     </option>
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
+                                    <option value="male">{t.male}</option>
+                                    <option value="female">{t.female}</option>
                                 </select>
                             </div>
 
@@ -459,7 +498,7 @@ export function SignUpPage({ onGoToSignIn,
                    
                             <form onSubmit={handleSendCode} className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="contact">Email or phone number</Label>
+                                    <Label htmlFor="contact">{t.signInDescription}</Label>
                                     <Input
                                         id="contact"
                                         type="text"
@@ -471,7 +510,7 @@ export function SignUpPage({ onGoToSignIn,
                                 </div>
 
                                 <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                    {isSubmitting ? "Sending..." : "Send verification code"}
+                                    {isSubmitting ? t.sending : t.sendCode}
                                 </Button>
                             </form>
 
@@ -479,7 +518,7 @@ export function SignUpPage({ onGoToSignIn,
                             {codeSent && (
                                 <form onSubmit={handleVerification} className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="verificationCode">Verification code</Label>
+                                        <Label htmlFor="verificationCode">{t.verificationCode}</Label>
                                         <Input
                                             id="verificationCode"
                                             type="text"
@@ -492,7 +531,7 @@ export function SignUpPage({ onGoToSignIn,
                                     </div>
 
                                     <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                        {isSubmitting ? "Verifying..." : "Verify and continue"}
+                                        {isSubmitting ? t.verifying : t.verifyAndContinue}
                                     </Button>
                                 </form>
                             )}
@@ -503,7 +542,7 @@ export function SignUpPage({ onGoToSignIn,
                                 onClick={goBack}
                                 className="w-full"
                             >
-                                Back
+                                {t.back}
                             </Button>
                         </div>
                     )}
@@ -517,6 +556,8 @@ export function SignUpPage({ onGoToSignIn,
                                     label="Password"
                                     value={password}
                                     onChange={setPassword}
+                                    showPasswordText={t.showPassword}
+                                    hidePasswordText={t.hidePassword}
                                 />
                             
                             <PasswordStrength password={password} />
@@ -526,14 +567,17 @@ export function SignUpPage({ onGoToSignIn,
                                     value={confirmPassword}
                                     label="Confirm password"
                                     onChange={setConfirmPassword}
+                                    showPasswordText={t.showPassword}
+                                    hidePasswordText={t.hidePassword}
+
                                 />
                                 {confirmPassword && password !== confirmPassword && (
                                         <p className="text-sm text-red-600">
-                                            Passwords do not match.
+                                            {t.passwordMismatch}
                                         </p>
                                 )}
                             <Button type="submit" className="w-full" disabled={isSubmitting}>
-                                {isSubmitting ? "Creating account..." : "Complete signup"}
+                                {isSubmitting ? t.creatingAccount : t.completeSignup}
                             </Button>
 
                             <Button
@@ -542,7 +586,7 @@ export function SignUpPage({ onGoToSignIn,
                                 onClick={goBack}
                                 className="w-full"
                             >
-                                Back
+                                {t.back}
                             </Button>
                         </form>
                     )}

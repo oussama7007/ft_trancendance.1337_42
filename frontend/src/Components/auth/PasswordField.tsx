@@ -10,6 +10,11 @@ interface PasswordFieldProps {
     label: string;
     value: string;
     onChange: (value: string) => void;
+
+    autoComplete?: string;
+    minLength?: number;
+    showPasswordText?: string;
+    hidePasswordText?: string;
 }
 
 export function PasswordField({
@@ -17,6 +22,10 @@ export function PasswordField({
     label,
     value,
     onChange,
+    autoComplete = "new-password",
+    minLength,
+    showPasswordText = "Show password",
+    hidePasswordText = "Hide password",
 }: PasswordFieldProps) {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -24,15 +33,16 @@ export function PasswordField({
         <div className="space-y-2">
             <Label htmlFor={id}>{label}</Label>
 
-            <div className="relative">
+            <div className="relative" dir="ltr">
                 <Input
                     id={id}
                     type={showPassword ? "text" : "password"}
+                    dir="ltr"
                     value={value}
                     onChange={(event) => onChange(event.target.value)}
-                    minLength={8}
+                    minLength={minLength}
                     maxLength={64}
-                    autoComplete="new-password"
+                    autoComplete={autoComplete}
                     required
                     className="pe-12"
                 />
@@ -43,7 +53,7 @@ export function PasswordField({
                     size="icon"
                     className="absolute end-1 top-1/2 -translate-y-1/2"
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={showPassword ? hidePasswordText : showPasswordText}
                 >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </Button>

@@ -1,4 +1,4 @@
-import { IsString, IsIn, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsIn,Matches, IsOptional, IsDateString } from 'class-validator';
 
 export class StartRegistrationDto {
   @IsString()
@@ -8,6 +8,9 @@ export class StartRegistrationDto {
   lastName: string;
 
   @IsDateString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Date of birth must use YYYY-MM-DD format',
+  })
   dateOfBirth: string;
 
   @IsIn(['male', 'female'])
