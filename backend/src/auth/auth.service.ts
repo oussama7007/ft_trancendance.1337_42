@@ -83,15 +83,6 @@ export class AuthService {
     };
   }
 
-  private getContactType(contact: string) {
-    if (contact.includes('@'))
-      return 'email';
-
-    if (/^\+?[0-9\s]{8,20}$/.test(contact))
-      return 'phone';
-
-    return 'invalid';
-  }
 
   async requestVerification(data: RequestVerificationDto) {
     const session = await this.registrationSessionRepository.findOne({
@@ -101,14 +92,11 @@ export class AuthService {
     if (!session)
       throw new NotFoundException('Registration session not found');
 
-    const contact = data.contact.trim();
-    const contactType = this.getContactType(contact);
+    const email = data.email.trim().toLowerCase();
 
-    if (contactType === 'invalid')
-      throw new BadRequestException('Invalid email or phone number');
 
     const existingUser = await this.userRepository.findOne({
-      where: { contact },
+      where: { email },
     });
 
     if (existingUser)
@@ -116,7 +104,7 @@ export class AuthService {
 
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
 
-    session.contact = contact;
+    session.email = email;
     session.verificationCode = code;
     session.verificationCodeExpiresAt =
       new Date(Date.now() + 5 * 60 * 1000);
@@ -124,7 +112,7 @@ export class AuthService {
 
     await this.registrationSessionRepository.save(session);
 
-    await this.mailService.sendVerificationCode(contact, code);
+    await this.mailService.sendVerificationCode(email, code);
 
     return {
       sessionId: session.id,
@@ -171,11 +159,11 @@ export class AuthService {
     if (!session)
       throw new NotFoundException('Registration session not found');
 
-    if (!session.isVerified || !session.contact)
-      throw new BadRequestException('Verify your contact first');
+    if (!session.isVerified || !session.email)
+      throw new BadRequestException('Verify your email first');
 
     const existingUser = await this.userRepository.findOne({
-      where: { contact: session.contact },
+      where: { email: session.email },
     });
 
     if (existingUser)
@@ -189,7 +177,7 @@ export class AuthService {
       dateOfBirth: session.dateOfBirth,
       gender: session.gender,
     
-      contact: session.contact,
+      email: session.email,
       passwordHash,
     });
 
@@ -219,14 +207,14 @@ export class AuthService {
       cin: user.cin,
       dateOfBirth: user.dateOfBirth,
       gender: user.gender,
-      contact: user.contact,
+      contact: user.email,
     };
   }
 
 
   async validateCredentials(data : LoginDto){
     const user = await this.userRepository.findOne({
-      where: {contact: data.contact.trim() },
+      where: {email: data.contact.trim() },
     });
     if (!user)
         throw new UnauthorizedException('Invalid contact or password');
@@ -246,7 +234,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         dateOfBirth: user.dateOfBirth,
-        contact: user.contact,
+        contact: user.email,
       },
     };
   }

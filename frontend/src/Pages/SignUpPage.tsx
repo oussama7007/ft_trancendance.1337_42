@@ -27,7 +27,7 @@ type RegistrationUser = {
     firstName: string;
     lastName: string;
     dateOfBirth: string;
-    contact: string;
+    email: string;
     gender?: string;
     
 };
@@ -102,10 +102,10 @@ export function SignUpPage({ onGoToSignIn,
     const [gender, setGender] = useState("");
     
 
-    const [contact, setContact] = useState("");
+    const [email, setEmail] = useState("");
     const [codeSent, setCodeSent] = useState(false);
     const [verificationCode, setVerificationCode] = useState("");
-    const [contactVerified, setContactVerified] = useState(false);
+    const [emailtVerified, setEmailVerified] = useState(false);
 
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -137,10 +137,10 @@ export function SignUpPage({ onGoToSignIn,
         setGender("");
        
 
-        setContact("");
+        setEmail("");
         setCodeSent(false);
         setVerificationCode("");
-        setContactVerified(false);
+        setEmailVerified(false);
 
         setPassword("");
         setConfirmPassword("");
@@ -206,8 +206,8 @@ export function SignUpPage({ onGoToSignIn,
             setError("Registration session is missing. Please restart signup.");
             return;
         }
-        if (!contact.trim()) {
-            setError("Please enter your email or phone number.");
+        if (!email.trim()) {
+            setError("Please enter your email.");
             return;
         }
 
@@ -216,7 +216,7 @@ export function SignUpPage({ onGoToSignIn,
         try {
             const result = await postToBackend("/auth/register/contact", {
                 sessionId: sessionId,
-                contact: contact.trim(),
+                contact: email.trim(),
             });
 
             if (!result.ok) {
@@ -256,7 +256,7 @@ export function SignUpPage({ onGoToSignIn,
                 return;
             }
 
-            setContactVerified(true);
+            setEmailVerified(true);
             setCurrentStep(3);
         } catch {
             setError("Cannot connect to the backend.");
@@ -274,8 +274,8 @@ export function SignUpPage({ onGoToSignIn,
         setError("Registration session is missing. Please restart signup.");
         return;
         }
-        if (!contactVerified) {
-            setError("Please complete contact verification first.");
+        if (!emailtVerified) {
+            setError(t.emailVerificationRequired);
             setCurrentStep(2);
             return;
         }
@@ -311,7 +311,7 @@ export function SignUpPage({ onGoToSignIn,
             },
             credentials: "include",
             body: JSON.stringify({
-                contact: contact.trim(),
+                contact: email.trim(),
                 password: password,
             }),
         });
@@ -418,16 +418,14 @@ export function SignUpPage({ onGoToSignIn,
                             >
                                 {t.registerAnother}
                             </Button>
-                            {/* <Button type="button" onClick={onGoToSignIn}>
-                                Go to Sign In
-                            </Button> */}
+
                         </div>
                     )}
 
 
                   
                     {showStep1 && (
-                        <form onSubmit={handlePersonalInfo} className="space-y-4">
+                        <form onSubmit={handlePersonalInfo}  className="space-y-4">
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="firstName">{t.firstName}</Label>
@@ -435,7 +433,7 @@ export function SignUpPage({ onGoToSignIn,
                                         id="firstName"
                                         value={firstName}
                                         onChange={(e) => setFirstName(e.target.value)}
-                                        required
+                                        
                                     />
                                 </div>
 
@@ -445,7 +443,7 @@ export function SignUpPage({ onGoToSignIn,
                                         id="lastName"
                                         value={lastName}
                                         onChange={(e) => setLastName(e.target.value)}
-                                        required
+                                        
                                     />
                                 </div>
                             </div>
@@ -463,7 +461,7 @@ export function SignUpPage({ onGoToSignIn,
                                     })()}
                                     value={dateOfBirth}
                                     onChange={(e) => setDateOfBirth(e.target.value)}
-                                    required
+                                    
                                 />
                             </div>
 
@@ -473,7 +471,7 @@ export function SignUpPage({ onGoToSignIn,
                                     id="gender"
                                     value={gender}
                                     onChange={(e) => setGender(e.target.value)}
-                                    required
+                                    
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 >
                                     <option value="" disabled>
@@ -503,9 +501,9 @@ export function SignUpPage({ onGoToSignIn,
                                         id="contact"
                                         type="text"
                                         placeholder="you@example.com"
-                                        value={contact}
-                                        onChange={(e) => setContact(e.target.value)}
-                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                       
                                     />
                                 </div>
 
@@ -526,7 +524,7 @@ export function SignUpPage({ onGoToSignIn,
                                             maxLength={6}
                                             value={verificationCode}
                                             onChange={(e) => setVerificationCode(e.target.value)}
-                                            required
+                                            
                                         />
                                     </div>
 

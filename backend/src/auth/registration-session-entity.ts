@@ -20,8 +20,8 @@ export class RegistrationSession
 
 
 
-  @Column({ nullable: true })
-  contact?: string;
+  @Column({ unique: true })
+  email: string;
 
   @Column({ nullable: true })
   verificationCode?: string;

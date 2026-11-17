@@ -21,7 +21,7 @@ export class User {
   cin?: string;
 
   @Column({ unique: true })
-  contact: string;
+  email: string;
 
   @Column()
   passwordHash: string;

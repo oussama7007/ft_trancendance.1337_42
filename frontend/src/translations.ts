@@ -1,11 +1,10 @@
 export const translations = {
     ar: {
 
-
-
-
-
         auth: {
+
+
+                emailVerificationRequired: 'يرجى تأكيد معلومات الاتصال أولاً.',
 
             accountCreatedTitle: 'تم إنشاء الحساب!',
             registrationCompleteDescription: 'اكتمل التسجيل بنجاح.',
@@ -284,6 +283,8 @@ export const translations = {
         auth: {
 
 
+
+            emailVerificationRequired: 'Please complete contact verification first.',
 
 
             accountCreatedTitle: 'Account created!',
@@ -566,7 +567,7 @@ export const translations = {
 
            
            
-         
+            emailVerificationRequired: "Veuillez d'abord vérifier vos coordonnées.",
            
           
            

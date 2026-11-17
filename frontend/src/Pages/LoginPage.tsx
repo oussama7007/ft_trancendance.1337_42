@@ -25,7 +25,7 @@ type LoginUser = {
     firstName: string;
     lastName: string;
     dateOfBirth: string;
-    contact: string;
+    email: string;
 };
 
 interface LoginPageProps {
@@ -40,7 +40,7 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
 
 
     // Form values
-    const [contact, setContact] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
     // Form status
@@ -51,7 +51,7 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
         event.preventDefault();
         setError("");
 
-        if (!contact.trim() || !password) {
+        if (!email.trim() || !password) {
             setError(t.missingFields);
             return;
         }
@@ -66,7 +66,7 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
                 },
                 credentials: "include",
                 body: JSON.stringify({
-                    contact: contact.trim(),
+                    email: email.trim().toLowerCase(),
                     password,
                 }),
             });
@@ -121,18 +121,18 @@ return (
 
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="contact">
+                        <Label htmlFor="email">
                             {t.contact}
                         </Label>
 
                         <Input
-                            id="contact"
-                            type="text"
+                            id="email"
+                            type="email"
                             dir="ltr"
                             placeholder={t.contactPlaceholder}
-                            value={contact}
-                            onChange={(e) => setContact(e.target.value)}
-                            autoComplete="username"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            autoComplete="email"
                             required
                         />
                     </div>
