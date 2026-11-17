@@ -13,7 +13,4 @@ export class StartRegistrationDto {
   @IsIn(['male', 'female'])
   gender: string;
 
-  @IsOptional()
-  @IsString()
-  cin?: string;
 }

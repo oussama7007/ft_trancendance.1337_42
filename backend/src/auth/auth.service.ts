@@ -62,7 +62,6 @@ export class AuthService {
     return 'invalid';
   }
 
-  // STEP 2: Save the contact and generate a verification code.
   async requestVerification(data: RequestVerificationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -102,7 +101,7 @@ export class AuthService {
     };
   }
 
-  // STEP 2 continued: Verify the code submitted by the user.
+
   async verifyRegistration(data: VerifyRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -132,7 +131,7 @@ export class AuthService {
     };
   }
 
-  // STEP 3: Create the permanent user.
+
   async finishRegistration(data: FinishRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -158,7 +157,7 @@ export class AuthService {
       lastName: session.lastName,
       dateOfBirth: session.dateOfBirth,
       gender: session.gender,
-      cin: session.cin,
+    
       contact: session.contact,
       passwordHash,
     });
