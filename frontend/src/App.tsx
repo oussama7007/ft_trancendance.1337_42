@@ -33,14 +33,14 @@ type BackendUser = {
     firstName: string;
     lastName: string;
     dateOfBirth: string;
-    contact: string;
+    email: string;
     gender?: string;
     cin?: string;
 };
 
 // Convert backend user data to the frontend User type.
 function mapBackendUser(user: BackendUser): User {
-    const isEmail = user.contact.includes('@');
+    const isEmail = user.email.includes('@');
 
     return {
         id: user.id,
@@ -48,10 +48,10 @@ function mapBackendUser(user: BackendUser): User {
         lastName: user.lastName,
         gender: user.gender,
         fullName: `${user.firstName} ${user.lastName}`,
-        email: isEmail ? user.contact : '',
-        phone: isEmail ? '' : user.contact,
+        email: isEmail ? user.email : '',
+        
         dateOfBirth: user.dateOfBirth,
-        cin: user.cin,
+        
     };
 }
 

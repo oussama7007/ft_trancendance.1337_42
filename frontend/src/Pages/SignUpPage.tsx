@@ -160,11 +160,6 @@ export function SignUpPage({ onGoToSignIn,
                 return;
             }
 
-        if (!gender) {
-            setError("Please select your gender.");
-            return;
-        }
-
         setIsSubmitting(true);
 
 
@@ -433,7 +428,7 @@ export function SignUpPage({ onGoToSignIn,
                                         id="firstName"
                                         value={firstName}
                                         onChange={(e) => setFirstName(e.target.value)}
-                                        
+                                        required
                                     />
                                 </div>
 
@@ -443,7 +438,7 @@ export function SignUpPage({ onGoToSignIn,
                                         id="lastName"
                                         value={lastName}
                                         onChange={(e) => setLastName(e.target.value)}
-                                        
+                                        required
                                     />
                                 </div>
                             </div>
@@ -461,7 +456,7 @@ export function SignUpPage({ onGoToSignIn,
                                     })()}
                                     value={dateOfBirth}
                                     onChange={(e) => setDateOfBirth(e.target.value)}
-                                    
+                                    required
                                 />
                             </div>
 
@@ -471,7 +466,7 @@ export function SignUpPage({ onGoToSignIn,
                                     id="gender"
                                     value={gender}
                                     onChange={(e) => setGender(e.target.value)}
-                                    
+                                    required
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 >
                                     <option value="" disabled>
@@ -503,7 +498,7 @@ export function SignUpPage({ onGoToSignIn,
                                         placeholder="you@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                       
+                                        required 
                                     />
                                 </div>
 
@@ -524,7 +519,7 @@ export function SignUpPage({ onGoToSignIn,
                                             maxLength={6}
                                             value={verificationCode}
                                             onChange={(e) => setVerificationCode(e.target.value)}
-                                            
+                                            required 
                                         />
                                     </div>
 
