@@ -3,7 +3,7 @@ export const translations = {
 
         auth: {
 
-
+                pleaseenteryouremail:  ' الرجاء إدخال بريدك الإلكتروني.',
                 emailVerificationRequired: 'يرجى تأكيد معلومات الاتصال أولاً.',
 
             accountCreatedTitle: 'تم إنشاء الحساب!',
@@ -283,7 +283,7 @@ export const translations = {
         auth: {
 
 
-
+            pleaseenteryouremail:  'Please enter your email',
             emailVerificationRequired: 'Please complete contact verification first.',
 
 
@@ -565,7 +565,7 @@ export const translations = {
         auth: {
 
 
-           
+            pleaseenteryouremail: 'Veuillez entrer votre email.',
            
             emailVerificationRequired: "Veuillez d'abord vérifier vos coordonnées.",
            

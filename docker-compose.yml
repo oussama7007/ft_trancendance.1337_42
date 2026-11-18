@@ -41,6 +41,19 @@ services:
     depends_on:
       database:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000').then(() => process.exit(0)).catch(() => process.exit(1))"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
 
   frontend:
     build:
@@ -54,7 +67,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     depends_on:
-      - backend
+       backend:
+        condition: service_healthy
 
 volumes:
   postgres_data:

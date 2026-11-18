@@ -20,7 +20,7 @@ export class RegistrationSession
 
 
 
-  @Column({ unique: true })
+  @Column({ nullable: true })
   email: string;
 
   @Column({ nullable: true })

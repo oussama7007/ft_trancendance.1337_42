@@ -202,7 +202,7 @@ export function SignUpPage({ onGoToSignIn,
             return;
         }
         if (!email.trim()) {
-            setError("Please enter your email.");
+            setError(t.pleaseenteryouremail);
             return;
         }
 
@@ -211,7 +211,7 @@ export function SignUpPage({ onGoToSignIn,
         try {
             const result = await postToBackend("/auth/register/contact", {
                 sessionId: sessionId,
-                contact: email.trim(),
+                email: email.trim(),
             });
 
             if (!result.ok) {
