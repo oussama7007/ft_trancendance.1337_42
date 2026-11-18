@@ -1,0 +1,1 @@
+To hide your readable TypeScript/React code from the browser's Developer
