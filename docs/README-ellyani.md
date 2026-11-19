@@ -14,6 +14,7 @@
 
 - **Search listings** by city (any language), property type and price. Results come from the database.
 - **Listings page** with cards, a details drawer, and filters kept in the URL (refresh and back button keep the search).
+- **Owner of each listing** shown in the details; your own listings are marked and you cannot contact yourself.
 - **Sorting and pages**: newest, price (low or high) or most bedrooms; 12 listings per page with page numbers.
 - **Map search**: listings shown as price markers; a marker opens the details; the map follows the search.
 - **Languages** with a switcher; the choice is remembered.
@@ -42,6 +43,7 @@ The framework and ORM modules are shared with the team. The languages, RTL, map 
 ### ORM (Minor, 1 pt)
 - **Why:** TypeORM avoids hand-written SQL and keeps the schema under version control.
 - **How:** entities `User`, `RegistrationSession`, `Listing`; changes only through migrations; the search uses bound parameters, so input is never concatenated into SQL.
+- **Relation:** each listing belongs to a user. In the code, `@ManyToOne(() => User)` on `Listing.owner`; in the database, the foreign key `FK_listing_owner` (`ownerId` → `user.id`, `ON DELETE CASCADE`), so a listing can never point to a user who does not exist.
 
 ### Multiple languages (Minor, 1 pt)
 - **Why:** our users in Morocco speak Arabic, French and English.
@@ -162,7 +164,7 @@ An invalid value (for example `type=hotel`) returns `400`.
 | Column | Type |
 |--------|------|
 | `id` | serial, primary key |
-| `ownerId` | integer |
+| `ownerId` | integer, foreign key to `user.id` |
 | `cityAr`, `cityFr`, `cityEn` | varchar |
 | `titleAr`, `titleFr`, `titleEn` | varchar |
 | `descriptionAr`, `descriptionFr`, `descriptionEn` | text |
@@ -186,6 +188,7 @@ Each text is stored once per language, so a listing can be searched and shown in
 6. Open Privacy Policy and Terms of Service from the footer.
 7. Listings page: choose **Price: low to high**, go to page 2, refresh. The sort and the page are kept.
 8. Sign in, open your profile and click the first icon of the sidebar: the dashboard opens. Change the period, then switch to Arabic.
+9. Sign in as a demo owner, for example `salma.owner@irent.local` (the password is `DEMO_OWNER_PASSWORD` from `backend/.env`). Her listings have an orange frame and a "Your listing" badge, and their details show no contact button. Other listings show their owner and the contact button.
 
 ## Challenges and how I solved them
 
@@ -225,9 +228,14 @@ Each text is stored once per language, so a listing can be searched and shown in
 - **Problem:** with `dir="rtl"` the page mirrored, but the chart kept its axes on the English side.
 - **Solution:** in Arabic the time axis is reversed (the newest day on the left) and the numbers axis moves to the right.
 
+### 10. The sample listings had owners who did not exist
+- **Problem:** the sample listings pointed to owner ids (101, 201...) that were not in the `user` table, so the database refused the foreign key, and nobody could receive a contact request for them.
+- **Solution:** one migration (test data only) creates four demo owners, gives them the orphan listings one after the other, then adds the foreign key. The demo owners can sign in, so the contact and chat flow can be tested.
+
 ## Limitations
 
-- My API only reads listings; creating them is done by another team member. `ownerId` is not a foreign key yet.
+- My API only reads listings; creating them is done by another team member.
+- The sample listings and the four demo owners are **test data** created by migrations, for development and evaluation. Real users and listings come from sign-up and the add-listing page.
 - The sample listings have approximate coordinates, not real addresses.
 - The dashboard shows sample data until the analytics API of my teammate is connected.
 - The text drawn by Google Maps itself (street and city names) is not translated by us.
