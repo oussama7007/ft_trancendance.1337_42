@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import type { Language } from '../types';
 import type { AnalyticsData, AnalyticsRange } from '../types/analytics';
 import { translations } from '../translations';
 import { fetchAnalytics } from '../api/analytics';
+import { ApiError } from '../api/apiError';
 import { Building2, Eye, MessageCircle, Search } from 'lucide-react';
 import { StatCard } from '../Components/dashboard/StatCard';
 import { ViewsChart } from '../Components/dashboard/ViewsChart';
@@ -32,12 +34,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ lang }) => {
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
+    const [isSessionExpired, setIsSessionExpired] = useState(false);
     useEffect(() => {
         const controller = new AbortController();
 
         async function loadAnalytics() {
             setIsLoading(true);
             setHasError(false);
+            setIsSessionExpired(false);
 
             try {
                 const result = await fetchAnalytics(
@@ -48,6 +52,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ lang }) => {
                 setData(result);
             } catch (error) {
                 if (controller.signal.aborted) return;
+
+                // // the sign-in cookie is missing or expired
+                if (error instanceof ApiError && error.status === 401) {
+                    setIsSessionExpired(true);
+                    return;
+                }
 
                 console.error(error);
                 setHasError(true);
@@ -91,6 +101,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ lang }) => {
 
             {isLoading ? (
                 <p className="py-16 text-center text-sm font-bold text-gray-500">{t.loading}</p>
+            ) : isSessionExpired ? (
+                <div className="py-16 text-center">
+                    <p className="mb-4 text-sm font-bold text-gray-700">{t.sessionExpired}</p>
+                    <Link
+                        to="/signin"
+                        className="inline-block rounded-xl bg-(--color-accent) px-5 py-2.5 text-xs font-bold text-white transition hover:bg-(--color-accent-dark)"
+                    >
+                        {translations[lang].navbar.signIn}
+                    </Link>
+                </div>
             ) : hasError || !data ? (
                 <p className="py-16 text-center text-sm font-bold text-red-500">{t.loadError}</p>
             ) : (

@@ -245,6 +245,7 @@ export const translations = {
                     listingColumn: 'الإعلان',
                     cityColumn: 'المدينة',
                     noData: 'لا توجد بيانات لهذه الفترة',
+                    sessionExpired: 'انتهت جلستك. سجل الدخول مرة أخرى.',
                 },
             },
     en: {
@@ -492,6 +493,7 @@ export const translations = {
             listingColumn: 'Listing',
             cityColumn: 'City',
             noData: 'No data for this period',
+            sessionExpired: 'Your session ended. Please sign in again.',
         },
 
     },
@@ -742,6 +744,7 @@ export const translations = {
             listingColumn: 'Annonce',
             cityColumn: 'Ville',
             noData: 'Aucune donnée pour cette période',
+            sessionExpired: 'Votre session a expiré. Reconnectez-vous.',
         },
 
     },

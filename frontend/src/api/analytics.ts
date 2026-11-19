@@ -1,3 +1,4 @@
+import { ApiError } from './apiError';
 import type { AnalyticsData, AnalyticsRange } from '../types/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -50,7 +51,7 @@ export async function fetchAnalytics(
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to load analytics (${response.status})`);
+        throw new ApiError(response.status);
     }
 
     return response.json();
