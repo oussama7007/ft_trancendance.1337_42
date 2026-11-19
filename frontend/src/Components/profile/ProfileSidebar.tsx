@@ -20,7 +20,7 @@ interface ProfileSidebarProps {
 const navigationItems = [
     // TODO [DASHBOARD TEAMMATE]:
     // Replace this destination with the Dashboard route when implemented.
-    { key: 'dashboard', path: '/', icon: LayoutDashboard },
+    { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
 
     // PROFILE: Implemented by the Profile developer.
     { key: 'profile', path: '/profile', icon: UserRound },
@@ -56,7 +56,7 @@ export function ProfileSidebar({t} : ProfileSidebarProps) {
                         <NavLink
                             key={item.key}
                             to={item.path}
-                            end={item.path === '/'}
+                            end
                             title={label}
                             aria-label={label}
                             className={({ isActive }) =>
