@@ -3,6 +3,8 @@ import { ExternalLink, Globe, Share2 } from 'lucide-react';
 import type { User } from '../../types';
 
 import type { ProfileTranslations } from '../../translations';
+import { AccountSection } from '../shared/AccountSection';
+
 
 interface SocialMediaCardProps {
     user: User;
@@ -77,17 +79,7 @@ export function SocialMediaCard({ user , t}: SocialMediaCardProps) {
     }
 
     return (
-        <section className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 shadow-sm sm:p-6">
-            <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-(--color-accent-soft) text-(--color-accent)">
-                    <Share2 size={19} />
-                </div>
-
-                <h2 className="text-lg font-bold text-(--color-primary)">
-                    {t.title}
-                </h2>
-            </div>
-
+        <AccountSection title={t.title} icon={Share2}>
             {links.length > 0 ? (
                 <div className="flex flex-col gap-2">
                     {links.map((link) => (
@@ -96,36 +88,36 @@ export function SocialMediaCard({ user , t}: SocialMediaCardProps) {
                             href={link.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group flex min-w-0 items-center gap-3 rounded-xl p-2 transition hover:bg-(--color-background)"
+                            className="group flex min-w-0 items-center gap-3 rounded-xl p-2 transition hover:bg-irent-background"
                         >
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-(--color-accent-soft) text-(--color-accent)">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-irent-accent-soft text-irent-accent">
                                 <Globe size={21} />
                             </span>
 
                             <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-semibold text-(--color-primary)">
+                                <span className="block text-sm font-semibold text-irent-primary">
                                     {link.name}
                                 </span>
 
-                                <span className="block truncate text-xs text-(--color-muted)">
+                                <span className="block truncate text-xs text-irent-muted">
                                     {link.url}
                                 </span>
                             </span>
 
                             <ExternalLink
                                 size={17}
-                                className="shrink-0 text-(--color-muted) group-hover:text-(--color-accent)"
+                                className="shrink-0 text-irent-muted group-hover:text-irent-accent"
                             />
                         </a>
                     ))}
                 </div>
             ) : (
-                <p className="rounded-xl bg-(--color-background) px-4 py-5 text-sm leading-6 text-(--color-muted)">
+                <p className="rounded-xl bg-irent-background px-4 py-5 text-sm leading-6 text-irent-muted">
                     {t.empty}
                 </p>
             )}
 
             {/* TODO: Add social profile editing when profile update endpoints are implemented. */}
-        </section>
+        </AccountSection>
     );
 }
