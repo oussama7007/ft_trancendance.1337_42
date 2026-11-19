@@ -22,6 +22,7 @@ interface HomePageProps {
     lang: Language;
     onSelectListing: (item: Listing) => void;
     isLoggedIn: boolean;
+    currentUserId?: number;
 }
 
 type HomeTab = 'home' | 'roommate' | 'list';
@@ -87,6 +88,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     lang,
     onSelectListing,
     isLoggedIn,
+    currentUserId
 }) => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -459,6 +461,7 @@ const filteredMarkers = mapMarkers.filter(
         availableLabel={currentLang.available}
         detailsLabel={currentLang.detailsTitle}
         onSelect={setActiveDetailItem}
+        currentUserId={currentUserId}
       />
       )}
 
@@ -483,6 +486,9 @@ const filteredMarkers = mapMarkers.filter(
         title={currentLang.detailsTitle}
         contactLabel={currentLang.contactBtn}
         locationLabel={currentLang.location}
+        ownerLabel={currentLang.owner}
+        currentUserId={currentUserId}
+        yourListingLabel={currentLang.yourListing}
         priceLabel={currentLang.price}
         perMonthLabel={currentLang.perMonth}
         closeLabel={currentLang.close}
