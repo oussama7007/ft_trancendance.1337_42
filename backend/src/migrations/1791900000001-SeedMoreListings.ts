@@ -1,75 +1,185 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 const img = (id: string) =>
-    `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
+  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`;
 
-const listings = [
-    {
-        ownerId: 105, cityAr: 'فاس', cityFr: 'Fès', cityEn: 'Fes',
-        titleAr: 'شقة واسعة قرب الجامعة', titleFr: "Grand appartement près de l'université", titleEn: 'Spacious apartment near the university',
-        descriptionAr: 'شقة واسعة ومشمسة قريبة من الجامعة ووسائل النقل.',
-        descriptionFr: "Appartement spacieux et lumineux, proche de l'université et des transports.",
-        descriptionEn: 'Spacious, sunny apartment close to the university and public transport.',
-        district: 'سايس', districtEnFr: 'Saïss', price: 1800, bedrooms: 3, hasWifi: true,
-        imageUrl: img('photo-1560448204-e02f11c3d0e2'),
-        images: [img('photo-1560448204-e02f11c3d0e2')],
-        ownerName: 'Hassan', lat: 34.0331, lng: -5.0003, type: 'apartment',
-    },
-    {
-        ownerId: 106, cityAr: 'أكادير', cityFr: 'Agadir', cityEn: 'Agadir',
-        titleAr: 'ستوديو قريب من الشاطئ', titleFr: 'Studio proche de la plage', titleEn: 'Studio close to the beach',
-        descriptionAr: 'ستوديو مفروش على بعد دقائق من الشاطئ.',
-        descriptionFr: 'Studio meublé à quelques minutes de la plage.',
-        descriptionEn: 'Furnished studio a few minutes from the beach.',
-        district: 'الكورنيش', districtEnFr: 'Corniche', price: 2200, bedrooms: 1, hasWifi: true,
-        imageUrl: img('photo-1493809842364-78817add7ffb'),
-        images: [img('photo-1493809842364-78817add7ffb')],
-        ownerName: 'Imane', lat: 30.4278, lng: -9.5981, type: 'studio',
-    },
-    {
-        ownerId: 107, cityAr: 'مكناس', cityFr: 'Meknès', cityEn: 'Meknes',
-        titleAr: 'منزل عائلي بحديقة', titleFr: 'Maison familiale avec jardin', titleEn: 'Family house with a garden',
-        descriptionAr: 'منزل هادئ بحديقة ومرآب مناسب للعائلات.',
-        descriptionFr: 'Maison calme avec jardin et garage, idéale pour les familles.',
-        descriptionEn: 'Quiet house with a garden and garage, ideal for families.',
-        district: 'حمرية', districtEnFr: 'Hamria', price: 4000, bedrooms: 4, hasWifi: false,
-        imageUrl: img('photo-1568605114967-8130f3a36994'),
-        images: [img('photo-1568605114967-8130f3a36994')],
-        ownerName: 'Nadia', lat: 33.8935, lng: -5.5473, type: 'house',
-    },
-    {
-        ownerId: 108, cityAr: 'الدار البيضاء', cityFr: 'Casablanca', cityEn: 'Casablanca',
-        titleAr: 'شقة فاخرة بإطلالة على الكورنيش', titleFr: 'Appartement de luxe vue corniche', titleEn: 'Luxury apartment with corniche view',
-        descriptionAr: 'شقة فاخرة بإطلالة على البحر وخدمات متكاملة.',
-        descriptionFr: 'Appartement de luxe avec vue sur la mer et services complets.',
-        descriptionEn: 'Luxury apartment with sea view and full amenities.',
-        district: 'عين الذئاب', districtEnFr: 'Ain Diab', price: 8500, bedrooms: 3, hasWifi: true,
-        imageUrl: img('photo-1545324418-cc1a3fa10c00'),
-        images: [img('photo-1545324418-cc1a3fa10c00')],
-        ownerName: 'Omar', lat: 33.5950, lng: -7.6690, type: 'apartment',
-    },
+const cities = [
+  {
+    ar: 'الرباط حي', fr: 'Rabat', en: 'Rabat',
+    districts: ['أكدال', 'حي الرياض', 'حسان', 'العكاري', 'أكدال العليا'],
+    lat: 34.0209, lng: -6.8416,
+  },
+  {
+    ar: 'الدار البيضاء', fr: 'Casablanca', en: 'Casablanca',
+    districts: ['المعاريف', 'أنفا', 'بوركون', 'الوازيس', 'وسط المدينة'],
+    lat: 33.5883, lng: -7.6114,
+  },
+  {
+    ar: 'مراكش', fr: 'Marrakech', en: 'Marrakech',
+    districts: ['جليز', 'المدينة', 'النخيل', 'أكدال', 'المسيرة'],
+    lat: 31.6295, lng: -7.9811,
+  },
+  {
+    ar: 'خريبكة', fr: 'Khouribga', en: 'Khouribga',
+    districts: ['وسط المدينة', 'القدس', 'الفتح', 'النهضة', 'الرياض'],
+    lat: 32.8817, lng: -6.9063,
+  },
+  {
+    ar: 'طنجة', fr: 'Tangier', en: 'Tangier',
+    districts: ['مالاباطا', 'وسط المدينة', 'إيبيريا', 'بني مكادة', 'مرشان'],
+    lat: 35.7595, lng: -5.834,
+  },
+  {
+    ar: 'فاس', fr: 'Fez', en: 'Fez',
+    districts: ['فاس الجديد', 'أكدال', 'زواغة', 'المدينة القديمة', 'النرجس'],
+    lat: 34.0181, lng: -5.0078,
+  },
+  {
+    ar: 'أكادير', fr: 'Agadir', en: 'Agadir',
+    districts: ['تالبرجت', 'فونتي', 'الداخلة', 'وسط المدينة', 'أنزا'],
+    lat: 30.4278, lng: -9.5981,
+  },
+  {
+    ar: 'مكناس', fr: 'Meknes', en: 'Meknes',
+    districts: ['حمرية', 'المدينة القديمة', 'تولال', 'البساتين', 'الزيتون'],
+    lat: 33.8938, lng: -5.5473,
+  },
+  {
+    ar: 'وجدة', fr: 'Oujda', en: 'Oujda',
+    districts: ['وسط المدينة', 'القدس', 'السلام', 'النجد', 'الوفاق'],
+    lat: 34.6812, lng: -1.9036,
+  },
+  {
+    ar: 'تطوان', fr: 'Tetouan', en: 'Tetouan',
+    districts: ['المضيق', 'المدينة القديمة', 'الولاية', 'سانية الرمل', 'الطويلع'],
+    lat: 35.5889, lng: -5.3626,
+  },
 ];
 
-export class SeedMoreListings1791900000001 implements MigrationInterface {
-    name = 'SeedMoreListings1791900000001'
+const types = ['apartment', 'house', 'studio', 'riad', 'villa'];
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        for (const l of listings) {
-            await queryRunner.query(
-                `INSERT INTO "listing" ("ownerId","cityAr","cityFr","cityEn","titleAr","titleFr","titleEn","descriptionAr","descriptionFr","descriptionEn","district","districtEnFr","price","bedrooms","hasWifi","imageUrl","images","ownerName","lat","lng","type")
-                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
-                [
-                    l.ownerId, l.cityAr, l.cityFr, l.cityEn, l.titleAr, l.titleFr, l.titleEn,
-                    l.descriptionAr, l.descriptionFr, l.descriptionEn, l.district, l.districtEnFr,
-                    l.price, l.bedrooms, l.hasWifi, l.imageUrl, l.images.join(','),
-                    l.ownerName, l.lat, l.lng, l.type,
-                ],
-            );
-        }
+const prices = [
+  1000, 1200, 1500, 1800, 2000,
+  2300, 2500, 2800, 3000, 3200,
+  3500, 3800, 4000, 4500, 5000,
+  5500, 6000, 6500, 7000, 8000,
+  9000, 10000,
+];
+
+const imageIds = [
+  'photo-1522708323590-d24dbb6b0267',
+  'photo-1505693416388-ac5ce068fe85',
+  'photo-1502672260266-1c1ef2d93688',
+  'photo-1564013799919-ab600027ffc6',
+  'photo-1512917774080-9991f1c4c750',
+  'photo-1600607687939-ce8a6c25118c',
+  'photo-1600210492486-724fe5c67fb0',
+  'photo-1600566753086-00f18fb6b3ea',
+];
+
+const owners = [
+  'Ahmed', 'Salma', 'Youssef', 'Karim', 'Sara',
+  'Omar', 'Imane', 'Hamza', 'Nadia', 'Mehdi',
+];
+
+const listings = Array.from({ length: 50 }, (_, i) => {
+  const city = cities[Math.floor(i / 5)];
+  const type = types[i % types.length];
+  const image = img(imageIds[i % imageIds.length]);
+  const bedrooms = (i % 5) + 1;
+  const price = prices[i % prices.length];
+
+  return {
+    ownerId: 201 + i,
+
+    cityAr: city.ar,
+    cityFr: city.fr,
+    cityEn: city.en,
+
+    titleAr: `${type} جميلة في ${city.ar} رقم ${i + 1}`,
+    titleFr: `Beau logement à ${city.fr} numéro ${i + 1}`,
+    titleEn: `Beautiful property in ${city.en} number ${i + 1}`,
+
+    descriptionAr: `عقار مريح ومجهز في ${city.ar}، قريب من جميع الخدمات.`,
+    descriptionFr: `Logement confortable à ${city.fr}, proche de toutes les commodités.`,
+    descriptionEn: `Comfortable property in ${city.en}, close to all amenities.`,
+
+    district: city.districts[i % 5],
+    districtEnFr: city.districts[i % 5],
+
+    price,
+    bedrooms,
+    hasWifi: i % 2 === 0,
+
+    imageUrl: image,
+    images: [
+      image,
+      img(imageIds[(i + 1) % imageIds.length]),
+    ],
+
+    ownerName: owners[i % owners.length],
+
+    lat: city.lat + (i % 5) * 0.001,
+    lng: city.lng + (i % 5) * 0.001,
+
+    type,
+  };
+});
+
+export class SeedListings1792000000000
+  implements MigrationInterface {
+  name = 'SeedListings1792000000000';
+
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    for (const l of listings) {
+      await queryRunner.query(
+        `INSERT INTO "listing" (
+          "ownerId", "cityAr", "cityFr", "cityEn",
+          "titleAr", "titleFr", "titleEn",
+          "descriptionAr", "descriptionFr", "descriptionEn",
+          "district", "districtEnFr",
+          "price", "bedrooms", "hasWifi",
+          "imageUrl", "images", "ownerName",
+          "lat", "lng", "type"
+        )
+        VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+          $11,$12,$13,$14,$15,$16,$17::text[],
+          $18,$19,$20,$21
+        )`,
+        [
+          l.ownerId,
+          l.cityAr,
+          l.cityFr,
+          l.cityEn,
+          l.titleAr,
+          l.titleFr,
+          l.titleEn,
+          l.descriptionAr,
+          l.descriptionFr,
+          l.descriptionEn,
+          l.district,
+          l.districtEnFr,
+          l.price,
+          l.bedrooms,
+          l.hasWifi,
+          l.imageUrl,
+          l.images,
+          l.ownerName,
+          l.lat,
+          l.lng,
+          l.type,
+        ],
+      );
     }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DELETE FROM "listing" WHERE "ownerId" IN (105,106,107,108)`);
-    }
-
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `DELETE FROM "listing"
+       WHERE "ownerId" BETWEEN 201 AND 250
+       AND "titleEn" LIKE 'Beautiful property in % number %'`,
+    );
+  }
 }

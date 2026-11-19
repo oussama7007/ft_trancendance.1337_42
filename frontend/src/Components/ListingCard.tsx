@@ -1,4 +1,4 @@
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, BedDouble } from "lucide-react";
 import type React from "react";
 import type { Language, Listing } from "../types";
 import { translations } from '../translations';
@@ -53,6 +53,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                     <p className="text-[11px] text-gray-500 font-bold mb-3 flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-red-500" />
                         {item.city[lang]}
+                    </p>
+                    <p className="text-[11px] text-gray-500 font-bold mb-3 flex items-center gap-1">
+                        <BedDouble className="w-3.5 h-3.5 text-(--color-accent)" />
+                        {item.bedrooms} {translations[lang].homePage.bedrooms}
                     </p>
                 </div>
 
