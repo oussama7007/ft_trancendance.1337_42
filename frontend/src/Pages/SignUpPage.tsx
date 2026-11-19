@@ -37,11 +37,12 @@ async function postToBackend(path: string, body: object) {
     const response = await fetch(`${API_URL}${path}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
     });
 
-    const data = await response.json();
-    return { ok: response.ok, data: data };
+    const data = await response.json().catch(() => ({}));
+    return { ok: response.ok,  status: response.status , data};
 }
 
 
@@ -78,13 +79,13 @@ function isValidDateOfBirth(value: string): boolean {
     return birthDate <= minimumDate;
 }
 interface SignUpPageProps {
-    onGoToSignIn: () => void;
+    
     onRegistrationSuccess: (user: RegistrationUser) => void;
     lang: Language;
 }
 
 
-export function SignUpPage({ onGoToSignIn,
+export function SignUpPage({ 
     onRegistrationSuccess, lang
  }: SignUpPageProps) {
 
@@ -93,7 +94,6 @@ export function SignUpPage({ onGoToSignIn,
 
     const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
     const [sessionId, setSessionId] = useState<number | null>(null)      // given by the backend after step 1
-    const [isComplete, setIsComplete] = useState(false); // true when signup is finished
 
 
     const [firstName, setFirstName] = useState("");
@@ -126,27 +126,6 @@ export function SignUpPage({ onGoToSignIn,
         setCurrentStep(currentStep - 1);
     }
 
-    function resetSignup() {
-        setCurrentStep(1);
-        setSessionId(null);
-        setIsComplete(false);
-
-        setFirstName("");
-        setLastName("");
-        setDateOfBirth("");
-        setGender("");
-       
-
-        setEmail("");
-        setCodeSent(false);
-        setVerificationCode("");
-        setEmailVerified(false);
-
-        setPassword("");
-        setConfirmPassword("");
-
-        clearMessages();
-    }
 
 
  
@@ -155,6 +134,13 @@ export function SignUpPage({ onGoToSignIn,
         event.preventDefault();
         clearMessages();
 
+        const cleanFirstName = firstName.trim();
+        const cleanLastName = lastName.trim();
+
+        if (!cleanFirstName || !cleanLastName) {
+            setError(t.nameRequired);
+            return;
+        }
         if (!isValidDateOfBirth(dateOfBirth)) {
                 setError("You must be at least 18 years old.");
                 return;
@@ -164,8 +150,8 @@ export function SignUpPage({ onGoToSignIn,
 
 
         const bodyData: Record<string, string> = {
-            firstName: firstName,
-            lastName: lastName,
+            firstName: cleanFirstName,
+            lastName: cleanLastName,
             dateOfBirth: dateOfBirth,
             gender: gender,
         };
@@ -298,33 +284,19 @@ export function SignUpPage({ onGoToSignIn,
             return;
             }
 
-   
-        const loginResponse = await fetch(`${API_URL}/auth/login`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            credentials: "include",
-            body: JSON.stringify({
-                contact: email.trim(),
-                password: password,
-            }),
-        });
+            if (!result.data.user) {
+                setError("User information was not returned by the backend.");
+                return;
+            }
 
-        const loginData = await loginResponse.json();
+            // Registration and authentication succeeded.
+            onRegistrationSuccess(result.data.user);
 
-        if (!loginResponse.ok || !loginData.user) {
-            setIsComplete(true);
-            setSuccess("Account created. Please sign in manually.");
-            return;
-        }
-
-        onRegistrationSuccess(loginData.user);
-        } catch {
-            setError("Cannot connect to the backend.");
-        } finally {
-            setIsSubmitting(false);
-        }
+            } catch {
+                setError("Cannot connect to the backend.");
+            } finally {
+                setIsSubmitting(false);
+            }
     }
 
 
@@ -332,7 +304,7 @@ export function SignUpPage({ onGoToSignIn,
     let title = "";
     let description = "";
 
-    if (isComplete) {
+    if (currentStep === 1) {
         title = t.accountCreatedTitle;
         description = t.registrationCompleteDescription;
     } else if (currentStep === 1) {
@@ -347,9 +319,9 @@ export function SignUpPage({ onGoToSignIn,
     }
 
 
-    const showStep1 = !isComplete && currentStep === 1;
-    const showStep2 = !isComplete && currentStep === 2;
-    const showStep3 = !isComplete && currentStep === 3;
+    const showStep1 = currentStep === 1;
+    const showStep2 = currentStep === 2;
+    const showStep3 = currentStep === 3;
 
 
 
@@ -358,8 +330,6 @@ export function SignUpPage({ onGoToSignIn,
             <Card className="w-full max-w-lg">
 
                 <CardHeader className="space-y-3">
-                    {!isComplete && (
-                        <>
                             <p className="text-sm text-muted-foreground">
                                 {t.step} {currentStep} {t.of} 3
                             </p>
@@ -369,8 +339,8 @@ export function SignUpPage({ onGoToSignIn,
                                 <div className={"h-1.5 flex-1 rounded-full " + barColor(2, currentStep)} />
                                 <div className={"h-1.5 flex-1 rounded-full " + barColor(3, currentStep)} />
                             </div>
-                        </>
-                    )}
+                        
+                    
 
                     <CardTitle className="text-2xl">{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
@@ -391,31 +361,7 @@ export function SignUpPage({ onGoToSignIn,
                     )}
 
                 
-                    {isComplete && (
-                        <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground">
-                                {t.accountCreated}
-                            </p>
 
-                            <Button
-                                type="button"
-                                className="w-full"
-                                onClick={onGoToSignIn}
-                            >
-                                {t.signIn}
-                            </Button>
-
-                            <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full"
-                                onClick={resetSignup}
-                            >
-                                {t.registerAnother}
-                            </Button>
-
-                        </div>
-                    )}
 
 
                   

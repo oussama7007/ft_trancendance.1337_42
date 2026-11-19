@@ -286,7 +286,7 @@ function App() {
                     element={
                         <SignUpPage
                             lang={lang}
-                            onGoToSignIn={() => navigate('/signin')}
+                           
                             onRegistrationSuccess={(user) => {
                                 setCurrentUser(mapBackendUser(user));
                                 navigate('/');

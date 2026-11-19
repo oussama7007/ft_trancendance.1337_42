@@ -182,14 +182,26 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
-
+        const accessToken = await this.jwtService.signAsync({
+            sub: savedUser.id,
+        });
     await this.registrationSessionRepository.delete(session.id);
+    
 
-    return {
-      userId: savedUser.id,
-      message: 'Registration completed successfully',
-    };
-  }
+      return {
+          accessToken,
+          user: {
+              id: savedUser.id,
+              firstName: savedUser.firstName,
+              lastName: savedUser.lastName,
+              dateOfBirth: savedUser.dateOfBirth,
+              gender: savedUser.gender,
+              email: savedUser.email,
+          },
+          message: 'Registration completed successfully',
+      }
+  };
+
 
     async getCurrentUser(userId: number) {
     const user = await this.userRepository.findOne({
@@ -207,14 +219,14 @@ export class AuthService {
 
       dateOfBirth: user.dateOfBirth,
       gender: user.gender,
-      contact: user.email,
+      email: user.email,
     };
   }
 
 
   async validateCredentials(data : LoginDto){
     const user = await this.userRepository.findOne({
-      where: {email: data.contact.trim() },
+      where: {email: data.email.trim().toLowerCase()  },
     });
     if (!user)
         throw new UnauthorizedException('Invalid contact or password');
@@ -234,7 +246,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         dateOfBirth: user.dateOfBirth,
-        contact: user.email,
+        email: user.email,
       },
     };
   }

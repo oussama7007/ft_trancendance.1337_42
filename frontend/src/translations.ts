@@ -2,7 +2,7 @@ export const translations = {
     ar: {
 
         auth: {
-
+                nameRequired: 'يرجى إدخال الاسم الشخصي واسم العائلة',
                 pleaseenteryouremail:  ' الرجاء إدخال بريدك الإلكتروني.',
                 emailVerificationRequired: 'يرجى تأكيد معلومات الاتصال أولاً.',
 
@@ -285,7 +285,7 @@ export const translations = {
 
             pleaseenteryouremail:  'Please enter your email',
             emailVerificationRequired: 'Please complete contact verification first.',
-
+            nameRequired: 'Please enter both your first and last name.',
 
             accountCreatedTitle: 'Account created!',
             registrationCompleteDescription: 'Your registration is complete.',
@@ -568,7 +568,7 @@ export const translations = {
             pleaseenteryouremail: 'Veuillez entrer votre email.',
            
             emailVerificationRequired: "Veuillez d'abord vérifier vos coordonnées.",
-           
+            nameRequired: 'Veuillez saisir votre prénom et votre nom.',
           
            
             

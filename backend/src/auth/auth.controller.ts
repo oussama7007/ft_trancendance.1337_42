@@ -33,9 +33,25 @@ export class AuthController {
   }
 
   @Post('register/finish')
-  finishRegistration(@Body() data: FinishRegistrationDto) {
-    return this.authService.finishRegistration(data);
-  }
+  async finishRegistration(
+              @Body() data: FinishRegistrationDto,
+          @Res({ passthrough: true }) response: Response,
+      ) {
+          const result = await this.authService.finishRegistration(data);
+
+          response.cookie('access_token', result.accessToken, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax',
+              maxAge: 15 * 60 * 1000,
+              path: '/',
+          });
+
+          return {
+              user: result.user,
+              message: result.message,
+          };
+      }
 
 
   @HttpCode(HttpStatus.OK)

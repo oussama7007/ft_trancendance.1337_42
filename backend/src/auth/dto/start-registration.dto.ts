@@ -1,10 +1,22 @@
-import { IsString, IsIn,Matches, IsOptional, IsDateString } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+import { IsString, IsIn,Matches, IsDateString, IsNotEmpty } from 'class-validator';
 
 export class StartRegistrationDto {
+
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @IsNotEmpty()
   firstName: string;
 
+
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
+  @IsNotEmpty()
   lastName: string;
 
   @IsDateString()
