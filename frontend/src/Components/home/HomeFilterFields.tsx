@@ -85,7 +85,7 @@ export const HomeFilterFields: React.FC<HomeFilterFieldsProps> = ({
                         setIsPropTypeOpen((prev) => !prev);
                         setIsPriceOpen(false);
                     }}
-                    className="w-full bg-gray-50 hover:bg-gray-100/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-md px-4 py-3 rounded-xl border border-gray-200/60 flex items-center justify-between cursor-pointer select-none"
+                    className="w-full bg-gray-50 hover:bg-gray-100/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-md px-4 py-3 rounded-xl border border-gray-200/60 flex items-center justify-between cursor-pointer"
                 >
                     <div className="flex items-center gap-2">
                         {SelectedPropertyIcon && (
