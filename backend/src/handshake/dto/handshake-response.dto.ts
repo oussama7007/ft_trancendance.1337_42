@@ -12,3 +12,13 @@ export class HandshakeResponseDto {
   status!: HandshakeStatus;
   hasUserApproved!: boolean;
 }
+
+// The listing a chat is about. `listing` is null when the chat did not start
+// from an accepted interest request, so there is nothing to shake hands on
+export class ChatHandshakeDto {
+  listing!: {
+    id: number;
+    clientId: number;
+    title: { ar: string; fr: string; en: string };
+  } | null;
+}

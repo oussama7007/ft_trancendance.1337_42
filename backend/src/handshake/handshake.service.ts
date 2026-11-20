@@ -1,20 +1,53 @@
-import {
+import
+{
   BadRequestException,
   ForbiddenException,
-  Injectable
+  Injectable,
+  NotFoundException
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
-import { HandshakeResponseDto } from './dto/handshake-response.dto.js';
+import { InterestRequest, InterestRequestStatus } from '../chat/entities/interest-request.entity.js';
+import { Listing } from '../listings/listing.entity.js';
+import { ChatHandshakeDto, HandshakeResponseDto } from './dto/handshake-response.dto.js';
 import { Handshake } from './entities/handshake.entity.js';
 import { toResponse } from './handshake.utils.js';
 
-// Temporary: until the listings code is merged, user 1 owns every listing.
-const OWNER_ID = 1;
-
 @Injectable()
 export class HandshakeService {
-  constructor( @InjectRepository(Handshake) private readonly handshakeRepository: Repository<Handshake>) {}
+  constructor(
+    @InjectRepository(Handshake) private readonly handshakeRepository: Repository<Handshake>,
+    @InjectRepository(Listing) private readonly listingRepository: Repository<Listing>,
+    @InjectRepository(InterestRequest) private readonly interestRequestRepository: Repository<InterestRequest>,
+  ) {}
+
+  // Finds the listing a chat is about, so the chat knows which handshake to show
+  // A chat starts when an owner accepts an interest request, and that request
+  // remembers the listing, the tenant and the conversation
+  async getForConversation(conversationId: number, userId: number): Promise<ChatHandshakeDto>
+  {
+    const request = await this.interestRequestRepository.findOne({
+      where: [
+        { conversationId, status: InterestRequestStatus.ACCEPTED, tenantId: userId },
+        { conversationId, status: InterestRequestStatus.ACCEPTED, ownerId: userId },
+      ],
+      order: { updatedAt: 'DESC' },
+    });
+    if (!request)
+      return { listing: null };
+
+    const listing = await this.listingRepository.findOneBy({ id: request.listingId });
+    if (!listing)
+      return { listing: null };
+
+    return {
+      listing: {
+        id: listing.id,
+        clientId: request.tenantId,
+        title: { ar: listing.titleAr, fr: listing.titleFr, en: listing.titleEn },
+      },
+    };
+  }
 
   // Returns the handshake between a listing and a client, as `userId` sees it.
   // It only reads: if nobody has clicked yet there is no row, and the status
@@ -80,12 +113,12 @@ export class HandshakeService {
     }
   }
 
-  // Returns the id of the user who owns the listing.
-  //
-  // TODO(listings): temporary stub. Once the listings code is merged, look the
-  // listing up here and throw a NotFoundException when it does not exist.
+  // Returns the id of the user who owns the listing, or 404 if it does not exist
   private async getListingOwnerId(listingId: number): Promise<number>
   {
-    return OWNER_ID;
+    const listing = await this.listingRepository.findOneBy({ id: listingId });
+    if (!listing)
+      throw new NotFoundException('Listing not found');
+    return listing.ownerId;
   }
 }

@@ -4,8 +4,8 @@ import type { Handshake } from '../services/handshakeService';
 
 // Loads the handshake between a listing and a client and gives the button what
 // it needs: the state, whether a request is running, an error flag, and the
-// action to say yes.
-export function useHandshake(listingId: number, clientId: number, userId: number)
+// action to say yes
+export function useHandshake(listingId: number, clientId: number)
 {
   const [handshake, setHandshake] = useState<Handshake | null>(null);
   const [loading, setLoading] = useState(true);
@@ -13,28 +13,28 @@ export function useHandshake(listingId: number, clientId: number, userId: number
 
   // Fetches the current state when the button appears or the ids change.
   // `ignore` drops an answer that arrives after the effect was replaced or the
-  // component was removed, so an old response never overwrites a newer one.
+  // component was removed, so an old response never overwrites a newer one
   useEffect(() =>
   {
     let ignore = false;
 
-    handshakeService.get(listingId, clientId, userId)
+    handshakeService.get(listingId, clientId)
       .then((data) => { if (!ignore) setHandshake(data); })
       .catch(() => { if (!ignore) setError(true); })
       .finally(() => { if (!ignore) setLoading(false); });
 
     return () => { ignore = true; };
-  }, [listingId, clientId, userId]);
+  }, [listingId, clientId]);
 
   // Sends the user's yes and shows the state the server answers with.
-  // A failure only raises the error flag; the button stays usable.
+  // A failure only raises the error flag, the button stays usable
   async function approve()
   {
     setLoading(true);
     setError(false);
     try
     {
-      setHandshake(await handshakeService.approve(listingId, clientId, userId));
+      setHandshake(await handshakeService.approve(listingId, clientId));
     }
     catch
     {

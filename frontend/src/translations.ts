@@ -171,6 +171,16 @@ export const translations = {
             sendError: 'تعذر إرسال الرسالة.',
             retry: 'إعادة المحاولة',
         },
+        handshake: {
+            forListing: 'المصافحة على:',
+            loading: 'جارٍ التحميل...',
+            unavailable: 'غير متاح',
+            propose: 'اقتراح مصافحة',
+            approve: 'قبول المصافحة',
+            waiting: 'في انتظار الطرف الآخر',
+            confirmed: 'تم تأكيد المصافحة',
+            error: 'حدث خطأ، حاول مرة أخرى',
+        },
         friends: {
             title: 'الأصدقاء',
             count: 'عدد الأصدقاء: {count}',
@@ -535,6 +545,16 @@ export const translations = {
             sendError: 'Could not send message.',
             retry: 'Retry',
         },
+        handshake: {
+            forListing: 'Handshake for',
+            loading: 'Loading...',
+            unavailable: 'Unavailable',
+            propose: 'Propose handshake',
+            approve: 'Approve handshake',
+            waiting: 'Waiting for the other side',
+            confirmed: 'Handshake confirmed',
+            error: 'Something went wrong, please try again',
+        },
         friends: {
             title: 'Friends',
             count: '{count} friends',
@@ -847,6 +867,16 @@ export const translations = {
             sendError: 'Impossible d’envoyer le message.',
             retry: 'Réessayer',
         },
+        handshake: {
+            forListing: 'Accord pour',
+            loading: 'Chargement...',
+            unavailable: 'Indisponible',
+            propose: 'Proposer un accord',
+            approve: 'Accepter l’accord',
+            waiting: 'En attente de l’autre partie',
+            confirmed: 'Accord confirmé',
+            error: 'Une erreur est survenue, réessayez',
+        },
         friends: {
             title: 'Amis',
             count: '{count} amis',
@@ -934,3 +964,4 @@ export const translations = {
 };
 export type ProfileTranslations = typeof translations.en.profile;
 export type FriendsTranslations = typeof translations.en.friends;
+export type HandshakeTranslations = typeof translations.en.handshake;
