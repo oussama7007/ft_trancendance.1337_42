@@ -6,6 +6,7 @@ import { CINCard } from '../Components/profile/CINCard';
 import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
 import ReviewsSection from '../Components/reviews/ReviewsSection';
+import { FriendsMenu } from '../Components/friends/FriendsMenu';
 
 
 import { translations  } from '../translations';
@@ -29,7 +30,9 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
             className="min-h-[65vh] bg-(--color-background) px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
             <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 md:grid-cols-[72px_minmax(0,1fr)] md:gap-5 lg:gap-6">
-                <ProfileSidebar t={t.sidebar} />
+                <ProfileSidebar t={t.sidebar}>
+                    <FriendsMenu lang={lang} />
+                </ProfileSidebar>
 
                 <div className="min-w-0">
                     <ProfileHeader
