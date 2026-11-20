@@ -39,12 +39,43 @@ export class AuthService {
 
     private readonly mailService: MailService,
   ) {}
+  
+
+  private validateDateOfBirth(dateOfBirth: string): void {
+        const birthDate = new Date(dateOfBirth);
+
+        if (isNaN(birthDate.getTime())) {
+            throw new BadRequestException('Invalid date of birth');
+        }
+
+        const today = new Date(
+            new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Africa/Casablanca',
+            }).format(new Date()),
+        );
+
+        const minimumDate = new Date(today);
+        minimumDate.setFullYear(today.getFullYear() - 18);
+
+        if (birthDate > minimumDate) {
+            throw new BadRequestException(
+                'You must be at least 18 years old',
+            );
+        }
+  } 
+
 
   async startRegistration(data: StartRegistrationDto) {
+    
+    
+    
+    this.validateDateOfBirth(data.dateOfBirth);
+    
+    
     const session = this.registrationSessionRepository.create(data);
 
-    const savedSession =
-      await this.registrationSessionRepository.save(session);
+
+    const savedSession = await this.registrationSessionRepository.save(session);
 
     return {
       sessionId: savedSession.id,
@@ -52,17 +83,7 @@ export class AuthService {
     };
   }
 
-  private getContactType(contact: string) {
-    if (contact.includes('@'))
-      return 'email';
 
-    if (/^\+?[0-9\s]{8,20}$/.test(contact))
-      return 'phone';
-
-    return 'invalid';
-  }
-
-  // STEP 2: Save the contact and generate a verification code.
   async requestVerification(data: RequestVerificationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -71,14 +92,11 @@ export class AuthService {
     if (!session)
       throw new NotFoundException('Registration session not found');
 
-    const contact = data.contact.trim();
-    const contactType = this.getContactType(contact);
+    const email = data.email.trim().toLowerCase();
 
-    if (contactType === 'invalid')
-      throw new BadRequestException('Invalid email or phone number');
 
     const existingUser = await this.userRepository.findOne({
-      where: { contact },
+      where: { email },
     });
 
     if (existingUser)
@@ -86,7 +104,7 @@ export class AuthService {
 
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
 
-    session.contact = contact;
+    session.email = email;
     session.verificationCode = code;
     session.verificationCodeExpiresAt =
       new Date(Date.now() + 5 * 60 * 1000);
@@ -94,7 +112,7 @@ export class AuthService {
 
     await this.registrationSessionRepository.save(session);
 
-    await this.mailService.sendVerificationCode(contact, code);
+    await this.mailService.sendVerificationCode(email, code);
 
     return {
       sessionId: session.id,
@@ -102,7 +120,7 @@ export class AuthService {
     };
   }
 
-  // STEP 2 continued: Verify the code submitted by the user.
+
   async verifyRegistration(data: VerifyRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -132,7 +150,7 @@ export class AuthService {
     };
   }
 
-  // STEP 3: Create the permanent user.
+
   async finishRegistration(data: FinishRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
       where: { id: data.sessionId },
@@ -141,11 +159,11 @@ export class AuthService {
     if (!session)
       throw new NotFoundException('Registration session not found');
 
-    if (!session.isVerified || !session.contact)
-      throw new BadRequestException('Verify your contact first');
+    if (!session.isVerified || !session.email)
+      throw new BadRequestException('Verify your email first');
 
     const existingUser = await this.userRepository.findOne({
-      where: { contact: session.contact },
+      where: { email: session.email },
     });
 
     if (existingUser)
@@ -158,20 +176,32 @@ export class AuthService {
       lastName: session.lastName,
       dateOfBirth: session.dateOfBirth,
       gender: session.gender,
-      cin: session.cin,
-      contact: session.contact,
+    
+      email: session.email,
       passwordHash,
     });
 
     const savedUser = await this.userRepository.save(user);
-
+        const accessToken = await this.jwtService.signAsync({
+            sub: savedUser.id,
+        });
     await this.registrationSessionRepository.delete(session.id);
+    
 
-    return {
-      userId: savedUser.id,
-      message: 'Registration completed successfully',
-    };
-  }
+      return {
+          accessToken,
+          user: {
+              id: savedUser.id,
+              firstName: savedUser.firstName,
+              lastName: savedUser.lastName,
+              dateOfBirth: savedUser.dateOfBirth,
+              gender: savedUser.gender,
+              email: savedUser.email,
+          },
+          message: 'Registration completed successfully',
+      }
+  };
+
 
     async getCurrentUser(userId: number) {
     const user = await this.userRepository.findOne({
@@ -186,17 +216,17 @@ export class AuthService {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
-      cin: user.cin,
+
       dateOfBirth: user.dateOfBirth,
       gender: user.gender,
-      contact: user.contact,
+      email: user.email,
     };
   }
 
 
   async validateCredentials(data : LoginDto){
     const user = await this.userRepository.findOne({
-      where: {contact: data.contact.trim() },
+      where: {email: data.email.trim().toLowerCase()  },
     });
     if (!user)
         throw new UnauthorizedException('Invalid contact or password');
@@ -216,7 +246,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         dateOfBirth: user.dateOfBirth,
-        contact: user.contact,
+        email: user.email,
       },
     };
   }

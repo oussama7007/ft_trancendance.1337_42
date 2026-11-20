@@ -11,6 +11,7 @@ import { ReviewsModule } from './reviews/reviews.module.js';
 import { ListingsModule } from './listings/listings.module.js';
 import { MetricsModule } from './metrics/metrics.module.js';
 import { RoommatesModule } from './roommates/roommates.module.js';
+import { ProfileModule } from './profile/profile.module.js';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { RoommatesModule } from './roommates/roommates.module.js';
     RoommatesModule,
     HandshakeModule,
     ReviewsModule,
+    ProfileModule,
     MetricsModule,
   ],
   controllers: [AppController],
