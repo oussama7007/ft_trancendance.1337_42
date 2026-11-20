@@ -8,11 +8,12 @@ Grafana shows the health of the project on one page: whether the backend and the
 
 ## How to run it
 
-1. Add these two lines to the `.env` file next to `docker-compose.yml`:
+1. Add these two lines to `backend/.env`:
    ```
-   GRAFANA_ADMIN_USER=admin
-   GRAFANA_ADMIN_PASSWORD=a_strong_password
+   GF_SECURITY_ADMIN_USER=admin
+   GF_SECURITY_ADMIN_PASSWORD=a_strong_password
    ```
+   Grafana reads them itself: every setting of Grafana can be given as a variable that starts with `GF_`.
 2. Start everything: `docker compose up --build -V`
    (`-V` is needed once, because the backend has a new dependency.)
 3. Open http://localhost:3001, sign in, and open the **iRent overview** dashboard.
@@ -27,7 +28,7 @@ Prometheus itself is at http://localhost:9090 (targets and alerts). It only answ
 | Configure exporters and integrations | `postgres-exporter` for the database, `node-exporter` for the host, and the backend's own `GET /metrics` (`backend/src/metrics/`) |
 | Create custom Grafana dashboards | `monitoring/grafana/dashboards/irent-overview.json`, loaded automatically at start |
 | Set up alerting rules | `monitoring/prometheus/alerts.yml`: backend down, database down, high error rate, slow requests, host memory almost full |
-| Secure access to Grafana | sign-in required, the password comes from `.env`, no anonymous access and no self sign-up |
+| Secure access to Grafana | sign-in required, the password comes from `backend/.env`, no anonymous access and no self sign-up |
 
 ## How the pieces talk
 
