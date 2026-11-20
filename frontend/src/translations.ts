@@ -1,6 +1,31 @@
 export const translations = {
     ar: {
-
+        settings: {
+                title: 'الإعدادات',
+                subtitle: 'إدارة تفضيلات حسابك.',
+                account: {
+                    title: 'معلومات الحساب',
+                    name: 'الاسم الكامل',
+                    email: 'البريد الإلكتروني',
+                    dateOfBirth: 'تاريخ الميلاد',
+                    notAvailable: 'غير متاح',
+                    note: 'هذه البيانات مأخوذة من معلومات التسجيل. تعديلها سيتاح بعد تجهيز واجهة الحساب.',
+                },
+                language: {
+                    title: 'اللغة والمنطقة',
+                    description: 'اختر اللغة التي تريد استخدامها في iRent.',
+                    label: 'لغة التطبيق',
+                    arabic: 'العربية',
+                    french: 'الفرنسية',
+                    english: 'الإنجليزية',
+                    note: 'سيتم تطبيق اللغة المختارة على صفحات التطبيق وحفظها في متصفحك.',
+                },
+                security: {
+                    title: 'الأمان',
+                    description: 'إعدادات كلمة المرور وأمان الحساب ستكون متاحة بعد ربط واجهة الأمان.',
+                    comingSoon: 'قريباً',
+                },
+            },
         auth: {
                 nameRequired: 'يرجى إدخال الاسم الشخصي واسم العائلة',
                 pleaseenteryouremail:  ' الرجاء إدخال بريدك الإلكتروني.',
@@ -318,6 +343,38 @@ export const translations = {
                 },
             },
     en: {
+
+        settings: {
+                title: 'Settings',
+                subtitle: 'Manage your account preferences.',
+                account: {
+                    title: 'Account information',
+                    name: 'Full name',
+                    email: 'Email address',
+                    dateOfBirth: 'Date of birth',
+                    notAvailable: 'Not available',
+                    note: 'These details come from your registration information. Editing will be available when the account API is ready.',
+                },
+                language: {
+                    title: 'Language and region',
+                    description: 'Choose the language you want to use in iRent.',
+                    label: 'Application language',
+                    arabic: 'Arabic',
+                    french: 'French',
+                    english: 'English',
+                    note: 'Your selected language will be applied across the application and saved in your browser.',
+                },
+                security: {
+                    title: 'Security',
+                    description: 'Password and account security settings will be available once the security API is integrated.',
+                    comingSoon: 'Coming soon',
+                },
+            },
+
+
+
+
+
         auth: {
 
 
@@ -639,6 +696,33 @@ export const translations = {
     },
     
     fr: {
+        settings: {
+            title: 'Paramètres',
+            subtitle: 'Gérez les préférences de votre compte.',
+            account: {
+                title: 'Informations du compte',
+                name: 'Nom complet',
+                email: 'Adresse e-mail',
+                dateOfBirth: 'Date de naissance',
+                notAvailable: 'Non disponible',
+                note: 'Ces informations proviennent de votre inscription. Leur modification sera disponible lorsque l’API du compte sera prête.',
+            },
+            language: {
+                title: 'Langue et région',
+                description: 'Choisissez la langue que vous souhaitez utiliser sur iRent.',
+                label: 'Langue de l’application',
+                arabic: 'Arabe',
+                french: 'Français',
+                english: 'Anglais',
+                note: 'La langue choisie sera appliquée à toute l’application et enregistrée dans votre navigateur.',
+            },
+            security: {
+                title: 'Sécurité',
+                description: 'Les paramètres du mot de passe et de la sécurité seront disponibles après l’intégration de l’API.',
+                comingSoon: 'Bientôt disponible',
+            },
+        },
+
         auth: {
 
 
@@ -966,3 +1050,4 @@ export const translations = {
     },
 };
 export type ProfileTranslations = typeof translations.en.profile;
+export type SettingsTranslations = typeof translations.en.settings;
