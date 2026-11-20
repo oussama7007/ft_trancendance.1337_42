@@ -148,6 +148,35 @@ export class ChatService {
     return savedMessage;
   }
 
+  async verifyConversationAccess(
+    conversationId: number,
+    userId: number,
+  ): Promise<void> {
+    await this.findConversationForUser(conversationId, userId);
+  }
+
+  async getMessageForBroadcast(
+    messageId: number,
+    conversationId: number,
+    senderId: number,
+  ): Promise<Message> {
+    await this.findConversationForUser(conversationId, senderId);
+
+    const message = await this.messageRepository.findOne({
+      where: {
+        id: messageId,
+        conversationId,
+        senderId,
+      },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    return message;
+  }
+
   private async findConversationForUser(
     conversationId: number,
     userId: number,
