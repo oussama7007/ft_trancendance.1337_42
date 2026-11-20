@@ -9,6 +9,7 @@ import type { ApiMessage } from "../../services/chatService";
 import { translations } from "../../translations";
 import { io, Socket } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
+import ChatHandshake from "../handshakes/ChatHandshake";
 
 let socket: Socket;
 
@@ -339,6 +340,8 @@ function Chat({ lang, currentUserId }: ChatProps) {
                     {selectedConversation.isOnline ? t.chat.online : t.chat.offline}
                   </p>
                 </div>
+
+                <ChatHandshake conversationId={selectedConversation.id} lang={lang} />
               </div>
 
               {error && (
