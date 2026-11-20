@@ -18,7 +18,7 @@ function makeUser(id: number, firstName: string): User {
     firstName,
     lastName: 'Test',
     passwordHash: 'secret-hash',
-    contact: `${firstName}@mail.com`,
+    email: `${firstName}@mail.com`,
   } as User;
 }
 

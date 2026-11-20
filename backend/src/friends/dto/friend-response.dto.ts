@@ -1,8 +1,8 @@
 // The JSON shapes the friends routes send back. Keep them identical to the
 // types in the frontend friend service.
 //
-// We never send the User row itself: it contains passwordHash, contact and the
-// CIN. Only the fields below leave the server.
+// We never send the User row itself: it contains passwordHash, the email and
+// other private fields. Only the fields below leave the server.
 
 // The relation between the logged-in user and another user, from the logged-in
 // user's point of view:
