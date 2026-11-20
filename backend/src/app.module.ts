@@ -10,6 +10,7 @@ import { FriendsModule } from './friends/friends.module.js';
 import { HandshakeModule } from './handshake/handshake.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { ListingsModule } from './listings/listings.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
 import { RoommatesModule } from './roommates/roommates.module.js';
 
 @Module({
@@ -41,6 +42,7 @@ import { RoommatesModule } from './roommates/roommates.module.js';
     HandshakeModule,
     ReviewsModule,
     FriendsModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

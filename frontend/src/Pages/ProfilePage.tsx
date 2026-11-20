@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Language, User } from '../types';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { ProfileHeader } from '../Components/profile/ProfileHeader';
@@ -7,22 +8,28 @@ import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
 import ReviewsSection from '../Components/reviews/ReviewsSection';
 import { FriendsMenu } from '../Components/friends/FriendsMenu';
+import { OwnerInterestRequests } from '../Components/home/OwnerInterestRequests';
 
-
-import { translations  } from '../translations';
+import { translations } from '../translations';
 
 interface ProfilePageProps {
     user: User;
     lang: Language;
 }
 
-export function ProfilePage({ user, lang, }: ProfilePageProps) {
-    // These states keep the new image and description visible in this page.
-    // They are preview states only until the backend profile endpoints exist.
+export function ProfilePage({ user, lang }: ProfilePageProps) {
+    const navigate = useNavigate();
     const t = translations[lang].profile;
     const [avatar, setAvatar] = useState(user.avatar);
     const [description, setDescription] = useState(user.bio ?? '');
 
+    const handleAcceptRequest = (conversationId?: number) => {
+        if (conversationId) {
+            navigate(`/chat?conversationId=${conversationId}`);
+        } else {
+            navigate('/chat');
+        }
+    };
 
     return (
         <main 
@@ -66,6 +73,7 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
                             />
 
                             {/* TODO: Teammates can add future profile sections in this column. */}
+                            <OwnerInterestRequests onAcceptSuccess={handleAcceptRequest} />
                         </div>
                     </div>
                 </div>

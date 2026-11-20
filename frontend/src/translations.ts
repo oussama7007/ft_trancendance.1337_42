@@ -12,7 +12,15 @@ export const translations = {
             language: 'اللغة',
             menu: 'القائمة',
             closeMenu: 'إغلاق القائمة',
-            brandSubtitle: 'كراء السكن بسهولة', 
+            brandSubtitle: 'كراء السكن بسهولة',
+            languages: {
+                en: 'الإنجليزية',
+                fr: 'الفرنسية',
+                ar: 'العربية',
+            },
+            dashboard: 'لوحة التحليلات',
+
+            
         },
         roommates: {
             joinRoom: 'الانضمام إلى غرفة',
@@ -131,10 +139,19 @@ export const translations = {
 
 
             location: 'الموقع',
+            owner: 'المالك',
+            yourListing: 'إعلانك',
             price: 'السعر',
             perMonth: '/ الشهر',      
             currency: 'درهم',
             close: 'إغلاق',
+            bedrooms:'غرف النوم',
+            sorting: {
+                newest: 'الأحدث',
+                priceLowToHigh: 'السعر: من الأقل إلى الأعلى',
+                priceHighToLow: 'السعر: من الأعلى إلى الأقل',
+                mostBedrooms: 'الأكثر غرفًا',
+            },
         },
         /************* Chat [ar] *************/
         chat: {
@@ -268,6 +285,29 @@ export const translations = {
                         placeholder: 'ستظهر التقييمات هنا بعد دمج مكوّن زميل الفريق.',
                     },
                 },
+                dashboardPage: {
+                    title: 'لوحة التحليلات',
+                    ranges: {
+                        '7d': 'آخر 7 أيام',
+                        '30d': 'آخر 30 يوم',
+                        '90d': 'آخر 90 يوم',
+                    },
+                    loading: 'جاري التحميل...',
+                    loadError: 'تعذر تحميل الإحصائيات. حاول مرة أخرى.',
+                    kpi: {
+                        views: 'المشاهدات',
+                        contacts: 'الاتصالات',
+                        searches: 'عمليات البحث',
+                        activeListings: 'الإعلانات النشطة',
+                    },
+                    vsPrevious: 'مقارنة بالفترة السابقة',
+                    viewsChartTitle: 'المشاهدات يوما بيوم',
+                    topListingsTitle: 'أفضل الإعلانات',
+                    listingColumn: 'الإعلان',
+                    cityColumn: 'المدينة',
+                    noData: 'لا توجد بيانات لهذه الفترة',
+                    sessionExpired: 'انتهت جلستك. سجل الدخول مرة أخرى.',
+                },
             },
     en: {
         profile: {
@@ -337,6 +377,13 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Close menu',
             brandSubtitle: 'Rent your home easily',
+            languages: {
+                en: 'English',
+                fr: 'French',
+                ar: 'Arabic',
+            },
+            dashboard: 'Analytics',
+
         },
         
         roommates: { 
@@ -456,10 +503,19 @@ export const translations = {
 
             
             location: 'Location',
+            owner: 'Owner',
+            yourListing: 'Your listing',
             price: 'Price',
             perMonth: '/ month',
             currency: 'DH',
             close: 'Close',
+            bedrooms: 'Bedrooms',
+            sorting: {
+                newest: 'Newest',
+                priceLowToHigh: 'Price: low to high',
+                priceHighToLow: 'Price: high to low',
+                mostBedrooms: 'Most bedrooms',
+            },
         },
         /************* Chat [en] *************/
         chat: {
@@ -537,8 +593,33 @@ export const translations = {
             sending: 'Sending...',
             close: 'Close',
             stars: '{count} stars',
-        }
+        },
+        dashboardPage: {
+            title: 'Analytics',
+            ranges: {
+                '7d': 'Last 7 days',
+                '30d': 'Last 30 days',
+                '90d': 'Last 90 days',
+            },
+            loading: 'Loading...',
+            loadError: 'Could not load the statistics. Please try again.',
+            kpi: {
+                views: 'Views',
+                contacts: 'Contacts',
+                searches: 'Searches',
+                activeListings: 'Active listings',
+            },
+            vsPrevious: 'vs previous period',
+            viewsChartTitle: 'Views per day',
+            topListingsTitle: 'Top listings',
+            listingColumn: 'Listing',
+            cityColumn: 'City',
+            noData: 'No data for this period',
+            sessionExpired: 'Your session ended. Please sign in again.',
+        },
+
     },
+    
     fr: {
         profile: {
                 sidebar: {
@@ -607,6 +688,16 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Fermer le menu',
             brandSubtitle: 'Louez votre logement facilement',
+            en: 'Anglais',
+            fr: 'Français',
+            ar: 'Arabe',
+            languages: {
+                en: 'Anglais',
+                fr: 'Français',
+                ar: 'Arabe',
+            dashboard: 'Statistiques',
+
+        },
         },
         roommates: {
             joinRoom: 'Rejoindre une chambre',
@@ -724,10 +815,19 @@ export const translations = {
 
 
             location: 'Emplacement',
+            owner: 'Propriétaire',
+            yourListing: 'Votre annonce',
             price: 'Prix',
             perMonth: '/ mois',
             currency: 'DH',
             close: 'Fermer',
+            bedrooms: 'Chambres',
+            sorting: {
+                newest: 'Plus récentes',
+                priceLowToHigh: 'Prix croissant',
+                priceHighToLow: 'Prix décroissant',
+                mostBedrooms: 'Plus de chambres',
+            },
         },
         /************* Chat [fr] *************/
         chat: {
@@ -805,7 +905,31 @@ export const translations = {
             sending: 'Envoi...',
             close: 'Fermer',
             stars: '{count} étoiles',
-        }
+        },
+        dashboardPage: {
+            title: 'Statistiques',
+            ranges: {
+                '7d': '7 derniers jours',
+                '30d': '30 derniers jours',
+                '90d': '90 derniers jours',
+            },
+            loading: 'Chargement...',
+            loadError: 'Impossible de charger les statistiques. Réessayez.',
+            kpi: {
+                views: 'Vues',
+                contacts: 'Contacts',
+                searches: 'Recherches',
+                activeListings: 'Annonces actives',
+            },
+            vsPrevious: 'vs période précédente',
+            viewsChartTitle: 'Vues par jour',
+            topListingsTitle: 'Meilleures annonces',
+            listingColumn: 'Annonce',
+            cityColumn: 'Ville',
+            noData: 'Aucune donnée pour cette période',
+            sessionExpired: 'Votre session a expiré. Reconnectez-vous.',
+        },
+
     },
 };
 export type ProfileTranslations = typeof translations.en.profile;

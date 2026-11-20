@@ -22,6 +22,7 @@ interface HomePageProps {
     lang: Language;
     onSelectListing: (item: Listing) => void;
     isLoggedIn: boolean;
+    currentUserId?: number;
 }
 
 type HomeTab = 'home' | 'roommate' | 'list';
@@ -87,6 +88,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     lang,
     onSelectListing,
     isLoggedIn,
+    currentUserId
 }) => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
@@ -159,8 +161,8 @@ useEffect(() => {
     if (priceRange === '3000+') { minPrice = 3001; }
 
     try {
-      const data = await fetchListings(
-        { city: searchQuery, type: propertyType, minPrice, maxPrice },
+      const {data} = await fetchListings(
+        { city: searchQuery, type: propertyType, minPrice, maxPrice, limit:50 },
         controller.signal,
       );
       setListings(data);
@@ -177,13 +179,10 @@ useEffect(() => {
 }, [searchQuery, propertyType, priceRange]);
 
   const mapMarkers = useMemo<MapMarker[]>(()=>{
-      return (listings || []).map((item, index) => {
+      return (listings || []).map((item) => {
 
       const cityMatch = findCityCoords(item.city);
-      const angle = (index * 130 * Math.PI) / 180;
-      const radius = 0.0015 + (index % 3) * 0.001;
-      const latOffset = Math.cos(angle) * radius;
-      const lngOffset = Math.sin(angle) * radius;
+  
       const district = item.district;
       const districtEnFr = item.districtEnFr;
 
@@ -195,9 +194,8 @@ useEffect(() => {
           en:cityMatch.en,
         },
 
-        lat: cityMatch.lat + latOffset,
-        lng: cityMatch.lng + lngOffset,
-
+        lat: item.lat,
+        lng: item.lng,
         title: item.title,
         price: Number(item.price),
         category: 'home',
@@ -218,8 +216,6 @@ useEffect(() => {
       return;
     }
     hasDetectedLocation.current = true;
-
-    // console.log(hasDetectedLocation.current);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -465,6 +461,7 @@ const filteredMarkers = mapMarkers.filter(
         availableLabel={currentLang.available}
         detailsLabel={currentLang.detailsTitle}
         onSelect={setActiveDetailItem}
+        currentUserId={currentUserId}
       />
       )}
 
@@ -489,6 +486,9 @@ const filteredMarkers = mapMarkers.filter(
         title={currentLang.detailsTitle}
         contactLabel={currentLang.contactBtn}
         locationLabel={currentLang.location}
+        ownerLabel={currentLang.owner}
+        currentUserId={currentUserId}
+        yourListingLabel={currentLang.yourListing}
         priceLabel={currentLang.price}
         perMonthLabel={currentLang.perMonth}
         closeLabel={currentLang.close}

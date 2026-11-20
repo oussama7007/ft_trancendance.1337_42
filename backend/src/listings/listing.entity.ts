@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { User } from '../auth/user.entity.js';
 
 @Entity()
 export class Listing {
@@ -7,6 +8,10 @@ export class Listing {
 
   @Column()
   ownerId: number;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'ownerId', foreignKeyConstraintName: 'FK_listing_owner' })
+  owner?: User;
 
   @Column()
   cityAr: string;

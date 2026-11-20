@@ -21,6 +21,8 @@ import { SignUpPage } from './Pages/SignUpPage'
 import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
 import Chat from './Components/chat/Chat'
+import { DashboardPage } from './Pages/DashboardPage'
+
 
 import type { Language, Listing, User } from './types'
 import { translations } from './translations'
@@ -228,6 +230,7 @@ function App() {
                             lang={lang}
                             onSelectListing={handleSelectListing}
                             isLoggedIn={currentUser !== null}
+                            currentUserId={currentUser?.id}
                         />
                     }
                 />
@@ -235,7 +238,7 @@ function App() {
                 {/* Your existing listings page */}
                 <Route
                     path="/listings"
-                    element={<ListingsPage lang={lang} />}
+                    element={<ListingsPage lang={lang} currentUserId={currentUser?.id} />}
                 />
 
                 <Route
@@ -265,6 +268,16 @@ function App() {
                             : <Navigate to="/signin" replace />
                     }
                 />
+
+                <Route
+                    path="/dashboard"
+                    element={
+                        currentUser
+                            ? <DashboardPage lang={lang} />
+                            : <Navigate to="/signin" replace />
+                    }
+                />
+
 
                 {/* Teammate's login implementation */}
                 <Route

@@ -79,7 +79,7 @@ export const OwnerInterestRequests: React.FC<OwnerInterestRequestsProps> = ({
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] my-6">
+    <div className="w-full p-6 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)]">
       <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
         <Home className="w-5 h-5 text-[var(--color-accent)]" />
         Interested Applicants

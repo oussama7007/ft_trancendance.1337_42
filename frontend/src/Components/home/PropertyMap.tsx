@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {APIProvider, AdvancedMarker, Map} from '@vis.gl/react-google-maps';
 import { Home as HomeIcon } from 'lucide-react';
 
@@ -62,6 +62,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
     onMarkerClick,
     currencyLabel,
 }) => {
+    const [hoveredMarker, setHoveredMarker] = useState<string | null>(null);
     return (
             <div className="w-full h-[65vh] md:h-[80vh]  min-h-[380px] md:min-h-[550px] mt-4 rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
             <APIProvider apiKey={apiKey}>
@@ -84,6 +85,9 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
                             lng: marker.lng,
                         }}
                         onClick={() => onMarkerClick(marker)}
+                        zIndex={hoveredMarker === marker.id ? 10 : 1}
+                        onMouseEnter={() => setHoveredMarker(marker.id)}
+                        onMouseLeave={() => setHoveredMarker(null)}
                         >
                             <div className="marker-3d-bounce group cursor-pointer flex flex-col items-center py-2">
                                 {/*Price*/}
@@ -96,6 +100,7 @@ export const PropertyMap: React.FC<PropertyMapProps> = ({
                                 </div>
                             </div>
                        </AdvancedMarker>
+                       
                     ))}
                 </Map>
             </APIProvider>
