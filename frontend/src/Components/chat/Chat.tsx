@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MessageSquareOff } from "lucide-react";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
@@ -45,7 +45,7 @@ function toChatMessage(message: ApiMessage): ChatMessage {
 function Chat({ lang, currentUserId }: ChatProps) {
   const t = translations[lang] ?? translations.en;
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [rawConversations, setRawConversations] = useState<Omit<Conversation, "isOnline">[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [showConversationList, setShowConversationList] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,31 +56,44 @@ function Chat({ lang, currentUserId }: ChatProps) {
   const requestedConversationId = Number(searchParams.get("conversationId"));
   const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
+  const onlineSet = useMemo(() => new Set(onlineUserIds), [onlineUserIds]);
+
+  const conversations: Conversation[] = useMemo(
+    () =>
+      rawConversations.map((conversation) => ({
+        ...conversation,
+        isOnline: onlineSet.has(conversation.otherUserId),
+      })),
+    [rawConversations, onlineSet],
+  );
+
   useEffect(() => {
     socket = io(import.meta.env.VITE_API_URL, {
       withCredentials: true,
     });
 
-    socket.on("onlineUsers", (userIds: number[]) => {
-      setOnlineUserIds(userIds);
-    });
+    const handleOnlineUsers = (userIds: number[]) => {
+      setOnlineUserIds(Array.from(new Set(userIds)));
+    };
 
-    socket.on("userOnline", ({ userId }: { userId: number }) => {
+    const handleUserOnline = ({ userId }: { userId: number }) => {
       setOnlineUserIds((previous) =>
         previous.includes(userId) ? previous : [...previous, userId],
       );
-    });
+    };
 
-    socket.on("userOffline", ({ userId }: { userId: number }) => {
-      setOnlineUserIds((previous) =>
-        previous.filter((id) => id !== userId),
-      );
-    });
+    const handleUserOffline = ({ userId }: { userId: number }) => {
+      setOnlineUserIds((previous) => previous.filter((id) => id !== userId));
+    };
+
+    socket.on("onlineUsers", handleOnlineUsers);
+    socket.on("userOnline", handleUserOnline);
+    socket.on("userOffline", handleUserOffline);
 
     socket.on("newMessage", (apiMessage: ApiMessage) => {
       const newMsg = toChatMessage(apiMessage);
 
-      setConversations((previous) =>
+      setRawConversations((previous) =>
         previous.map((conv) => {
           if (conv.id !== apiMessage.conversationId) return conv;
 
@@ -98,6 +111,9 @@ function Chat({ lang, currentUserId }: ChatProps) {
     });
 
     return () => {
+      socket.off("onlineUsers", handleOnlineUsers);
+      socket.off("userOnline", handleUserOnline);
+      socket.off("userOffline", handleUserOffline);
       socket.removeAllListeners();
       socket.disconnect();
     };
@@ -127,7 +143,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
     let cancelled = false;
 
     if (currentUserId == null) {
-      setConversations([]);
+      setRawConversations([]);
       setSelectedConversationId(null);
       setError(null);
       setIsLoading(false);
@@ -165,17 +181,17 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
             return {
               id: conversation.id,
-              name: participantName, otherUserId,
+              name: participantName,
+              otherUserId,
               lastMessage: messages.at(-1)?.content ?? "",
               messages,
-              isOnline: onlineUserIds.includes(otherUserId),
             };
           }),
         );
 
         if (cancelled) return;
 
-        setConversations(loadedConversations);
+        setRawConversations(loadedConversations);
 
         setSelectedConversationId((previousId) => {
           if (
@@ -217,15 +233,6 @@ function Chat({ lang, currentUserId }: ChatProps) {
     };
   }, [reloadKey, currentUserId, searchQuery, requestedConversationId, t.chat.loadError]);
 
-  useEffect(() => {
-    setConversations((previous) =>
-      previous.map((conversation) => ({
-        ...conversation,
-        isOnline: onlineUserIds.includes(conversation.otherUserId),
-      })),
-    );
-  }, [onlineUserIds]);
-
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
   );
@@ -253,14 +260,14 @@ function Chat({ lang, currentUserId }: ChatProps) {
         conversationId: savedMessage.conversationId,
       });
 
-      setConversations((previousConversations) =>
+      setRawConversations((previousConversations) =>
         previousConversations.map((conversation) =>
           conversation.id === selectedConversation.id
             ? {
-              ...conversation,
-              messages: [...conversation.messages, message],
-              lastMessage: message.content,
-            }
+                ...conversation,
+                messages: [...conversation.messages, message],
+                lastMessage: message.content,
+              }
             : conversation,
         ),
       );
@@ -280,7 +287,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
   if (isLoading && conversations.length === 0) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
         <p>{t.chat.loadingConversations}</p>
       </div>
     );
@@ -288,7 +295,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
   if (conversations.length === 0 && !searchQuery.trim()) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
         <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] mb-6 text-[var(--color-accent)] shadow-sm">
           <MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
         </div>
@@ -305,23 +312,25 @@ function Chat({ lang, currentUserId }: ChatProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-[var(--color-surface)]">
-      <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-5.5rem)] min-h-[420px] max-h-[calc(100dvh-5.5rem)] w-full bg-[var(--color-surface)] overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {showConversationList && (
-          <ConversationList
-            conversations={conversations}
-            selectedConversation={selectedConversation ?? conversations[0]}
-            onSelectConversation={handleSelectConversation}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            lang={lang}
-          />
+          <div className="h-full min-h-0 flex flex-col">
+            <ConversationList
+              conversations={conversations}
+              selectedConversation={selectedConversation ?? conversations[0]}
+              onSelectConversation={handleSelectConversation}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              lang={lang}
+            />
+          </div>
         )}
 
-        <div className="flex flex-1 flex-col bg-[var(--color-background)] h-full overflow-hidden">
+        <div className="flex flex-1 min-h-0 flex-col bg-[var(--color-background)] h-full overflow-hidden">
           {selectedConversation ? (
             <>
-              <div className="flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
+              <div className="shrink-0 flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
                 {!showConversationList && (
                   <button
                     type="button"
@@ -342,7 +351,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
               </div>
 
               {error && (
-                <div className="m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-red-700" role="alert">
+                <div className="shrink-0 m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-red-700" role="alert">
                   <p className="text-sm">{error}</p>
                   <button
                     type="button"
@@ -354,13 +363,18 @@ function Chat({ lang, currentUserId }: ChatProps) {
                 </div>
               )}
 
-              <MessageList
-                messages={selectedConversation.messages}
-                currentUserId={currentUserId ?? -1}
-                lang={lang}
-              />
+              <div className="flex-1 min-h-0 flex flex-col">
+                <MessageList
+                  messages={selectedConversation.messages}
+                  currentUserId={currentUserId ?? -1}
+                  lang={lang}
+                  conversationId={selectedConversation.id}
+                />
+              </div>
 
-              <MessageInput onSend={handleSendMessage} lang={lang} />
+              <div className="shrink-0">
+                <MessageInput onSend={handleSendMessage} lang={lang} />
+              </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-muted)] p-6">

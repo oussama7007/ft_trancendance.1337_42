@@ -24,10 +24,7 @@ interface SendMessagePayload {
 
 @WebSocketGateway({
   cors: {
-    origin: [
-      'https://musical-enigma-97q7p9p95pg7fx5p7-5173.app.github.dev',
-      'http://localhost:5173',
-    ],
+    origin: '*',
     credentials: true,
   },
 })
@@ -59,12 +56,12 @@ export class ChatGateway
       const payload =
         await this.jwtService.verifyAsync<JwtPayload>(token);
 
-      if (!Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
+      const userId = Number(payload.sub);
+
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
         client.disconnect(true);
         return;
       }
-
-      const userId = payload.sub;
 
       client.data.userId = userId;
 
