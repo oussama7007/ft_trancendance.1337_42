@@ -233,6 +233,8 @@ export const translations = {
 
 
             location: 'الموقع',
+            owner: 'المالك',
+            yourListing: 'إعلانك',
             price: 'السعر',
             perMonth: '/ الشهر',      
             currency: 'درهم',
@@ -639,6 +641,8 @@ export const translations = {
 
             
             location: 'Location',
+            owner: 'Owner',
+            yourListing: 'Your listing',
             price: 'Price',
             perMonth: '/ month',
             currency: 'DH',
@@ -993,6 +997,8 @@ export const translations = {
 
 
             location: 'Emplacement',
+            owner: 'Propriétaire',
+            yourListing: 'Votre annonce',
             price: 'Prix',
             perMonth: '/ mois',
             currency: 'DH',

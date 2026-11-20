@@ -9,6 +9,7 @@ import { ChatModule } from './chat/chat.module.js';
 import { HandshakeModule } from './handshake/handshake.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { ListingsModule } from './listings/listings.module.js';
+import { MetricsModule } from './metrics/metrics.module.js';
 import { RoommatesModule } from './roommates/roommates.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 
@@ -41,6 +42,7 @@ import { ProfileModule } from './profile/profile.module.js';
     HandshakeModule,
     ReviewsModule,
     ProfileModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-import { MapPin, ArrowRight, BedDouble } from "lucide-react";
+import { MapPin, ArrowRight, BedDouble, User } from "lucide-react";
 import type React from "react";
 import type { Language, Listing } from "../types";
 import { translations } from '../translations';
@@ -9,6 +9,7 @@ interface ListingCardProps {
     availableLabel: string;
     detailsLabel: string;
     onSelect: (item: Listing) => void;
+    isMine?: boolean;
 }
 
 export const ListingCard: React.FC<ListingCardProps> = ({
@@ -17,11 +18,14 @@ export const ListingCard: React.FC<ListingCardProps> = ({
     availableLabel,
     detailsLabel,
     onSelect,
+    isMine = false,
 }) => {
     return (
         <article
             onClick={() => onSelect(item)}
-            className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer border border-gray-100 flex flex-col group"
+            className={`bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer flex flex-col group ${
+                isMine ? 'border-2 border-(--color-accent) ring-4 ring-(--color-accent-soft)' : 'border border-gray-100'
+            }`}
         >
             {/* Image */}
             <div className="h-56 overflow-hidden relative bg-gray-100">
@@ -35,6 +39,14 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                     <div className="w-full h-full flex items-center justify-center text-gray-300">
                         <MapPin className="w-10 h-10 text-amber-600" />
                     </div>
+                )}
+
+                {/* Your listing */}
+                {isMine && (
+                    <span className="absolute top-3 start-3 flex items-center gap-1 bg-(--color-accent) text-white font-black text-[10px] px-2.5 py-1.5 rounded-xl shadow-md">
+                        <User className="w-3 h-3" />
+                        {translations[lang].homePage.yourListing}
+                    </span>
                 )}
 
                 {/* Price */}

@@ -10,6 +10,7 @@ interface FeaturedListingsProps {
     availableLabel: string;
     detailsLabel: string;
     onSelect: (item: Listing) => void;
+    currentUserId?: number;
 }
 
 export const FeaturedListing: React.FC<FeaturedListingsProps> = ({
@@ -19,6 +20,7 @@ export const FeaturedListing: React.FC<FeaturedListingsProps> = ({
     availableLabel,
     detailsLabel,
     onSelect,
+    currentUserId,
 }) => {
     const featuredListings = listings.slice(0, 3);
 
@@ -49,6 +51,7 @@ export const FeaturedListing: React.FC<FeaturedListingsProps> = ({
                         availableLabel={availableLabel}
                         detailsLabel={detailsLabel}
                         onSelect={onSelect}
+                        isMine={item.ownerId === currentUserId}
                     />
 
                 ))}
