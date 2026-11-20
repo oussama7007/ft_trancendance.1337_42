@@ -10,7 +10,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
-
+import { GoogleLogin } from '@react-oauth/google';
 import { PasswordField } from "@/Components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +38,9 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
     const t = translations[lang].auth;
     const isRtl = lang === "ar";
 
-
+    const [challengeToken, setChallengeToken] = useState('');
+const [phoneHint, setPhoneHint] = useState('');
+const [smsCode, setSmsCode] = useState('');
     // Form values
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -46,6 +48,94 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
     // Form status
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+
+
+
+    async function handleGoogleLogin(credential: string) {
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+        const response = await fetch(`${API_URL}/auth/google/login`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ credential }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Google login failed');
+        }
+
+        if (data.requiresTwoFactor) {
+            setChallengeToken(data.challengeToken);
+            setPhoneHint(data.phoneHint);
+            return;
+        }
+
+        onLoginSuccess(data.user);
+    } catch (error) {
+        setError(
+            error instanceof Error
+                ? error.message
+                : 'Google login failed',
+        );
+    } finally {
+        setIsSubmitting(false);
+    }
+}
+        async function handleSmsVerification(
+    event: FormEvent<HTMLFormElement>,
+) {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+        const response = await fetch(
+            `${API_URL}/auth/2fa/login/verify`,
+            {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    challengeToken,
+                    code: smsCode,
+                }),
+            },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || 'SMS verification failed',
+            );
+        }
+
+        if (!data.user) {
+            throw new Error('User was not returned');
+        }
+
+        onLoginSuccess(data.user);
+    } catch (error) {
+        setError(
+            error instanceof Error
+                ? error.message
+                : 'Verification failed',
+        );
+    } finally {
+        setIsSubmitting(false);
+    }
+}
+
+
 
     async function handleLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -79,6 +169,12 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
                         ? data.message
                         : t.invalidCredentials
                 );
+                return;
+            }
+            if (data.requiresTwoFactor) {
+                setChallengeToken(data.challengeToken);
+                setPhoneHint(data.phoneHint);
+                setPassword('');
                 return;
             }
 
@@ -118,7 +214,66 @@ return (
                         {error}
                     </Alert>
                 )}
+                {challengeToken ? (
+    <form
+        onSubmit={handleSmsVerification}
+        className="space-y-4"
+    >
+        <p className="text-sm text-muted-foreground">
+            Enter the code sent to {phoneHint}.
+        </p>
 
+        <Label htmlFor="smsCode">
+            SMS verification code
+        </Label>
+
+        <Input
+            id="smsCode"
+            value={smsCode}
+            onChange={(event) => setSmsCode(event.target.value)}
+            maxLength={8}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+        />
+
+        <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting}
+        >
+            {isSubmitting ? 'Verifying...' : 'Verify and sign in'}
+        </Button>
+    </form>
+) : (
+    <>
+        {/* Keep your existing email/password form here */}
+
+        <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-gray-200" />
+            <span className="text-xs text-gray-500">OR</span>
+            <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+            <div className="flex justify-center">
+                <GoogleLogin
+                    onSuccess={(response) => {
+                        if (response.credential) {
+                            void handleGoogleLogin(response.credential);
+                        }
+                    }}
+                    onError={() => {
+                        setError('Google login failed');
+                    }}
+                    theme="outline"
+                    size="large"
+                    text="continue_with"
+                />
+            </div>
+        )}
+    </>
+)}
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="email">

@@ -40,7 +40,7 @@ export interface Listing {
     lng: number;
 
     type: PropertyType;
-
+    avatarUrl?: string;
 }
 
 export interface User {
@@ -58,12 +58,12 @@ export interface User {
  
 
   avatar?: string;
+    avatarUrl?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  linkedin?: string | null;
 
-  instagram?: string;
-  facebook?: string;
-  linkedin?: string;
-
-  bio?: string;
+  bio?: string | null;
 
   role?: 'user' | 'admin';
 

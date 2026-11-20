@@ -48,4 +48,25 @@ export class User {
 
   @Column({ type: 'varchar', nullable: true })
   googleEmail: string | null;
+
+
+  @Column({
+        type: 'varchar',
+        length: 20,
+        nullable: true,
+        unique: true,
+    })
+    phoneNumber: string | null;
+
+    @Column({
+        type: 'boolean',
+        default: false,
+    })
+    phoneVerified: boolean;
+
+    @Column({
+        type: 'boolean',
+        default: false,
+    })
+    sms2faEnabled: boolean;
 }

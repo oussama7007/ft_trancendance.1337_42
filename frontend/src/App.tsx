@@ -10,6 +10,9 @@ import {
     useLocation,
 } from 'react-router-dom'
 
+
+
+import { SettingsPage } from './Pages/SettingsPage';
 import { LegalPage } from './Pages/LegalPage'
 import { HomePage } from './Pages/HomePage'
 import { ListingsPage } from './Pages/ListingsPage'
@@ -22,7 +25,7 @@ import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
 import Chat from './Components/chat/Chat'
 import { DashboardPage } from './Pages/DashboardPage'
-
+import { SettingsPage } from './Pages/SettingsPage';
 
 import type { Language, Listing, User } from './types'
 import { translations } from './translations'
@@ -38,6 +41,11 @@ type BackendUser = {
     email: string;
     gender?: string;
     cin?: string;
+        bio?: string | null;
+    avatarUrl?: string | null;
+    linkedin?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
 };
 
 // Convert backend user data to the frontend User type.
@@ -51,7 +59,11 @@ function mapBackendUser(user: BackendUser): User {
         gender: user.gender,
         fullName: `${user.firstName} ${user.lastName}`,
         email: isEmail ? user.email : '',
-        
+                bio: user.bio,
+        avatarUrl: user.avatarUrl,
+        linkedin: user.linkedin,
+        instagram: user.instagram,
+        facebook: user.facebook,
         dateOfBirth: user.dateOfBirth,
         
     };
@@ -248,6 +260,22 @@ function App() {
                             : <Navigate to="/signin" replace />
                     }
                 />
+
+                <Route
+                    path="/settings"
+                    element={
+                        currentUser
+                            ? (
+                                <SettingsPage
+                                    user={currentUser}
+                                    lang={lang}
+                                    onLanguageChange={setLang}
+                                />
+                            )
+                            : <Navigate to="/signin" replace />
+                    }
+                />
+
 
                 {/* Existing placeholder pages */}
                 <Route

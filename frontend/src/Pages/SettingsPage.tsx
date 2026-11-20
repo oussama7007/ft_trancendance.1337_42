@@ -1,12 +1,18 @@
 import {
     Globe,
-    ShieldCheck,
+    
     UserRound,
+    Lock,
 } from 'lucide-react';
+
+import { useState } from 'react';
+import { changeMyPassword } from '../services/profile';
 
 import type { Language, User } from '../types';
 import { translations } from '../translations';
-
+import { PasswordField } from '../Components/auth/PasswordField';
+import { PasswordStrength } from '../Components/auth/PasswordStrength';
+import { isPasswordValid } from '../utils/password';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { AccountSection } from '../Components/shared/AccountSection';
 
@@ -21,10 +27,70 @@ export function SettingsPage({
     lang,
     onLanguageChange,
 }: SettingsPageProps) {
+
+
     const t = translations[lang].settings;
     const sidebarT = translations[lang].profile.sidebar;
 
     const notAvailable = t.account.notAvailable;
+
+    const [currentPassword, setCurrentPassword] = useState('');
+const [newPassword, setNewPassword] = useState('');
+const [confirmPassword, setConfirmPassword] = useState('');
+
+const [passwordMessage, setPasswordMessage] = useState('');
+const [passwordError, setPasswordError] = useState('');
+const [passwordLoading, setPasswordLoading] = useState(false);
+    await changeMyPassword(currentPassword, newPassword);
+async function handlePasswordChange(
+    event: React.FormEvent<HTMLFormElement>,
+) {
+    event.preventDefault();
+
+    setPasswordMessage('');
+    setPasswordError('');
+
+    if (newPassword !== confirmPassword) {
+        setPasswordError('Passwords do not match');
+        return;
+    }
+
+    if (newPassword.length < 8) {
+        setPasswordError('Password must contain at least 8 characters');
+        return;
+    }
+            if (!isPasswordValid(newPassword)) {
+            setPasswordError('Please follow all password requirements');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            setPasswordError('Passwords do not match');
+            return;
+        }
+    try {
+        setPasswordLoading(true);
+
+        await changeMyPassword(
+            currentPassword,
+            newPassword,
+        );
+
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+
+        setPasswordMessage('Password updated successfully');
+    } catch (error) {
+        setPasswordError(
+            error instanceof Error
+                ? error.message
+                : 'Could not update password',
+        );
+    } finally {
+        setPasswordLoading(false);
+    }
+}
 
     return (
         <main
@@ -138,23 +204,115 @@ export function SettingsPage({
                                 </p>
                             </div>
                         </AccountSection>
+                                    <PasswordField
+                                        id="currentPassword"
+                                        label="Current password"
+                                        value={currentPassword}
+                                        onChange={setCurrentPassword}
+                                        autoComplete="current-password"
+                                    />
 
+            <PasswordField
+                id="newPassword"
+                label="New password"
+                value={newPassword}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+                minLength={8}
+            />
+
+            <PasswordStrength password={newPassword} />
+
+            <PasswordField
+                id="confirmPassword"
+                label="Confirm new password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
+                minLength={8}
+            />
                         {/* Security settings */}
                         <AccountSection
-                            title={t.security.title}
-                            icon={ShieldCheck}
+                            icon={Lock}
+                            title="Security"
                         >
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <p className="max-w-xl text-sm leading-6 text-irent-muted">
-                                    {t.security.description}
-                                </p>
+                            <form
+                                onSubmit={handlePasswordChange}
+                                className="space-y-4"
+                            >
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium">
+                                        Current password
+                                    </label>
 
-                                <span className="rounded-full bg-irent-accent-soft px-3 py-1 text-xs font-semibold text-irent-accent">
-                                    {t.security.comingSoon}
-                                </span>
-                            </div>
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(event) =>
+                                            setCurrentPassword(event.target.value)
+                                        }
+                                        required
+                                        className="w-full rounded-lg border border-gray-200 p-3"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium">
+                                        New password
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        value={newPassword}
+                                        onChange={(event) =>
+                                            setNewPassword(event.target.value)
+                                        }
+                                        minLength={8}
+                                        required
+                                        className="w-full rounded-lg border border-gray-200 p-3"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium">
+                                        Confirm new password
+                                    </label>
+
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(event) =>
+                                            setConfirmPassword(event.target.value)
+                                        }
+                                        minLength={8}
+                                        required
+                                        className="w-full rounded-lg border border-gray-200 p-3"
+                                    />
+                                </div>
+
+                                {passwordError && (
+                                    <p className="text-sm text-red-600">
+                                        {passwordError}
+                                    </p>
+                                )}
+
+                                {passwordMessage && (
+                                    <p className="text-sm text-green-600">
+                                        {passwordMessage}
+                                    </p>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={passwordLoading}
+                                    className="rounded-lg bg-orange-500 px-5 py-2.5 font-medium text-white disabled:opacity-50"
+                                >
+                                    {passwordLoading
+                                        ? 'Updating...'
+                                        : 'Change password'}
+                                </button>
+                            </form>
                         </AccountSection>
-
                     </div>
                 </div>
             </div>

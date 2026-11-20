@@ -1,6 +1,9 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { DataSource } from 'typeorm';
+import { LoginChallenge } from './auth/login-challenge.entity.js';
+
+
 
 
 import { Handshake } from './handshake/entities/handshake.entity.js';
@@ -30,6 +33,7 @@ const dataSource = new DataSource({
   RegistrationSession,
   User,
   Listing,
+  LoginChallenge,
   RoommatePost,
   Handshake,
   Review,

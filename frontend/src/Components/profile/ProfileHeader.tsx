@@ -6,7 +6,7 @@ import type { ProfileTranslations } from '../../translations';
 interface ProfileHeaderProps {
     user: User;
     avatar?: string;
-    onAvatarChange: (newAvatar: string) => void;
+    onAvatarChange: (file: File) => void;
     t: ProfileTranslations['header'];
     avatarT: ProfileTranslations['avatar'];
     lang: Language;

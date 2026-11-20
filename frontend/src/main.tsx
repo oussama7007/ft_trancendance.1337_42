@@ -6,10 +6,21 @@ import { BrowserRouter } from 'react-router-dom'
 import '@fontsource-variable/geist';
 import '@fontsource-variable/noto-sans-arabic';
 
-createRoot(document.getElementById('root')!).render(
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+const application =(
   <StrictMode>
     <BrowserRouter>
       <App />
     </BrowserRouter>
   </StrictMode>,
 )
+
+createRoot(document.getElementById('root')!).render(
+    googleClientId ? (
+        <GoogleOAuthProvider clientId={googleClientId}>
+            {application}
+        </GoogleOAuthProvider>
+    ) : application,
+);

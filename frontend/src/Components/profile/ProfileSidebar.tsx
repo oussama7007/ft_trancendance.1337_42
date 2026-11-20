@@ -21,6 +21,7 @@ const navigationItems = [
     // TODO [DASHBOARD TEAMMATE]:
     // Replace this destination with the Dashboard route when implemented.
     { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { key: 'settings', path: '/settings', icon: Settings },
 
     // PROFILE: Implemented by the Profile developer.
     { key: 'profile', path: '/profile', icon: UserRound },
@@ -36,9 +37,7 @@ const futureItems = [
     // Implement the user's favorite properties and connect the route.
     { key: 'favorites', icon: Heart },
 
-    // TODO [SETTINGS TEAMMATE]:
-    // Implement the user's account settings and connect the route.
-    { key: 'settings', icon: Settings },
+    
 ] as const;
 
 export function ProfileSidebar({t} : ProfileSidebarProps) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Language, User } from '../types';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { ProfileHeader } from '../Components/profile/ProfileHeader';
@@ -6,6 +6,14 @@ import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
 import { FeedbackSection } from '../Components/profile/FeedbackSection';
 
+
+
+import {
+    getMyProfile,
+    updateMyProfile,
+    uploadMyAvatar,
+    getAvatarUrl,
+} from '../services/profile';
 
 import { translations  } from '../translations';
 
@@ -18,9 +26,57 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
     // These states keep the new image and description visible in this page.
     // They are preview states only until the backend profile endpoints exist.
     const t = translations[lang].profile;
-    const [avatar, setAvatar] = useState(user.avatar);
-    const [description, setDescription] = useState(user.bio ?? '');
+    
+    const [profile, setProfile] = useState(user);
+    const [error, setError] = useState('');
 
+        useEffect(() => {
+            getMyProfile()
+                .then(setProfile)
+                .catch((error: Error) => {
+                    setError(error.message);
+                });
+        }, []);
+
+        async function handleAvatarChange(file: File) {
+            try {
+                setError('');
+
+                const updated = await uploadMyAvatar(file);
+
+                setProfile((previous) => ({
+                    ...previous,
+                    ...updated,
+                }));
+            } catch (error) {
+                setError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not upload image',
+                );
+            }
+        }
+
+async function handleDescriptionSave(description: string) {
+    try {
+        setError('');
+
+        const updated = await updateMyProfile({
+            bio: description,
+        });
+
+        setProfile((previous) => ({
+            ...previous,
+            ...updated,
+        }));
+    } catch (error) {
+        setError(
+            error instanceof Error
+                ? error.message
+                : 'Could not save description',
+        );
+    }
+}
 
     return (
         <main 
@@ -30,11 +86,20 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
             <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 md:grid-cols-[72px_minmax(0,1fr)] md:gap-5 lg:gap-6">
                 <ProfileSidebar t={t.sidebar} />
 
+                
+                {error && (
+                            <div
+                                role="alert"
+                                className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600"
+                            >
+                                {error}
+                            </div>
+                        )}
                 <div className="min-w-0">
                     <ProfileHeader
-                        user={user}
-                        avatar={avatar}
-                        onAvatarChange={setAvatar}
+                        user={profile}
+                        avatar={getAvatarUrl(profile.avatarUrl)}
+                        onAvatarChange={handleAvatarChange}
                         t={t.header}
                         avatarT={t.avatar}
                         lang={lang}
@@ -44,11 +109,11 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
                         <div className="flex min-w-0 flex-col gap-5">
                             
                             <ProfileDescription
-                                description={description}
-                                onSave={setDescription}
+                                description={profile.bio ?? ''}
+                                onSave={handleDescriptionSave}
                                 t={t.description}
                             />
-                            <SocialMediaCard user={user}
+                            <SocialMediaCard user={profile}
                                 t={t.social}
                             />
                         </div>

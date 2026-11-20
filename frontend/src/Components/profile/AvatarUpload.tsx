@@ -6,7 +6,7 @@ import type { ProfileTranslations } from '../../translations';
 interface AvatarUploadProps {
     avatar?: string;
     fullName: string;
-    onAvatarChange: (newAvatar: string) => void;
+    onAvatarChange: (file: File) => void;
     t: ProfileTranslations['avatar'];
 }
 
@@ -40,7 +40,7 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
 
         reader.onload = () => {
             if (typeof reader.result === 'string') {
-                onAvatarChange(reader.result);
+                onAvatarChange(file);
                 setError('');
             }
         };
