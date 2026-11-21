@@ -57,6 +57,25 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
             }
         }
 
+            
+
+
+
+        async function handleSocialSave(links: {
+            linkedin: string | null;
+            instagram: string | null;
+            facebook: string | null;
+        }) {
+            const updated = await updateMyProfile(links);
+
+            setProfile((previous) => ({
+                ...previous,
+                ...updated,
+            }));
+        }
+
+
+
 async function handleDescriptionSave(description: string) {
     try {
         setError('');
@@ -115,6 +134,7 @@ async function handleDescriptionSave(description: string) {
                             />
                             <SocialMediaCard user={profile}
                                 t={t.social}
+                                onSave={handleSocialSave}
                             />
                         </div>
 

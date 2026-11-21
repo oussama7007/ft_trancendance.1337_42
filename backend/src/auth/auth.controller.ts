@@ -1,5 +1,9 @@
-import { Body, Controller, Post, Res,  HttpStatus, HttpCode, Get, Req, Delete ,UseGuards} from '@nestjs/common';
+import { Body, Controller, Patch, Post, Res,  HttpStatus, HttpCode, Get, Req, Delete ,UseGuards} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
+
+import { StartEmailChangeDto } from './dto/start-email-change.dto.js';
+import { VerifyEmailChangeDto } from './dto/verify-email-change.dto.js';
+
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
 import { RequestVerificationDto } from './dto/request-verification.dto.js';
@@ -15,7 +19,6 @@ import { VerifyLogin2faDto } from './dto/verify-login-2fa.dto.js';
 import { DisableSms2faDto } from './dto/disable-sms-2fa.dto.js';
 
 
-import { Patch } from '@nestjs/common';
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 import { LoginDto } from './dto/login.dto.js';
@@ -46,7 +49,17 @@ export class AuthController {
     });
 }
 
-
+@Post('google/link')
+@UseGuards(JwtAuthGuard)
+linkGoogle(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: GoogleCredentialDto,
+) {
+    return this.authService.linkGoogleAccount(
+        request.user!.sub,
+        data.credential,
+    );
+}
 
 @Delete('google/link')
 @UseGuards(JwtAuthGuard)
@@ -257,4 +270,29 @@ async verifyLogin2fa(
     };
 }
 
+
+@Post('email/change/start')
+@UseGuards(JwtAuthGuard)
+startEmailChange(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: StartEmailChangeDto,
+) {
+    return this.authService.startEmailChange(
+        request.user!.sub,
+        data.email,
+    );
+}
+
+
+@Post('email/change/verify')
+@UseGuards(JwtAuthGuard)
+verifyEmailChange(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: VerifyEmailChangeDto,
+) {
+    return this.authService.verifyEmailChange(
+        request.user!.sub,
+        data.code,
+    );
+}
 }

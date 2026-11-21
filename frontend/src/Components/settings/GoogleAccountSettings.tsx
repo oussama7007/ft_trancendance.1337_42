@@ -3,28 +3,62 @@ import { GoogleLogin } from '@react-oauth/google';
 import { AccountSection } from '../shared/AccountSection';
 import { Link2 } from 'lucide-react';
 import { PasswordField } from '../auth/PasswordField';
+import type { Language } from '../../types';
+import { translations } from '../../translations';
+
 
 const API_URL =
     import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-export function GoogleAccountSettings() {
-    const [googleEmail, setGoogleEmail] = useState<string | null>(null);
+
+
+interface Props {
+    lang: Language;
+}
+
+async function request<T>(
+    path: string,
+    method = 'GET',
+    body?: object,
+): Promise<T> {
+    const response = await fetch(`${API_URL}${path}`, {
+        method,
+        credentials: 'include',
+        headers: body
+            ? { 'Content-Type': 'application/json' }
+            : undefined,
+        body: body ? JSON.stringify(body) : undefined,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+    }
+
+    return data as T;
+}
+
+
+export function GoogleAccountSettings({ lang }: Props) {
+    const t = translations[lang].settings.security;
+    const authT = translations[lang].auth;
+
+    const [googleEmail, setGoogleEmail] =
+        useState<string | null>(null);
+
     const [unlinkPassword, setUnlinkPassword] = useState('');
+
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
     async function loadSecurity() {
-        const response = await fetch(`${API_URL}/auth/security`, {
-            credentials: 'include',
-        });
+        const data = await request<SecurityData>(
+            '/auth/security',
+        );
 
-        if (!response.ok) {
-            throw new Error('Could not load connected accounts');
-        }
-
-        const data = await response.json();
-
-        setGoogleEmail(data.googleEmail ?? null);
+        setGoogleEmail(data.googleEmail);
     }
 
     useEffect(() => {
@@ -38,35 +72,25 @@ export function GoogleAccountSettings() {
         setMessage('');
 
         try {
-            const response = await fetch(
-                `${API_URL}/auth/google/link`,
-                {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ credential }),
-                },
+            setLoading(true);
+
+            await request(
+                '/auth/google/link',
+                'POST',
+                { credential },
             );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message || 'Could not link Google account',
-                );
-            }
 
             await loadSecurity();
 
-            setMessage('Google account connected successfully.');
+            setMessage(t.googleConnectSuccess);
         } catch (error) {
             setError(
                 error instanceof Error
                     ? error.message
-                    : 'Google linking failed',
+                    : t.googleAuthFailed,
             );
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -75,75 +99,78 @@ export function GoogleAccountSettings() {
     ) {
         event.preventDefault();
 
+        setError('');
+        setMessage('');
+
         try {
-            const response = await fetch(
-                `${API_URL}/auth/google/link`,
+            setLoading(true);
+
+            await request(
+                '/auth/google/link',
+                'DELETE',
                 {
-                    method: 'DELETE',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        currentPassword: unlinkPassword,
-                    }),
+                    currentPassword: unlinkPassword,
                 },
             );
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    data.message || 'Could not disconnect Google',
-                );
-            }
-
             setUnlinkPassword('');
             setGoogleEmail(null);
-            setMessage('Google account disconnected.');
+
+            setMessage(t.googleDisconnectSuccess);
         } catch (error) {
             setError(
                 error instanceof Error
                     ? error.message
-                    : 'Could not disconnect Google',
+                    : t.googleAuthFailed,
             );
+        } finally {
+            setLoading(false);
         }
     }
-
     return (
-        <AccountSection title="Connected accounts" icon={Link2}>
-            <div className="space-y-4">
+       <AccountSection
+            title={t.googleTitle}
+            icon={Link2}
+        >
+            <div className="max-w-2xl space-y-4">
                 {googleEmail ? (
                     <>
-                        <p className="text-sm text-irent-text">
-                            Google connected: <strong>{googleEmail}</strong>
-                        </p>
+                       <div className="rounded-xl border border-irent-border bg-irent-background p-4">
+                            <p className="text-xs text-irent-muted">
+                                {t.googleConnected}
+                            </p>
 
+                            <p className="mt-1 break-all text-sm font-semibold text-irent-primary">
+                                {googleEmail}
+                            </p>
+                        </div>
                         <form
                             onSubmit={unlinkGoogle}
                             className="space-y-3"
                         >
                             <PasswordField
                                 id="unlinkGooglePassword"
-                                label="Confirm your password to disconnect"
+                                label={t.googleDisconnectPassword}
                                 value={unlinkPassword}
                                 onChange={setUnlinkPassword}
                                 autoComplete="current-password"
+                                showPasswordText={authT.showPassword}
+                                hidePasswordText={authT.hidePassword}
                             />
 
                             <button
                                 type="submit"
                                 className="rounded-xl border border-red-300 px-4 py-2 text-sm font-semibold text-red-600"
                             >
-                                Disconnect Google
+                               {t.googleDisconnect}
                             </button>
                         </form>
                     </>
                 ) : (
                     <>
                         <p className="text-sm text-irent-muted">
-                            Connect your Google account to use it when signing in to iRent.
-                        </p>
+                            {t.googleDescription}
+                         </p>
 
                         {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
                             <GoogleLogin
@@ -154,12 +181,12 @@ export function GoogleAccountSettings() {
                                     }
                                 }}
                                 onError={() => {
-                                    setError('Google authentication failed');
+                                    setError(t.googleAuthFailed);
                                 }}
                             />
                         ) : (
                             <p className="text-sm text-amber-600">
-                                Google authentication is not configured.
+                                {t.googleNotConfigured}
                             </p>
                         )}
                     </>

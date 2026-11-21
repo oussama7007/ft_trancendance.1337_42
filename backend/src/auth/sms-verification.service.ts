@@ -3,7 +3,7 @@ import {
     ServiceUnavailableException,
 } from '@nestjs/common';
 
-import twilio from 'twilio';
+import { randomInt } from 'node:crypto';
 
 @Injectable()
 export class SmsVerificationService {

@@ -269,12 +269,17 @@ function App() {
                                     user={currentUser}
                                     lang={lang}
                                     onLanguageChange={setLang}
-                                />
-                            )
-                            : <Navigate to="/signin" replace />
-                    }
-                />
-
+                                    onEmailChanged={(newEmail) => {
+                                    setCurrentUser((previous) =>
+                                        previous
+                                            ? {
+                                                ...previous,
+                                                email: newEmail,
+                                            }
+                                            : previous,
+                                    );
+                                }}
+                            />
 
                 {/* Existing placeholder pages */}
                 <Route

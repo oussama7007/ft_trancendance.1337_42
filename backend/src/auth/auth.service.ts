@@ -7,18 +7,18 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-      
+      TooManyRequestsException,
     ServiceUnavailableException,
 } from '@nestjs/common';
 
-
+import { EmailChangeChallenge } from './email-change-challenge.entity.js';
 
 
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import { randomInt } from 'node:crypto';
+
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto.js';
 
@@ -32,7 +32,12 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 import {
     randomBytes,
     createHash,
+    randomInt,
+    timingSafeEqual,
 } from 'node:crypto';
+
+
+
 import { OAuth2Client } from 'google-auth-library';
 
 import { LoginChallenge } from './login-challenge.entity.js';
@@ -44,12 +49,19 @@ import { MailService } from '../mail/mail.service.js';
 @Injectable()
 export class AuthService {
   constructor(
+
+
+
     @InjectRepository(RegistrationSession)
     private readonly registrationSessionRepository: Repository<RegistrationSession>,
 
 
     @InjectRepository(LoginChallenge)
     private readonly loginChallengeRepository: Repository<LoginChallenge>,
+
+        @InjectRepository(EmailChangeChallenge)
+    private readonly emailChangeChallengeRepository:
+        Repository<EmailChangeChallenge>,
 
     private readonly smsService: SmsVerificationService,
     @InjectRepository(User)
@@ -238,6 +250,246 @@ private async prepareLogin(user: User) {
         message: 'Password updated successfully',
     };
 }
+
+
+
+private hashEmailChangeCode(
+    userId: number,
+    code: string,
+): string {
+    return createHash('sha256')
+        .update(`${userId}:${code}`)
+        .digest('hex');
+}
+
+
+// Step 1: Request email change.
+async startEmailChange(
+    userId: number,
+    newEmail: string,
+) {
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Normalize the email.
+    const normalizedEmail = newEmail
+        .trim()
+        .toLowerCase();
+
+    if (normalizedEmail === user.email.toLowerCase()) {
+        throw new BadRequestException(
+            'This is already your current email',
+        );
+    }
+
+    // Check whether another user already owns this email.
+    const existingUser = await this.userRepository.findOne({
+        where: { email: normalizedEmail },
+    });
+
+    if (existingUser) {
+        throw new ConflictException(
+            'This email is already used by another account',
+        );
+    }
+
+    const now = Date.now();
+
+    // Find an existing challenge for this user.
+    let challenge =
+        await this.emailChangeChallengeRepository.findOne({
+            where: { userId },
+        });
+
+    // Prevent sending a new code every second.
+    if (
+        challenge &&
+        challenge.expiresAt.getTime() > now
+    ) {
+        const previousSentAt =
+            challenge.expiresAt.getTime() - 5 * 60 * 1000;
+
+        if (now - previousSentAt < 30 * 1000) {
+            throw new TooManyRequestsException(
+                'Please wait before requesting another code',
+            );
+        }
+    }
+
+    // Generate a six-digit verification code.
+    const code = randomInt(100000, 1000000).toString();
+
+    if (!challenge) {
+        challenge =
+            this.emailChangeChallengeRepository.create({
+                userId,
+                pendingEmail: normalizedEmail,
+                codeHash: '',
+                expiresAt: new Date(),
+                attempts: 0,
+            });
+    }
+
+    challenge.pendingEmail = normalizedEmail;
+    challenge.codeHash =
+        this.hashEmailChangeCode(userId, code);
+
+    challenge.expiresAt =
+        new Date(now + 5 * 60 * 1000);
+
+    challenge.attempts = 0;
+
+    await this.emailChangeChallengeRepository.save(
+        challenge,
+    );
+
+    try {
+        await this.mailService.sendEmailChangeCode(
+            normalizedEmail,
+            code,
+        );
+    } catch {
+        // Do not keep a challenge when sending the email failed.
+        await this.emailChangeChallengeRepository.delete({
+            userId,
+        });
+
+        throw new ServiceUnavailableException(
+            'Could not send verification email',
+        );
+    }
+
+    return {
+        message: 'Verification code sent',
+        expiresInSeconds: 300,
+    };
+}
+
+
+// Step 2: Verify the code and update the email.
+async verifyEmailChange(
+    userId: number,
+    code: string,
+) {
+    const challenge =
+        await this.emailChangeChallengeRepository.findOne({
+            where: { userId },
+        });
+
+    if (!challenge) {
+        throw new BadRequestException(
+            'No email change request was found',
+        );
+    }
+
+    // Check expiration.
+    if (challenge.expiresAt.getTime() < Date.now()) {
+        await this.emailChangeChallengeRepository.delete(
+            challenge.id,
+        );
+
+        throw new BadRequestException(
+            'Verification code has expired',
+        );
+    }
+
+    // Limit incorrect attempts.
+    if (challenge.attempts >= 5) {
+        await this.emailChangeChallengeRepository.delete(
+            challenge.id,
+        );
+
+        throw new BadRequestException(
+            'Too many incorrect attempts. Request a new code.',
+        );
+    }
+
+    // Hash the code entered by the user.
+    const providedHash = this.hashEmailChangeCode(
+        userId,
+        code,
+    );
+
+    // Compare hashes safely.
+    const storedBuffer = Buffer.from(
+        challenge.codeHash,
+        'hex',
+    );
+
+    const providedBuffer = Buffer.from(
+        providedHash,
+        'hex',
+    );
+
+    const isValid =
+        storedBuffer.length === providedBuffer.length &&
+        timingSafeEqual(storedBuffer, providedBuffer);
+
+    if (!isValid) {
+        challenge.attempts += 1;
+
+        if (challenge.attempts >= 5) {
+            await this.emailChangeChallengeRepository.delete(
+                challenge.id,
+            );
+        } else {
+            await this.emailChangeChallengeRepository.save(
+                challenge,
+            );
+        }
+
+        throw new BadRequestException(
+            'Invalid verification code',
+        );
+    }
+
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Check again in case another user registered this email.
+    const existingUser = await this.userRepository.findOne({
+        where: { email: challenge.pendingEmail },
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+        await this.emailChangeChallengeRepository.delete(
+            challenge.id,
+        );
+
+        throw new ConflictException(
+            'This email is already used',
+        );
+    }
+
+    // Update the user's email.
+    user.email = challenge.pendingEmail;
+
+    await this.userRepository.save(user);
+
+    // Remove the challenge after successful verification.
+    await this.emailChangeChallengeRepository.delete(
+        challenge.id,
+    );
+
+    return {
+        email: user.email,
+        message: 'Email updated successfully',
+    };
+}
+
+
+
+
   private validateDateOfBirth(dateOfBirth: string): void {
         const birthDate = new Date(dateOfBirth);
 

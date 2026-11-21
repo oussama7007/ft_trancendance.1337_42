@@ -209,110 +209,124 @@ return (
             </CardHeader>
 
             <CardContent>
-                {error && (
-                    <Alert variant="danger" className="mb-4">
-                        {error}
-                    </Alert>
-                )}
+                            {error && (
+                                <Alert variant="danger" className="mb-4">
+                                    {error}
+                                </Alert>
+                            )}
+
                 {challengeToken ? (
-    <form
-        onSubmit={handleSmsVerification}
-        className="space-y-4"
-    >
-        <p className="text-sm text-muted-foreground">
-            Enter the code sent to {phoneHint}.
-        </p>
+                <form
+                    onSubmit={handleSmsVerification}
+                    className="space-y-4"
+                >
+                    <p className="text-sm text-muted-foreground">
+                        {t.twoFactorDescription}{phoneHint}.
+                    </p>
 
-        <Label htmlFor="smsCode">
-            SMS verification code
-        </Label>
+                    <Label htmlFor="smsCode">
+                        {t.smsVerificationCode}
+                    </Label>
 
-        <Input
-            id="smsCode"
-            value={smsCode}
-            onChange={(event) => setSmsCode(event.target.value)}
-            maxLength={8}
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-        />
-
-        <Button
-            type="submit"
-            className="w-full"
-            disabled={isSubmitting}
-        >
-            {isSubmitting ? 'Verifying...' : 'Verify and sign in'}
-        </Button>
-    </form>
-) : (
-    <>
-        {/* Keep your existing email/password form here */}
-
-        <div className="my-5 flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs text-gray-500">OR</span>
-            <div className="h-px flex-1 bg-gray-200" />
-        </div>
-
-        {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-            <div className="flex justify-center">
-                <GoogleLogin
-                    onSuccess={(response) => {
-                        if (response.credential) {
-                            void handleGoogleLogin(response.credential);
-                        }
-                    }}
-                    onError={() => {
-                        setError('Google login failed');
-                    }}
-                    theme="outline"
-                    size="large"
-                    text="continue_with"
-                />
-            </div>
-        )}
-    </>
-)}
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">
-                            {t.contact}
-                        </Label>
-
-                        <Input
-                            id="email"
-                            type="email"
-                            dir="ltr"
-                            placeholder={t.contactPlaceholder}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            autoComplete="email"
-                            required
-                        />
-                    </div>
-
-                        <PasswordField
-                            id="password"
-                            label={t.password}
-                    
-                            value={password}
-                            onChange={setPassword}
-                            autoComplete="current-password"
-                            showPasswordText={t.showPassword}
-                            hidePasswordText={t.hidePassword}
-                        />
-                 
+                    <Input
+                        id="smsCode"
+                        value={smsCode}
+                        onChange={(event) => setSmsCode(event.target.value)}
+                        maxLength={8}
+                        dir="ltr"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        required
+                    />
 
                     <Button
                         type="submit"
                         className="w-full"
                         disabled={isSubmitting}
                     >
-                        {isSubmitting ? t.signingIn : t.signIn}
+                        {isSubmitting ? t.verifyingCode : t.verifyAndSignIn}
                     </Button>
                 </form>
-            </CardContent>
+                    ) : (
+                <>
+                    {/* Keep your existing email/password form here */}
+
+                     <form
+                            onSubmit={handleLogin}
+                            className="space-y-4"
+                        >
+                            <div className="space-y-2">
+                                <Label htmlFor="email">
+                                    {t.contact}
+                                </Label>
+
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    dir="ltr"
+                                    placeholder={t.contactPlaceholder}
+                                    value={email}
+                                    onChange={(event) =>
+                                        setEmail(event.target.value)
+                                    }
+                                    autoComplete="email"
+                                    required
+                                />
+                            </div>
+                                     <PasswordField
+                    id="password"
+                    label={t.password}
+                    value={password}
+                    onChange={setPassword}
+                    autoComplete="current-password"
+                    showPasswordText={t.showPassword}
+                    hidePasswordText={t.hidePassword}
+                />
+
+                <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting
+                        ? t.signingIn
+                        : t.signIn}
+                </Button>
+            </form>
+
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+                <>
+                    <div className="my-5 flex items-center gap-3">
+                        <div className="h-px flex-1 bg-gray-200" />
+
+                        <span className="text-xs text-gray-500">
+                            OR
+                        </span>
+
+                        <div className="h-px flex-1 bg-gray-200" />
+                    </div>
+
+                    <div className="flex justify-center">
+                        <GoogleLogin
+                            onSuccess={(response) => {
+                                if (response.credential) {
+                                    void handleGoogleLogin(
+                                        response.credential,
+                                    );
+                                }
+                            }}
+                            onError={() => {
+                                setError(t.googleLoginFailed);
+                            }}
+                            theme="outline"
+                            size="large"
+                            text="continue_with"
+                        />
+                    </div>
+                </>
+            )}
+        </>
+    )}            </CardContent>
         </Card>
     </main>
 );
