@@ -7,13 +7,13 @@ import { User } from './user.entity.js';
 import { SharedJwtModule } from './jwt.module.js';
 import { MailService } from '../mail/mail.service.js';
 
-
+import { EmailChangeChallenge } from './email-change-challenge.entity.js';
 import { LoginChallenge } from './login-challenge.entity.js';
 import { SmsVerificationService } from './sms-verification.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RegistrationSession, User, LoginChallenge]),
+    TypeOrmModule.forFeature([RegistrationSession, User, LoginChallenge,  EmailChangeChallenge]),
     SharedJwtModule,
   ],
   controllers: [AuthController],

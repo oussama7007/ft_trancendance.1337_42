@@ -99,6 +99,40 @@ export class AuthService {
         );
     }
 }
+
+async linkGoogleAccount(
+    userId: number,
+    credential: string,
+) {
+    const identity = await this.verifyGoogleCredential(credential);
+
+    const existingUser = await this.userRepository.findOne({
+        where: { googleId: identity.googleId },
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+        throw new ConflictException(
+            'This Google account is already connected to another user',
+        );
+    }
+
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    user.googleId = identity.googleId;
+    user.googleEmail = identity.googleEmail;
+
+    await this.userRepository.save(user);
+
+    return {
+        message: 'Google account connected successfully',
+    };
+}
 private toAuthUser(user: User) {
     return {
         id: user.id,
@@ -407,38 +441,7 @@ private async prepareLogin(user: User) {
     
     return this.prepareLogin(user);
 }
-async unlinkGoogleAccount(
-    userId: number,
-    currentPassword: string,
-) {
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
 
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    const validPassword = await bcrypt.compare(
-        currentPassword,
-        user.passwordHash,
-    );
-
-    if (!validPassword) {
-        throw new UnauthorizedException(
-            'Current password is incorrect',
-        );
-    }
-
-    user.googleId = null;
-    user.googleEmail = null;
-
-    await this.userRepository.save(user);
-
-    return {
-        message: 'Google account disconnected',
-    };
-}
 async unlinkGoogleAccount(
     userId: number,
     currentPassword: string,

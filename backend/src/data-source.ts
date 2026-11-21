@@ -17,7 +17,7 @@ import { RegistrationSession } from './auth/registration-session-entity.js';
 import { User } from './auth/user.entity.js';
 import { Listing } from './listings/listing.entity.js';
 import { RoommatePost } from './roommates/roommate-post.entity.js';
-
+import { EmailChangeChallenge } from './auth/email-change-challenge.entity.js';
 config({
   path: fileURLToPath(new URL('../.env', import.meta.url)),
 });
@@ -40,6 +40,7 @@ const dataSource = new DataSource({
   Message,
   Conversation,
   InterestRequest,
+  EmailChangeChallenge,
 ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

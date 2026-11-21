@@ -4,9 +4,6 @@ import { Lock, ShieldCheck, Smartphone } from 'lucide-react';
 import { AccountSection } from '../shared/AccountSection';
 
 
-import { SecuritySettings } from '../Components/settings/SecuritySettings';
-import { GoogleAccountSettings } from '../Components/settings/GoogleAccountSettings';
-
 import { PasswordField } from '../auth/PasswordField';
 import { PasswordStrength } from '../auth/PasswordStrength';
 import { isPasswordValid } from '../../utils/password';
@@ -132,7 +129,7 @@ export function SecuritySettings() {
             );
 
             setCodeSent(true);
-            setMessage('Verification code sent.');
+            setMessage(t.codeSent);
         } catch (error) {
             setError(
                 error instanceof Error

@@ -5,17 +5,18 @@ import App from './App.tsx'
 import { BrowserRouter } from 'react-router-dom'
 import '@fontsource-variable/geist';
 import '@fontsource-variable/noto-sans-arabic';
-
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-const application =(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-)
+const application = (
+    <StrictMode>
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    </StrictMode>
+);
+
 
 createRoot(document.getElementById('root')!).render(
     googleClientId ? (

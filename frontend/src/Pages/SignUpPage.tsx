@@ -142,7 +142,7 @@ export function SignUpPage({
             return;
         }
         if (!isValidDateOfBirth(dateOfBirth)) {
-                setError("You must be at least 18 years old.");
+                setError(t.ageRequirement);
                 return;
             }
 
@@ -207,7 +207,7 @@ export function SignUpPage({
 
             setCodeSent(true);
             setVerificationCode("");
-            setSuccess("Verification code sent!");
+            setSuccess(t.codeSent);
         } catch {
             setError("Cannot connect to the backend.");
         } finally {

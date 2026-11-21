@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res,  HttpStatus, HttpCode, Get, Req, UseGuards} from '@nestjs/common';
+import { Body, Controller, Post, Res,  HttpStatus, HttpCode, Get, Req, Delete ,UseGuards} from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
@@ -24,6 +24,9 @@ import type { AuthenticatedRequest } from './jwt-auth.guard.js';
 
 import type { Response } from 'express';
 
+import { UnlinkGoogleDto } from './dto/unlink-google.dto.js';
+
+
 @Controller('auth')
 export class AuthController {
 
@@ -43,6 +46,19 @@ export class AuthController {
     });
 }
 
+
+
+@Delete('google/link')
+@UseGuards(JwtAuthGuard)
+unlinkGoogle(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: UnlinkGoogleDto,
+) {
+    return this.authService.unlinkGoogleAccount(
+        request.user!.sub,
+        data.currentPassword,
+    );
+}
   @Post('register/start')
   startRegistration(@Body() data: StartRegistrationDto) {
     return this.authService.startRegistration(data);
@@ -124,26 +140,11 @@ async login(
       return this.authService.getCurrentUser(request.user.sub);
     return null;
   }
-  @Post('google/login')
-async googleLogin(
-    @Body() data: GoogleCredentialDto,
-    @Res({ passthrough: true }) response: Response,
-) {
-    const result = await this.authService.loginWithGoogle(
-        data.credential,
-    );
 
-    if ('accessToken' in result) {
-        this.setAccessCookie(response, result.accessToken);
 
-        return {
-            requiresTwoFactor: false,
-            user: result.user,
-        };
-    }
 
-    return result;
-}
+
+
 @Post('google/login')
 async googleLogin(
     @Body() data: GoogleCredentialDto,
@@ -191,4 +192,69 @@ changePassword(
         data,
     );
 }
+
+@Post('2fa/phone/start')
+@UseGuards(JwtAuthGuard)
+startPhoneVerification(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: PhoneNumberDto,
+) {
+    return this.authService.startPhoneVerification(
+        request.user!.sub,
+        data.phoneNumber,
+    );
+}
+
+@Post('2fa/phone/verify')
+@UseGuards(JwtAuthGuard)
+verifyPhone(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: VerifyPhoneDto,
+) {
+    return this.authService.verifyAndSavePhoneNumber(
+        request.user!.sub,
+        data.phoneNumber,
+        data.code,
+    );
+}
+
+@Post('2fa/enable')
+@UseGuards(JwtAuthGuard)
+enableSms2fa(
+    @Req() request: AuthenticatedRequest,
+) {
+    return this.authService.enableSms2fa(
+        request.user!.sub,
+    );
+}
+
+@Post('2fa/disable')
+@UseGuards(JwtAuthGuard)
+disableSms2fa(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: DisableSms2faDto,
+) {
+    return this.authService.disableSms2fa(
+        request.user!.sub,
+        data.currentPassword,
+    );
+}
+
+@Post('2fa/login/verify')
+async verifyLogin2fa(
+    @Body() data: VerifyLogin2faDto,
+    @Res({ passthrough: true }) response: Response,
+) {
+    const result = await this.authService.verifyLoginChallenge(
+        data.challengeToken,
+        data.code,
+    );
+
+    this.setAccessCookie(response, result.accessToken);
+
+    return {
+        user: result.user,
+    };
+}
+
 }
