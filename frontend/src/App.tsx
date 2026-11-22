@@ -260,27 +260,26 @@ function App() {
                     }
                 />
 
-                <Route
-                    path="/settings"
-                    element={
-                        currentUser
-                            ? (
-                                <SettingsPage
-                                    user={currentUser}
-                                    lang={lang}
-                                    onLanguageChange={setLang}
-                                    onEmailChanged={(newEmail) => {
-                                    setCurrentUser((previous) =>
-                                        previous
-                                            ? {
-                                                ...previous,
-                                                email: newEmail,
-                                            }
-                                            : previous,
-                                    );
-                                }}
-                            />
-
+               <Route
+                        path="/settings"
+                        element={
+                            currentUser
+                                ? (
+                                    <SettingsPage
+                                        user={currentUser}
+                                        lang={lang}
+                                        onLanguageChange={setLang}
+                                        onEmailChanged={(newEmail: string) => {
+                                            setCurrentUser((previous) =>
+                                                previous ? { ...previous, email: newEmail } : previous,
+                                            );
+                                        }}
+                                    />
+                                )
+                                : <Navigate to="/signin" replace />
+                        }
+                    />
+                            
                 {/* Existing placeholder pages */}
                 <Route
                     path="/chat"

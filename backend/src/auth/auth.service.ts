@@ -2,12 +2,13 @@
 
 
 import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-      TooManyRequestsException,
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    NotFoundException,
+    HttpException,
+    UnauthorizedException,
+    HttpStatus,
     ServiceUnavailableException,
 } from '@nestjs/common';
 
@@ -30,7 +31,6 @@ import { VerifyRegistrationDto } from './dto/verify-registration.dto.js';
 import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 import {
-    randomBytes,
     createHash,
     randomInt,
     timingSafeEqual,
@@ -40,8 +40,6 @@ import {
 
 import { OAuth2Client } from 'google-auth-library';
 
-import { LoginChallenge } from './login-challenge.entity.js';
-import { SmsVerificationService } from './sms-verification.service.js';
 
 
 import { MailService } from '../mail/mail.service.js';
@@ -56,14 +54,11 @@ export class AuthService {
     private readonly registrationSessionRepository: Repository<RegistrationSession>,
 
 
-    @InjectRepository(LoginChallenge)
-    private readonly loginChallengeRepository: Repository<LoginChallenge>,
 
         @InjectRepository(EmailChangeChallenge)
     private readonly emailChangeChallengeRepository:
         Repository<EmailChangeChallenge>,
 
-    private readonly smsService: SmsVerificationService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
@@ -166,6 +161,13 @@ private async issueAuthenticatedSession(user: User) {
         user: this.toAuthUser(user),
     };
 }
+
+
+
+
+/*
+
+
 private async createLoginChallenge(user: User) {
     if (!user.phoneNumber || !user.phoneVerified) {
         throw new BadRequestException(
@@ -203,13 +205,31 @@ private async createLoginChallenge(user: User) {
             user.phoneNumber.slice(-2),
     };
 }
-private async prepareLogin(user: User) {
-    if (user.sms2faEnabled) {
-        return this.createLoginChallenge(user);
-    }
 
+
+*/
+
+
+
+
+
+
+
+private async prepareLogin(user: User) {
+
+
+
+    if (user.sms2faEnabled) {
+        user.sms2faEnabled = false;
+
+        await this.userRepository.save(user);
+    }
     return this.issueAuthenticatedSession(user);
 }
+
+
+
+
   async changePassword(
     userId: number,
     data: ChangePasswordDto,
@@ -315,8 +335,9 @@ async startEmailChange(
             challenge.expiresAt.getTime() - 5 * 60 * 1000;
 
         if (now - previousSentAt < 30 * 1000) {
-            throw new TooManyRequestsException(
+            throw new HttpException(
                 'Please wait before requesting another code',
+                HttpStatus.TOO_MANY_REQUESTS,
             );
         }
     }
@@ -726,6 +747,13 @@ async unlinkGoogleAccount(
         message: 'Google account disconnected',
     };
 }
+
+
+
+
+
+
+/*
 async startPhoneVerification(
     userId: number,
     phoneNumber: string,
@@ -754,6 +782,16 @@ async startPhoneVerification(
         message: 'Verification code sent',
     };
 }
+
+*/
+
+
+
+
+
+
+
+
 async verifyAndSavePhoneNumber(
     userId: number,
     phoneNumber: string,
@@ -795,6 +833,15 @@ async verifyAndSavePhoneNumber(
 
     return this.getSecuritySettings(userId);
 }
+
+
+
+
+
+
+
+
+
 async enableSms2fa(userId: number) {
     const user = await this.userRepository.findOne({
         where: { id: userId },

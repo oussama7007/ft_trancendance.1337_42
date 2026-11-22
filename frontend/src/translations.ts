@@ -1,9 +1,30 @@
 export const translations = {
     ar: {
-            security: {
-                    title: 'الأمان',
-                    description: 'إدارة كلمة المرور وحماية حسابك.',
 
+        settings: {
+            title: 'الأمان',
+            description: 'إدارة كلمة المرور وحماية حسابك.',
+                account: {
+                    title: 'معلومات الحساب',
+                    name: 'الاسم الكامل',
+                    email: 'البريد الإلكتروني',
+                    dateOfBirth: 'تاريخ الميلاد',
+                    note: 'معلومات حسابك الشخصية.',
+                    notAvailable: 'غير متوفر',
+                },
+
+                language: {
+                    title: 'تفضيلات اللغة',
+                    description: 'اختر اللغة التي تفضل استخدامها في التطبيق.',
+                    label: 'لغة التطبيق',
+                    arabic: 'العربية',
+                    french: 'الفرنسية',
+                    english: 'الإنجليزية',
+                    note: 'ستتغير واجهة التطبيق حسب اختيارك.',
+                },
+
+            security: {
+                    description: 'إدارة كلمة المرور وحماية حسابك.',
                     passwordTitle: 'تغيير كلمة المرور',
                     currentPassword: 'كلمة المرور الحالية',
                     newPassword: 'كلمة المرور الجديدة',
@@ -80,7 +101,7 @@ export const translations = {
            
 
 
-
+            },
 
 
 
@@ -93,7 +114,7 @@ export const translations = {
             verifyingCode: 'جار التحقق...',
             googleLoginFailed: 'فشل تسجيل الدخول باستخدام Google.',
             verificationFailed: 'فشل التحقق من الرمز.',
-            SecuritySettings: 'البريد الإلكتروني',
+            contact: 'البريد الإلكتروني',
 
                 nameRequired: 'يرجى إدخال الاسم الشخصي واسم العائلة',
                 pleaseenteryouremail:  ' الرجاء إدخال بريدك الإلكتروني.',
@@ -380,8 +401,7 @@ export const translations = {
                     social: {
                         title: 'وسائل التواصل الاجتماعي',
                         empty: 'لم تتم إضافة حسابات التواصل الاجتماعي بعد.',
-                        edit: 'تعديل الروابط',
-                        
+                        edit: 'تعديل الروابط',           
                         save: 'حفظ',
                         saving: 'جار الحفظ...',
                         cancel: 'إلغاء',
@@ -420,84 +440,112 @@ export const translations = {
             },
     en: {
 
-       security: {
-            title: 'Security',
-            description: 'Manage your password and protect your account.',
 
-            passwordTitle: 'Change password',
-            currentPassword: 'Current password',
-            newPassword: 'New password',
-            confirmPassword: 'Confirm new password',
-            updatePassword: 'Update password',
-            updating: 'Updating...',
-            passwordUpdated: 'Password updated successfully.',
-            passwordMismatch: 'New passwords do not match.',
-            passwordRequirements: 'Please follow all password requirements.',
+        settings: {
 
-            passwordStrength: {
-                title: 'Password strength',
-                weak: 'Weak',
-                medium: 'Medium',
-                strong: 'Strong',
-                rules: [
-                    'At least 8 characters',
-                    'One lowercase letter',
-                    'One uppercase letter',
-                    'One number',
-                    'One special character',
-                    'Maximum 64 characters',
-                ],
+                title: 'Settings',
+                description: 'Manage your account preferences and security.',
+
+                account: {
+                    title: 'Account information',
+                    name: 'Full name',
+                    email: 'Email address',
+                    dateOfBirth: 'Date of birth',
+                    note: 'Your personal account information.',
+                    notAvailable: 'Not available',
+                },
+
+                language: {
+                    title: 'Language preferences',
+                    description: 'Choose your preferred application language.',
+                    label: 'Application language',
+                    arabic: 'Arabic',
+                    french: 'French',
+                    english: 'English',
+                    note: 'The application interface will change according to your selection.',
+                },
+
+
+
+
+            security: {
+                    description: 'Manage your password and protect your account.',
+                    passwordTitle: 'Change password',
+                    currentPassword: 'Current password',
+                    newPassword: 'New password',
+                    confirmPassword: 'Confirm new password',
+                    updatePassword: 'Update password',
+                    updating: 'Updating...',
+                    passwordUpdated: 'Password updated successfully.',
+                    passwordMismatch: 'New passwords do not match.',
+                    passwordRequirements: 'Please follow all password requirements.',
+
+                    passwordStrength: {
+                        title: 'Password strength',
+                        weak: 'Weak',
+                        medium: 'Medium',
+                        strong: 'Strong',
+                        rules: [
+                            'At least 8 characters',
+                            'One lowercase letter',
+                            'One uppercase letter',
+                            'One number',
+                            'One special character',
+                            'Maximum 64 characters',
+                        ],
+                    },
+
+                    smsTitle: 'SMS two-factor authentication',
+                    smsDescription: 'Add your phone number to receive a verification code when signing in.',
+                    status: 'Status',
+                    enabled: 'Enabled',
+                    disabled: 'Disabled',
+                    phoneNumber: 'Phone number',
+                    phoneHint: 'Use international format. For Morocco: +2126XXXXXXXX',
+                    sendCode: 'Send verification code',
+                    sending: 'Sending...',
+                    codeSent: 'Verification code sent.',
+                    verificationCode: 'Verification code',
+                    verifyPhone: 'Verify phone number',
+                    phoneVerified: 'Your phone number is verified.',
+                    enable2fa: 'Enable two-factor authentication',
+                    disable2fa: 'Disable two-factor authentication',
+                    disable2faPassword: 'Enter your password to confirm disabling two-factor authentication.',
+                    smsEnabled: 'SMS two-factor authentication enabled.',
+                    smsDisabled: 'SMS two-factor authentication disabled.',
+                    invalidPhone: 'Enter a valid international phone number.',
+                    requestFailed: 'The request could not be completed. Please try again.',
+
+                    googleTitle: 'Connected accounts',
+                    googleDescription: 'Connect your Google account to use it when signing in.',
+                    googleConnected: 'Connected Google account:',
+                    googleDisconnectPassword: 'Enter your iRent password to disconnect Google.',
+                    googleDisconnect: 'Disconnect Google',
+                    googleNotConfigured: 'Google Authentication is not configured.',
+                    googleConnectSuccess: 'Google account connected successfully.',
+                    googleDisconnectSuccess: 'Google account disconnected.',
+                    googleAuthFailed: 'Google authentication failed.',
+                },
+
+
+
+                emailChange: {
+                    title: 'Change email address',
+                    description: 'You can change your email address after verifying the new one.',
+                    currentEmail: 'Current email',
+                    newEmail: 'New email address',
+                    sendCode: 'Send verification code',
+                    sending: 'Sending...',
+                    codeSent: 'A verification code was sent to your new email.',
+                    verificationCode: 'Verification code',
+                    verifyAndSave: 'Verify and update email',
+                    verifying: 'Verifying...',
+                    success: 'Email address updated successfully.',
+                    cancel: 'Cancel',
+                    invalidEmail: 'Enter a valid email address.',
+                    requestFailed: 'The request could not be completed. Please try again.',
+                },
             },
-
-            smsTitle: 'SMS two-factor authentication',
-            smsDescription: 'Add your phone number to receive a verification code when signing in.',
-            status: 'Status',
-            enabled: 'Enabled',
-            disabled: 'Disabled',
-            phoneNumber: 'Phone number',
-            phoneHint: 'Use international format. For Morocco: +2126XXXXXXXX',
-            sendCode: 'Send verification code',
-            sending: 'Sending...',
-            codeSent: 'Verification code sent.',
-            verificationCode: 'Verification code',
-            verifyPhone: 'Verify phone number',
-            phoneVerified: 'Your phone number is verified.',
-            enable2fa: 'Enable two-factor authentication',
-            disable2fa: 'Disable two-factor authentication',
-            disable2faPassword: 'Enter your password to confirm disabling two-factor authentication.',
-            smsEnabled: 'SMS two-factor authentication enabled.',
-            smsDisabled: 'SMS two-factor authentication disabled.',
-            invalidPhone: 'Enter a valid international phone number.',
-            requestFailed: 'The request could not be completed. Please try again.',
-
-            googleTitle: 'Connected accounts',
-            googleDescription: 'Connect your Google account to use it when signing in.',
-            googleConnected: 'Connected Google account:',
-            googleDisconnectPassword: 'Enter your iRent password to disconnect Google.',
-            googleDisconnect: 'Disconnect Google',
-            googleNotConfigured: 'Google Authentication is not configured.',
-            googleConnectSuccess: 'Google account connected successfully.',
-            googleDisconnectSuccess: 'Google account disconnected.',
-            googleAuthFailed: 'Google authentication failed.',
-        },
-
-        emailChange: {
-            title: 'Change email address',
-            description: 'You can change your email address after verifying the new one.',
-            currentEmail: 'Current email',
-            newEmail: 'New email address',
-            sendCode: 'Send verification code',
-            sending: 'Sending...',
-            codeSent: 'A verification code was sent to your new email.',
-            verificationCode: 'Verification code',
-            verifyAndSave: 'Verify and update email',
-            verifying: 'Verifying...',
-            success: 'Email address updated successfully.',
-            cancel: 'Cancel',
-            invalidEmail: 'Enter a valid email address.',
-            requestFailed: 'The request could not be completed. Please try again.',
-        },
-
 
 
 
@@ -627,10 +675,6 @@ export const translations = {
             social: {
                 title: 'Social Media',
                 empty: 'No social media profiles have been added yet.',
-
-                social: {
-                    title: 'Social Media',
-                    empty: 'No social media profiles have been added yet.',
                     edit: 'Edit links',
                     save: 'Save',
                     saving: 'Saving...',
@@ -638,7 +682,7 @@ export const translations = {
                     invalidLink: 'Please check your social media URLs.',
                     saveSuccess: 'Social media links updated successfully.',
                     saveError: 'Could not save social media links.',
-                },
+              
             },
             feedback: {
                 title: 'Feedback',
@@ -840,8 +884,35 @@ export const translations = {
     },
     
     fr: {
-    
-        security: {
+        
+        settings: {
+            title: 'Paramètres',
+            description: 'Gérez les préférences et la sécurité de votre compte.',
+
+
+            
+            account: {
+                title: 'Informations du compte',
+                name: 'Nom complet',
+                email: 'Adresse e-mail',
+                dateOfBirth: 'Date de naissance',
+                note: 'Informations personnelles de votre compte.',
+                notAvailable: 'Non disponible',
+            },
+
+            language: {
+                title: 'Préférences linguistiques',
+                description: 'Choisissez votre langue préférée.',
+                label: 'Langue de l’application',
+                arabic: 'Arabe',
+                french: 'Français',
+                english: 'Anglais',
+                note: 'L’interface changera selon votre sélection.',
+            },
+
+
+
+            security: {
                 title: 'Sécurité',
                 description: 'Gérez votre mot de passe et protégez votre compte.',
 
@@ -869,7 +940,6 @@ export const translations = {
                         '64 caractères maximum',
                     ],
                 },
-
                 smsTitle: 'Authentification à deux facteurs par SMS',
                 smsDescription: 'Ajoutez votre numéro pour recevoir un code lors de la connexion.',
                 status: 'Statut',
@@ -918,15 +988,7 @@ export const translations = {
                 invalidEmail: 'Saisissez une adresse e-mail valide.',
                 requestFailed: 'La requête n’a pas pu aboutir. Veuillez réessayer.',
             },
-
-
-
-
-
-
-
-
-
+        },
 
 
         auth: {
@@ -1060,10 +1122,6 @@ export const translations = {
                 social: {
                     title: 'Réseaux sociaux',
                     empty: "Aucun profil de réseau social n'a encore été ajouté.",
-
-                    social: {
-                        title: 'Réseaux sociaux',
-                        empty: "Aucun profil de réseau social n'a encore été ajouté.",
                         edit: 'Modifier les liens',
                         save: 'Enregistrer',
                         saving: 'Enregistrement...',
@@ -1071,7 +1129,7 @@ export const translations = {
                         invalidLink: 'Veuillez vérifier vos liens de réseaux sociaux.',
                         saveSuccess: 'Les liens ont été mis à jour avec succès.',
                         saveError: "Impossible d'enregistrer les liens.",
-                    },
+                    
                 },
                 feedback: {
                     title: 'Avis et commentaires',
@@ -1275,4 +1333,5 @@ export const translations = {
 };
 
 export type ProfileTranslations = typeof translations.en.profile;
-export type SettingsTranslations = typeof translations.en.security;
+export type SettingsTranslations = typeof translations.en.settings;
+export type SecurityTranslations = typeof translations.en.settings.security;

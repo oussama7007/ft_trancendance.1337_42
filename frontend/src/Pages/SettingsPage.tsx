@@ -4,22 +4,27 @@ import { Globe, UserRound } from 'lucide-react';
 
 import type { Language, User } from '../types';
 import { translations } from '../translations';
+import { EmailChangeSettings } from '../Components/settings/EmailChangeSettings';
 
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { AccountSection } from '../Components/shared/AccountSection';
 import { SecuritySettings } from '../Components/settings/SecuritySettings';
+
 import { GoogleAccountSettings } from '../Components/settings/GoogleAccountSettings';
 
 interface SettingsPageProps {
     user: User;
     lang: Language;
     onLanguageChange: (language: Language) => void;
+    onEmailChanged: (newEmail: string) => void; 
 }
 
 export function SettingsPage({
     user,
     lang,
     onLanguageChange,
+    onEmailChanged,
+
 }: SettingsPageProps) {
     const t = translations[lang].settings;
     const sidebarT = translations[lang].profile.sidebar;
@@ -42,7 +47,7 @@ export function SettingsPage({
                         </h1>
 
                         <p className="mt-1 text-sm text-irent-muted">
-                            {t.subtitle}
+                            {t.description}
                         </p>
                     </header>
 
@@ -88,7 +93,11 @@ export function SettingsPage({
                                 {t.account.note}
                             </p>
                         </AccountSection>
-
+                        <EmailChangeSettings
+                            lang={lang}
+                            currentEmail={user.email}
+                            onEmailChanged={onEmailChanged}
+                        />
                         {/* Language preferences */}
                         <AccountSection
                             title={t.language.title}

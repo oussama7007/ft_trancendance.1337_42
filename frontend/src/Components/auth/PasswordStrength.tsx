@@ -1,4 +1,26 @@
+
+
 import { passwordRules } from "@/utils/password";
+
+
+
+
+
+interface PasswordStrengthLabels {
+    title: string;
+    weak: string;
+    medium: string;
+    strong: string;
+    rules: readonly string[];
+}
+
+interface PasswordStrengthProps {
+    password: string;
+    labels?: PasswordStrengthLabels;
+}
+
+
+
 
 interface PasswordStrengthProps {
     password: string;
@@ -6,19 +28,23 @@ interface PasswordStrengthProps {
 
 export function PasswordStrength({
     password,
+    labels,
 }: PasswordStrengthProps) {
     const passedRules = passwordRules.filter(
         (rule) => rule.test(password)
     ).length;
 
-    let strength = "Weak";
+    let strength = labels?.weak ?? 'Weak';
+
 
     if (passedRules >= 4) {
-        strength = "Medium";
+        strength = labels?.medium ?? 'Medium';
     }
 
+
+
     if (passedRules === passwordRules.length) {
-        strength = "Strong";
+         strength = labels?.strong ?? 'Strong';
     }
 
     return (
@@ -47,7 +73,7 @@ export function PasswordStrength({
             </div>
 
             <ul className="space-y-1">
-                {passwordRules.map((rule) => {
+                {passwordRules.map((rule, index) => {
                     const passed = rule.test(password);
 
                     return (
@@ -63,7 +89,7 @@ export function PasswordStrength({
                                 {passed ? "✓" : "○"}
                             </span>
 
-                            {rule.label}
+                            {labels?.rules[index] ?? rule.label}
                         </li>
                     );
                 })}
@@ -71,3 +97,4 @@ export function PasswordStrength({
         </div>
     );
 }
+

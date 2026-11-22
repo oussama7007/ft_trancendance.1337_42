@@ -16,6 +16,11 @@ interface Props {
     lang: Language;
 }
 
+
+interface SecurityData {
+    googleEmail: string | null;
+}
+
 async function request<T>(
     path: string,
     method = 'GET',
@@ -160,9 +165,10 @@ export function GoogleAccountSettings({ lang }: Props) {
 
                             <button
                                 type="submit"
+                                disabled={loading || !unlinkPassword}
                                 className="rounded-xl border border-red-300 px-4 py-2 text-sm font-semibold text-red-600"
                             >
-                               {t.googleDisconnect}
+                               {loading ? t.sending : t.googleDisconnect}
                             </button>
                         </form>
                     </>
@@ -172,23 +178,29 @@ export function GoogleAccountSettings({ lang }: Props) {
                             {t.googleDescription}
                          </p>
 
-                        {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-                            <GoogleLogin
-                                text="continue_with"
-                                onSuccess={(response) => {
-                                    if (response.credential) {
-                                        void linkGoogle(response.credential);
-                                    }
-                                }}
-                                onError={() => {
-                                    setError(t.googleAuthFailed);
-                                }}
-                            />
-                        ) : (
-                            <p className="text-sm text-amber-600">
-                                {t.googleNotConfigured}
-                            </p>
-                        )}
+                            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+                                loading ? (
+                                    <p role="status" className="text-sm text-irent-muted">
+                                        {t.sending}
+                                    </p>
+                                ) : (
+                                    <GoogleLogin
+                                        text="continue_with"
+                                        onSuccess={(response) => {
+                                            if (response.credential) {
+                                                void linkGoogle(response.credential);
+                                            }
+                                        }}
+                                        onError={() => {
+                                            setError(t.googleAuthFailed);
+                                        }}
+                                    />
+                                )
+                            ) : (
+                                <p className="text-sm text-amber-600">
+                                    {t.googleNotConfigured}
+                                </p>
+                            )}
                     </>
                 )}
 
