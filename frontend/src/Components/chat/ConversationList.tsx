@@ -32,7 +32,7 @@ function ConversationList({
 
   if (hasNoConversationsAtAll) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center border-r border-[var(--color-border)]">
+      <div className="flex min-w-0 flex-1 flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center border-r border-[var(--color-border)]">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--color-accent-soft)]/40 mb-6 text-[var(--color-accent)]">
           <MessageSquareOff className="h-10 w-10 stroke-[1.5]" />
         </div>
@@ -49,14 +49,14 @@ function ConversationList({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-surface)] border-r border-[var(--color-border)]">
-      <div className="border-b border-[var(--color-border)] p-4">
+    <div className="flex w-full min-w-0 min-h-0 flex-1 flex-col bg-[var(--color-surface)] border-r border-[var(--color-border)]">
+      <div className="shrink-0 min-w-0 border-b border-[var(--color-border)] p-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-bold text-[var(--color-text)]">
+          <h2 className="truncate font-bold text-[var(--color-text)]">
             {t.title}
           </h2>
 
-          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-[var(--color-accent-soft)] px-2 text-xs font-semibold text-[var(--color-accent-dark)]">
+          <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-soft)] px-2 text-xs font-semibold text-[var(--color-accent-dark)]">
             {conversations.length}
           </span>
         </div>
@@ -73,12 +73,12 @@ function ConversationList({
             placeholder={t.search}
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] ps-10 pe-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)] focus:ring-2 focus:ring-[var(--color-accent)]/20"
+            className="w-full min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-background)] ps-10 pe-4 py-3 text-sm text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)] focus:bg-[var(--color-surface)] focus:ring-2 focus:ring-[var(--color-accent)]/20"
           />
         </div>
       </div>
 
-      <div className="flex-1 space-y-1 overflow-y-auto p-3">
+      <div className="flex-1 min-w-0 space-y-1 overflow-y-auto overflow-x-hidden p-3">
         {conversations.map((conversation) => (
           <ConversationItem
             key={conversation.id}

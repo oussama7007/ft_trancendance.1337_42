@@ -9,6 +9,7 @@ import { Conversation } from './entities/conversation.entity.js';
 import { Message } from './entities/message.entity.js';
 import { InterestRequest, InterestRequestStatus } from './entities/interest-request.entity.js';
 import { User } from '../auth/user.entity.js';
+import { Listing } from '../listings/listing.entity.js';
 
 @Injectable()
 export class ChatService {
@@ -21,7 +22,7 @@ export class ChatService {
 
     @InjectRepository(InterestRequest)
     private readonly interestRequestRepository: Repository<InterestRequest>,
-  ) { }
+  ) {}
 
   async createConversation(
     participantOneId: number,
@@ -151,8 +152,8 @@ export class ChatService {
   async verifyConversationAccess(
     conversationId: number,
     userId: number,
-  ): Promise<void> {
-    await this.findConversationForUser(conversationId, userId);
+  ): Promise<Conversation> {
+    return this.findConversationForUser(conversationId, userId);
   }
 
   async getMessageForBroadcast(
@@ -233,9 +234,52 @@ export class ChatService {
   }
 
   async getOwnerInterestRequests(ownerId: number) {
-    return this.interestRequestRepository.find({
-      where: { ownerId },
-      order: { createdAt: 'DESC' },
+    this.validateId(ownerId, 'ownerId');
+
+    const result = await this.interestRequestRepository
+      .createQueryBuilder('req')
+      .leftJoin(User, 'tenant', 'tenant.id = req.tenantId')
+      .leftJoin(Listing, 'listing', 'listing.id = req.listingId')
+      .select([
+        'req.id',
+        'req.tenantId',
+        'req.ownerId',
+        'req.listingId',
+        'req.status',
+        'req.conversationId',
+        'req.createdAt',
+        'tenant.firstName',
+        'tenant.lastName',
+        'listing.titleEn',
+        'listing.titleFr',
+        'listing.titleAr',
+      ])
+      .where('req.ownerId = :ownerId', { ownerId })
+      .orderBy('req.createdAt', 'DESC')
+      .getRawAndEntities();
+
+    return result.entities.map((req, index) => {
+      const raw = result.raw[index];
+
+      const tenantName =
+        raw.tenant_firstName && raw.tenant_lastName
+          ? `${raw.tenant_firstName} ${raw.tenant_lastName}`
+          : raw.tenant_firstName ?? `Applicant #${req.tenantId}`;
+
+      const listingTitle =
+        raw.listing_titleEn ||
+        raw.listing_titleFr ||
+        raw.listing_titleAr ||
+        `Listing #${req.listingId}`;
+
+      return {
+        ...req,
+        tenantName,
+        listingTitle,
+        listingTitleEn: raw.listing_titleEn,
+        listingTitleFr: raw.listing_titleFr,
+        listingTitleAr: raw.listing_titleAr,
+      };
     });
   }
 
@@ -265,5 +309,4 @@ export class ChatService {
 
     return { request, conversation };
   }
-
 }

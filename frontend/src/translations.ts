@@ -170,6 +170,17 @@ export const translations = {
             loadError: 'تعذر تحميل المحادثات.',
             sendError: 'تعذر إرسال الرسالة.',
             retry: 'إعادة المحاولة',
+            today: "اليوم",
+            yesterday: "أمس",
+            unknownDate: "تاريخ غير معروف",
+			errors: {
+				tooLong: "رسالتك طويلة جدًا ولا يمكن إرسالها. يرجى تقصيرها والمحاولة مرة أخرى.",
+				unauthorized: "انتهت صلاحية الجلسة أو لم يتم التحقق من هويتك. يرجى تسجيل الدخول مرة أخرى.",
+				forbidden: "ليس لديك صلاحية للقيام بهذا الإجراء.",
+				notFound: "تعذر العثور على المحادثة أو العنصر المطلوب.",
+				network: "تعذر الوصول إلى خادم الدردشة. يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
+				generic: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.",
+			},
         },
         profile: {
                     sidebar: {
@@ -475,6 +486,17 @@ export const translations = {
             loadError: 'Could not load conversations.',
             sendError: 'Could not send message.',
             retry: 'Retry',
+            today: "TODAY",
+            yesterday: "YESTERDAY",
+            unknownDate: "Unknown date",
+			errors: {
+				tooLong: "Your message is too long to send. Please shorten it and try again.",
+				unauthorized: "Your session has expired or isn't authenticated. Please sign in again.",
+				forbidden: "You don't have permission to perform this action.",
+				notFound: "The conversation or requested item could not be found.",
+				network: "We couldn't reach the chat server. Please check your connection and try again.",
+				generic: "Something went wrong. Please try again.",
+			},
         },
         dashboardPage: {
             title: 'Analytics',
@@ -728,6 +750,17 @@ export const translations = {
             loadError: 'Impossible de charger les conversations.',
             sendError: 'Impossible d’envoyer le message.',
             retry: 'Réessayer',
+            today: "AUJOURD'HUI",
+            yesterday: "HIER",
+            unknownDate: "Date inconnue",
+			errors: {
+				tooLong: "Votre message est trop long pour être envoyé. Veuillez le raccourcir et réessayer.",
+				unauthorized: "Votre session a expiré ou n'est pas authentifiée. Veuillez vous reconnecter.",
+				forbidden: "Vous n'avez pas l'autorisation d'effectuer cette action.",
+				notFound: "La conversation ou la ressource demandée est introuvable.",
+				network: "Impossible de joindre le serveur de messagerie. Vérifiez votre connexion et réessayez.",
+				generic: "Une erreur inattendue s'est produite. Veuillez réessayer.",
+			},
         },
         dashboardPage: {
             title: 'Statistiques',

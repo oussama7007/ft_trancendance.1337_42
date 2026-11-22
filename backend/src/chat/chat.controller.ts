@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { ChatService } from './chat.service.js';
+import { ChatGateway } from './chat.gateway.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 interface AuthenticatedRequest extends Request {
@@ -23,7 +24,10 @@ interface AuthenticatedRequest extends Request {
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   @Post('conversations')
   createConversation(
@@ -100,13 +104,24 @@ export class ChatController {
   }
 
   @Patch('interest-requests/:id/accept')
-  acceptRequest(
+  async acceptRequest(
     @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) requestId: number,
   ) {
-    return this.chatService.acceptInterestRequest(
+    const result = await this.chatService.acceptInterestRequest(
       request.user.userId,
       requestId,
     );
+
+    this.chatGateway.notifyInterestRequestAccepted(result.request.tenantId, {
+      requestId: result.request.id,
+      listingId: result.request.listingId,
+      ownerId: result.request.ownerId,
+      tenantId: result.request.tenantId,
+      conversationId: result.conversation.id,
+      status: result.request.status,
+    });
+
+    return result;
   }
 }
