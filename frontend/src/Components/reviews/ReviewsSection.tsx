@@ -11,11 +11,11 @@ interface ReviewsSectionProps
   profileUserId: number;
   profileName: string;
   lang: Language;
-  // TODO(auth): temporary, the logged-in user until real login exists
+  // TODO: use the real logged in user
   currentUserId?: number;
 }
 
-// Everything about reviews on a profile page, in one piece
+// reviews part of the profile page
 export default function ReviewsSection({ profileUserId, profileName, lang, currentUserId }: ReviewsSectionProps)
 {
   const { tab, setTab, result, error, reviewRole, submit } = useReviews(profileUserId, currentUserId);

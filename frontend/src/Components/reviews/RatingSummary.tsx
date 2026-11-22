@@ -9,7 +9,7 @@ interface RatingSummaryProps
   lang: Language;
 }
 
-// The "Overall rating" card: the big number, the stars and how many reviews
+// overall rating card
 export default function RatingSummary({ average, count, lang }: RatingSummaryProps)
 {
   const t = translations[lang].reviews;

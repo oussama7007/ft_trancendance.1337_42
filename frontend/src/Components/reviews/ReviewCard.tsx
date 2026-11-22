@@ -5,13 +5,13 @@ import type { Review } from '../../services/reviewService';
 
 const locales = { ar: 'ar-MA', fr: 'fr-FR', en: 'en-US' };
 
-// "2026-07-02T10:00:00Z" -> "Jul 2, 2026"
+// 2026-07-02 -> Jul 2, 2026
 function formatDate(date: string, lang: Language): string
 {
   return new Date(date).toLocaleDateString(locales[lang], { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-// One review: who wrote it, the stars and what they said
+// one review
 export default function ReviewCard({ review, lang }: { review: Review; lang: Language })
 {
   const t = translations[lang].reviews;

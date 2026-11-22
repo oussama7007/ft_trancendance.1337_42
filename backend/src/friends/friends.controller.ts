@@ -21,34 +21,24 @@ import {
 import { SearchUsersDto } from './dto/search-users.dto.js';
 import { FriendsService } from './friends.service.js';
 
-// The friends routes. This class only maps URLs to service methods; every
-// rule lives in FriendsService.
-//
-// Security: JwtAuthGuard runs before every route. It reads the login cookie,
-// answers 401 if it is missing or fake, and puts the user's id in
-// request.user.sub. "Me" always comes from there, never from the URL or the
-// body, so nobody can act in someone else's name.
-//
-// :userId is always the OTHER user. ParseIntPipe answers 400 if it is not a
-// number.
 @Controller('friends')
 @UseGuards(JwtAuthGuard)
 export class FriendsController {
   constructor(private readonly friendsService: FriendsService) {}
 
-  // GET /friends -> my friends list
+  // my friends list
   @Get()
   getFriends(@Req() request: AuthenticatedRequest): Promise<FriendDto[]> {
     return this.friendsService.getFriends(request.user!.sub);
   }
 
-  // GET /friends/requests -> { incoming, outgoing } pending requests
+  // requests i got and requests i sent
   @Get('requests')
   getRequests(@Req() request: AuthenticatedRequest): Promise<FriendRequestsDto> {
     return this.friendsService.getRequests(request.user!.sub);
   }
 
-  // GET /friends/search?q=sara -> users matching the name, with my status
+  // search users by name
   @Get('search')
   search(
     @Req() request: AuthenticatedRequest,
@@ -57,7 +47,7 @@ export class FriendsController {
     return this.friendsService.searchUsers(request.user!.sub, query.q);
   }
 
-  // GET /friends/:userId/status -> where I stand with this user
+  // my status with this user
   @Get(':userId/status')
   getStatus(
     @Req() request: AuthenticatedRequest,
@@ -66,7 +56,7 @@ export class FriendsController {
     return this.friendsService.getStatus(request.user!.sub, userId);
   }
 
-  // POST /friends/:userId/request -> send a request (201 Created: a new row)
+  // send a friend request
   @Post(':userId/request')
   sendRequest(
     @Req() request: AuthenticatedRequest,
@@ -75,7 +65,7 @@ export class FriendsController {
     return this.friendsService.sendRequest(request.user!.sub, userId);
   }
 
-  // POST /friends/:userId/accept -> accept their request (200: a row changed)
+  // accept a request
   @Post(':userId/accept')
   @HttpCode(HttpStatus.OK)
   acceptRequest(
@@ -85,7 +75,7 @@ export class FriendsController {
     return this.friendsService.acceptRequest(request.user!.sub, userId);
   }
 
-  // POST /friends/:userId/reject -> reject their request
+  // reject a request
   @Post(':userId/reject')
   @HttpCode(HttpStatus.OK)
   rejectRequest(
@@ -95,7 +85,7 @@ export class FriendsController {
     return this.friendsService.rejectRequest(request.user!.sub, userId);
   }
 
-  // DELETE /friends/:userId/request -> cancel the request I sent
+  // cancel a request i sent
   @Delete(':userId/request')
   cancelRequest(
     @Req() request: AuthenticatedRequest,
@@ -104,7 +94,7 @@ export class FriendsController {
     return this.friendsService.cancelRequest(request.user!.sub, userId);
   }
 
-  // DELETE /friends/:userId -> remove this friend
+  // remove a friend
   @Delete(':userId')
   removeFriend(
     @Req() request: AuthenticatedRequest,

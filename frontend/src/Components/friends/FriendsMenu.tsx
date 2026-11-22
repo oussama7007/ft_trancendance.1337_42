@@ -14,7 +14,7 @@ interface FriendsMenuProps
   lang: Language;
 }
 
-// The friends icon in the sidebar and the panel it opens
+// friends icon and its panel
 export function FriendsMenu({ lang }: FriendsMenuProps)
 {
   const t = translations[lang].friends;

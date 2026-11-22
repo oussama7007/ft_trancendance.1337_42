@@ -12,7 +12,7 @@ interface ReviewTabsProps
 
 const tabs: ReviewTab[] = ['all', 'owner', 'roommate'];
 
-// The three tabs with their numbers. The open one is orange
+// the three review tabs
 export default function ReviewTabs({ tab, counts, lang, onChange }: ReviewTabsProps)
 {
   const t = translations[lang].reviews;

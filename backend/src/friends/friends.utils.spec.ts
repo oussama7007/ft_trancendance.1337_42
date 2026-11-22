@@ -7,8 +7,6 @@ import {
   toFriendUser,
 } from './friends.utils.js';
 
-// Unit tests for the rules in friends.utils.ts. They need no database.
-// Story used everywhere: Sara (4) sent a friend request to Youssef (9).
 const SARA = 4;
 const YOUSSEF = 9;
 

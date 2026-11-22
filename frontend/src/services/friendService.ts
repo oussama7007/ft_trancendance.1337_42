@@ -35,7 +35,7 @@ export interface SearchResult
   status: FriendshipStatus;
 }
 
-// Calls the friends api with the login cookie and returns the json
+// fetch with the login cookie
 async function request<T>(path: string, method = 'GET'): Promise<T>
 {
   const response = await fetch(`${API_URL}/friends${path}`, {
@@ -50,56 +50,56 @@ async function request<T>(path: string, method = 'GET'): Promise<T>
   return response.json();
 }
 
-// Runs a friend action and gives back the new status
+// runs an action and returns the new status
 async function changeStatus(path: string, method: string): Promise<FriendshipStatus>
 {
   const data = await request<{ status: FriendshipStatus }>(path, method);
   return data.status;
 }
 
-// Gets my friends list
+// my friends
 export function getFriends()
 {
   return request<Friend[]>('');
 }
 
-// Gets the requests i received and the ones i sent
+// my requests
 export function getRequests()
 {
   return request<FriendRequests>('/requests');
 }
 
-// Finds users by name
+// search by name
 export function searchUsers(text: string)
 {
   return request<SearchResult[]>(`/search?q=${encodeURIComponent(text)}`);
 }
 
-// Sends a friend request
+// send a request
 export function sendRequest(userId: number)
 {
   return changeStatus(`/${userId}/request`, 'POST');
 }
 
-// Accepts a request this user sent me
+// accept a request
 export function acceptRequest(userId: number)
 {
   return changeStatus(`/${userId}/accept`, 'POST');
 }
 
-// Rejects a request this user sent me
+// reject a request
 export function rejectRequest(userId: number)
 {
   return changeStatus(`/${userId}/reject`, 'POST');
 }
 
-// Cancels the request i sent to this user
+// cancel my request
 export function cancelRequest(userId: number)
 {
   return changeStatus(`/${userId}/request`, 'DELETE');
 }
 
-// Removes this user from my friends
+// remove a friend
 export function removeFriend(userId: number)
 {
   return changeStatus(`/${userId}`, 'DELETE');

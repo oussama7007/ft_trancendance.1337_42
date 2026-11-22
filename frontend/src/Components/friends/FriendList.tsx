@@ -15,12 +15,12 @@ interface FriendListProps
   onFindPeople: () => void;
 }
 
-// Shows my friends, or a small message when i have none yet
+// my friends list
 export function FriendList({ friends, lang, t, onRemove, onFindPeople }: FriendListProps)
 {
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
 
-  // Removes the friend once i say yes in the row
+  // removes the friend after confirming
   function remove(userId: number)
   {
     setConfirmingId(null);

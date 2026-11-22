@@ -7,7 +7,7 @@ interface FriendRowProps {
   children?: ReactNode;
 }
 
-// One person in a list: initials, name, a small line under it and the buttons
+// one person in a list
 export function FriendRow({ user, subtitle, children }: FriendRowProps) {
   return (
     <li className="flex items-center gap-3 rounded-2xl px-2 py-2.5">

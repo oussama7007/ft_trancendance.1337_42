@@ -10,7 +10,7 @@ interface HandshakeButtonProps
   t: HandshakeTranslations;
 }
 
-// Picks the text for each state: loading, unavailable, and the four stages of a handshake
+// text for each state
 function getButtonText(handshake: Handshake | null, loading: boolean, t: HandshakeTranslations): string
 {
   if (loading)
@@ -26,16 +26,13 @@ function getButtonText(handshake: Handshake | null, loading: boolean, t: Handsha
   return t.propose;
 }
 
-// The whole handshake flow in one button: propose, approve, wait for the other
-// person, confirmed. It is disabled while a request runs, once the user has
-// said yes, and when the state could not be loaded
+// the handshake button
 export default function HandshakeButton({ listingId, clientId, t }: HandshakeButtonProps)
 {
   const { handshake, loading, error, approve } = useHandshake(listingId, clientId);
   const disabled = loading || !handshake || handshake.hasUserApproved;
   const confirmed = handshake?.status === 'confirmed';
 
-  // Orange while the user can act, gray while nothing can be clicked, green once confirmed
   const look = confirmed
     ? 'cursor-default bg-[#E8F5EE] text-[#178A4C]'
     : disabled

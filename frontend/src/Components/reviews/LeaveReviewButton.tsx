@@ -12,7 +12,7 @@ interface LeaveReviewButtonProps
   onSubmit: (rating: number, comment: string) => Promise<void>;
 }
 
-// The orange button. Clicking it opens the review popup.
+// opens the review popup
 export default function LeaveReviewButton({ profileName, role, lang, onSubmit }: LeaveReviewButtonProps)
 {
   const [open, setOpen] = useState(false);

@@ -14,7 +14,6 @@ import { Handshake } from '../../handshake/entities/handshake.entity.js';
 
 export type ReviewRole = 'owner' | 'roommate';
 
-
 @Entity('reviews')
 @Unique('unique_review_per_handshake', ['handshakeId', 'reviewerId'])
 export class Review

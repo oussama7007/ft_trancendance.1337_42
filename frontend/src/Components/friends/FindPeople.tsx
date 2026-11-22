@@ -16,7 +16,7 @@ interface FindPeopleProps {
 
 const buttonClass = 'flex h-10 shrink-0 items-center gap-1.5 rounded-xl px-3 text-sm font-bold';
 
-// Searches users by name and shows the right button next to each one
+// search users by name
 export function FindPeople({ t, onAdd, onCancel, onAccept }: FindPeopleProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -43,7 +43,7 @@ export function FindPeople({ t, onAdd, onCancel, onAccept }: FindPeopleProps) {
     };
   }, [text]);
 
-  // Runs the action and updates the button of that person only
+  // runs the action and updates that person
   async function handle(action: Action, userId: number) {
     const status = await action(userId);
     if (status) {
@@ -53,7 +53,7 @@ export function FindPeople({ t, onAdd, onCancel, onAccept }: FindPeopleProps) {
     }
   }
 
-  // Picks the button that matches where i stand with this person
+  // button for each status
   function renderButton(result: SearchResult) {
     const id = result.user.id;
 

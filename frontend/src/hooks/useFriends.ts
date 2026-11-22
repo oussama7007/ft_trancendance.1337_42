@@ -4,7 +4,7 @@ import type { Friend, FriendRequests, FriendshipStatus } from '../services/frien
 
 type Action = (userId: number) => Promise<FriendshipStatus>;
 
-// Keeps my friends and my requests in sync with the server
+// loads my friends and requests
 export function useFriends()
 {
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -33,7 +33,7 @@ export function useFriends()
     };
   }, [refresh]);
 
-  // Runs one action, then loads the lists again so the screen matches the database
+  // runs an action then reloads the lists
   async function run(action: Action, userId: number)
   {
     setFailed(false);

@@ -1,15 +1,9 @@
 import type { Handshake } from './entities/handshake.entity.js';
 import { getStatus, hasUserApproved, toResponse } from './handshake.utils.js';
 
-// Unit tests for the status rules in handshake.utils.ts. They need no database.
-//
-// TODO(tests): add e2e tests for the routes: first yes gives pending, the
-// second gives confirmed, a repeated click changes nothing, a stranger gets
-// 403, a missing userId gets 401 and owner === client gets 400.
 const OWNER = 1;
 const CLIENT = 2;
 
-// Builds a row with only the fields these tests care about.
 function makeHandshake(ownerApproved: boolean, clientApproved: boolean) {
   return {
     ownerId: OWNER,

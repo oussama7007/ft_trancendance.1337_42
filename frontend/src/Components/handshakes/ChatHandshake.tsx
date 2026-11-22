@@ -11,7 +11,7 @@ interface ChatHandshakeProps
   lang: Language;
 }
 
-// Shows the handshake button in the chat header when the chat is about a listing
+// handshake button in the chat header
 export default function ChatHandshake({ conversationId, lang }: ChatHandshakeProps)
 {
   const t = translations[lang].handshake;

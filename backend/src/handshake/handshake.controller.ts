@@ -13,16 +13,12 @@ import { JwtAuthGuard, type AuthenticatedRequest } from '../auth/jwt-auth.guard.
 import { ChatHandshakeDto, HandshakeResponseDto } from './dto/handshake-response.dto.js';
 import { HandshakeService } from './handshake.service.js';
 
-// Routes for the handshake between a listing and a client. JwtAuthGuard reads
-// the login cookie, so the caller's id always comes from the token and nobody
-// can act in someone else's name
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class HandshakeController {
   constructor(private readonly handshakeService: HandshakeService) {}
 
-  // Current state of the handshake, so the button can show the right text when
-  // the page opens. ParseIntPipe answers 400 if an id is not a number.
+  // gets the handshake state
   @Get('listings/:listingId/handshakes/:clientId')
   getHandshake(
     @Param('listingId', ParseIntPipe) listingId: number,
@@ -32,8 +28,7 @@ export class HandshakeController {
     return this.handshakeService.getHandshake(listingId, clientId, request.user!.sub);
   }
 
-  // The caller says yes. It answers 200 instead of POST's default 201 because
-  // it usually updates an existing handshake instead of creating one.
+  // the user says yes
   @Post('listings/:listingId/handshakes/:clientId/approve')
   @HttpCode(HttpStatus.OK)
   approveHandshake(
@@ -44,7 +39,7 @@ export class HandshakeController {
     return this.handshakeService.approveHandshake(listingId, clientId, request.user!.sub);
   }
 
-  // The listing a chat is about, so the chat can show the handshake button
+  // gets the listing of a chat
   @Get('conversations/:conversationId/handshake')
   getForConversation(
     @Param('conversationId', ParseIntPipe) conversationId: number,

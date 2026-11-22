@@ -10,7 +10,7 @@ interface StarRatingProps
   onChange?: (value: number) => void;
 }
 
-// Five stars. Pass onChange to make them clickable
+// five stars, clickable with onChange
 export default function StarRating({ value, size = 18, lang = 'en', onChange }: StarRatingProps)
 {
   const stars = [1, 2, 3, 4, 5];

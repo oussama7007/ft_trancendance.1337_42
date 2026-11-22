@@ -7,7 +7,7 @@ import { CreateReviewDto } from './dto/create-review.dto.js';
 import { CanReviewDto, ReviewsResultDto } from './dto/review-response.dto.js';
 import { buildCounts, buildSummary, filterByRole, toReviewResponse } from './reviews.utils.js';
 
-// Postgres error code for "this row already exists" (UNIQUE broken)
+// postgres unique error
 const UNIQUE_VIOLATION = '23505';
 
 @Injectable()
@@ -17,7 +17,7 @@ export class ReviewsService
         @InjectRepository(Review) private readonly reviewRepository: Repository<Review>,
         @InjectRepository(Handshake) private readonly handshakeRepository: Repository<Handshake>) {}
 
-    // All the reviews written about `userId`, plus the summary and the tab counts
+    // reviews of a user with the summary and counts
     async findByUser(userId: number, role: 'all' | 'owner' | 'roommate'): Promise<ReviewsResultDto>
     {
         const rows = await this.reviewRepository.find({
@@ -34,7 +34,7 @@ export class ReviewsService
         };
     }
 
-    // Does the "Leave a review" button show for `reviewerId` on this profile
+    // checks if the button should show
     async canReview(reviewerId: number, reviewedId: number): Promise<CanReviewDto>
     {
         const handshake = await this.findReviewableHandshake(reviewerId, reviewedId);
@@ -43,7 +43,7 @@ export class ReviewsService
         return { allowed: true, role: 'owner' };
     }
 
-    // Saves a new review, or refuses with the right error
+    // saves a new review
     async create(reviewerId: number, reviewedId: number, dto: CreateReviewDto): Promise<void>
     {
         if (reviewerId === reviewedId)
@@ -66,15 +66,13 @@ export class ReviewsService
         }
         catch (error)
         {
-            // Two clicks at the same time: the database let only one through
             if ((error as { code?: string }).code === UNIQUE_VIOLATION)
                 throw new ConflictException('You already reviewed this handshake');
             throw error;
         }
     }
 
-    // Finds a confirmed handshake where I'm the owner and they're the client
-    // Returns null if there is none, or if I already reviewed it
+    // confirmed handshake i did not review yet
     private async findReviewableHandshake(reviewerId: number, reviewedId: number): Promise<Handshake | null>
     {
         const handshake = await this.handshakeRepository.findOne({

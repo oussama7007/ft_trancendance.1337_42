@@ -1,8 +1,7 @@
 import type { ReviewRole, Review } from './entities/review.entity.js';
 import type { ReviewCountsDto, ReviewResponseDto, ReviewsSummaryDto } from './dto/review-response.dto.js';
 
-
-// "simon" + "jackson" -> "simon j."
+// simon jackson -> simon j.
 export function formatName(firstName: string, lastName: string): string
 {
     if (lastName === '')
@@ -10,7 +9,7 @@ export function formatName(firstName: string, lastName: string): string
     return `${firstName} ${lastName.charAt(0)}.`;
 }
 
-// One review (with its reviewer and listing loaded) -> one card
+// turns a review into a card
 export function toReviewResponse(review: Review): ReviewResponseDto
 {
     return {
@@ -31,7 +30,7 @@ export function toReviewResponse(review: Review): ReviewResponseDto
     };
 }
 
-// reviews average and number of reviews
+// average and count
 export function buildSummary(reviews: ReviewResponseDto[]): ReviewsSummaryDto
 {
     if (reviews.length === 0)
@@ -45,7 +44,7 @@ export function buildSummary(reviews: ReviewResponseDto[]): ReviewsSummaryDto
     return { average, count: reviews.length };
 }
 
-// The three numbers shown on the tabs
+// counts for the tabs
 export function buildCounts(reviews: ReviewResponseDto[]): ReviewCountsDto
 {
     return {
@@ -55,7 +54,7 @@ export function buildCounts(reviews: ReviewResponseDto[]): ReviewCountsDto
     };
 }
 
-// Keeps only the reviews of the open tab while 'all' keeps everything
+// keeps the reviews of the open tab
 export function filterByRole(reviews: ReviewResponseDto[], role: 'all' | ReviewRole): ReviewResponseDto[]
 {
     if (role === 'all')

@@ -21,9 +21,7 @@ export class HandshakeService {
     @InjectRepository(InterestRequest) private readonly interestRequestRepository: Repository<InterestRequest>,
   ) {}
 
-  // Finds the listing a chat is about, so the chat knows which handshake to show
-  // A chat starts when an owner accepts an interest request, and that request
-  // remembers the listing, the tenant and the conversation
+  // finds the listing of a chat from its accepted interest request
   async getForConversation(conversationId: number, userId: number): Promise<ChatHandshakeDto>
   {
     const request = await this.interestRequestRepository.findOne({
@@ -49,9 +47,7 @@ export class HandshakeService {
     };
   }
 
-  // Returns the handshake between a listing and a client, as `userId` sees it.
-  // It only reads: if nobody has clicked yet there is no row, and the status
-  // is simply 'none'.
+  // gets the handshake between a listing and a client
   async getHandshake(listingId: number, clientId: number, userId: number): Promise<HandshakeResponseDto>
   {
     const ownerId = await this.getListingOwnerId(listingId);
@@ -61,18 +57,12 @@ export class HandshakeService {
     return toResponse(handshake, userId);
   }
 
-  // Records the yes of `userId`. The first yes makes the handshake 'pending',
-  // the second one makes it 'confirmed', and clicking twice changes nothing.
-  //
-  // The work is split into small SQL statements on purpose. Reading the row,
-  // changing it and saving it crashes when the owner and the client click at
-  // the same moment (both try to create it). This version does not.
+  // saves the yes of the user and confirms when both said yes
   async approveHandshake( listingId: number, clientId: number, userId: number ): Promise<HandshakeResponseDto>
   {
     const ownerId = await this.getListingOwnerId(listingId);
     this.assertParticipant(userId, ownerId, clientId);
 
-    // First click: create the row. If it already exists, do nothing.
     await this.handshakeRepository
       .createQueryBuilder()
       .insert()
@@ -80,12 +70,9 @@ export class HandshakeService {
       .orIgnore()
       .execute();
 
-    // Set the yes of whoever clicked. The guard above guarantees that anyone
-    // who is not the owner is the client.
     const yes = userId === ownerId ? { ownerApproved: true } : { clientApproved: true };
     await this.handshakeRepository.update({ listingId, clientId }, yes);
 
-    // Once both have said yes, store the moment, and only the first time.
     await this.handshakeRepository.update(
       {
         listingId,
@@ -101,9 +88,7 @@ export class HandshakeService {
     return toResponse(handshake, userId);
   }
 
-  // Stops the request when the caller has no business in this handshake:
-  // nobody can shake hands with themselves, and only the owner and the client
-  // may see or change it.
+  // only the owner and the client can use it
   private assertParticipant(userId: number, ownerId: number, clientId: number): void
   {
     if (ownerId === clientId)
@@ -113,7 +98,7 @@ export class HandshakeService {
     }
   }
 
-  // Returns the id of the user who owns the listing, or 404 if it does not exist
+  // gets the owner of the listing
   private async getListingOwnerId(listingId: number): Promise<number>
   {
     const listing = await this.listingRepository.findOneBy({ id: listingId });

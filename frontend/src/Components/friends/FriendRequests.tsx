@@ -17,7 +17,7 @@ interface FriendRequestsProps {
 const titleClass = 'mx-2 mt-2 mb-1 text-xs font-bold uppercase tracking-wider text-(--color-muted)';
 const emptyClass = 'mx-2 py-3 text-sm text-(--color-muted)';
 
-// Shows the requests waiting for my answer and the ones i sent
+// requests i got and requests i sent
 export function FriendRequests({ requests, lang, t, onAccept, onReject, onCancel }: FriendRequestsProps) {
   return (
     <div>

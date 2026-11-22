@@ -14,7 +14,7 @@ interface ReviewModalProps
   onClose: () => void;
 }
 
-// The "Leave a review" popup: pick the stars, write something, send it
+// the review popup
 export default function ReviewModal({ profileName, role, lang, onSubmit, onClose }: ReviewModalProps)
 {
   const [rating, setRating] = useState(0);
@@ -30,7 +30,7 @@ export default function ReviewModal({ profileName, role, lang, onSubmit, onClose
     .replace('{name}', profileName)
     .replace('{tab}', isOwner ? t.tabOwner : t.tabRoommate);
 
-  // Sends the review and closes the popup if it worked
+  // sends the review and closes
   async function handleSubmit()
   {
     setSending(true);

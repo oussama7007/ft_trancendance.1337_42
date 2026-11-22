@@ -22,15 +22,12 @@ import {
   toFriendUser,
 } from './friends.utils.js';
 
-// Postgres error codes we translate into clean HTTP answers.
-const UNIQUE_VIOLATION = '23505'; // the pair already has a row
-const FOREIGN_KEY_VIOLATION = '23503'; // the other user was deleted meanwhile
+// postgres error codes
+const UNIQUE_VIOLATION = '23505';
+const FOREIGN_KEY_VIOLATION = '23503';
 
 const SEARCH_LIMIT = 20;
 
-// All the friendship rules and all the database work. `me` is always the
-// logged-in user (taken from the JWT by the controller, never from the URL),
-// `otherId` is always the person on the other side.
 @Injectable()
 export class FriendsService
 {
@@ -39,9 +36,7 @@ export class FriendsService
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
 
-  // ---------------------------------------------------------------- reading
-
-  // My friends, most recent first.
+  // my friends newest first
   async getFriends(me: number): Promise<FriendDto[]> {
     const rows = await this.friendshipRepository.find({
       where: [
@@ -58,7 +53,7 @@ export class FriendsService
     }));
   }
 
-  // The pending requests I received (incoming) and the ones I sent (outgoing).
+  // pending requests i got and i sent
   async getRequests(me: number): Promise<FriendRequestsDto> {
     const rows = await this.friendshipRepository.find({
       where: [
@@ -80,7 +75,7 @@ export class FriendsService
     };
   }
 
-  // Where I stand with one user. Used to choose which button to show.
+  // my status with one user
   async getStatus(me: number, otherId: number): Promise<FriendshipStatusDto> {
     this.assertNotSelf(me, otherId);
     await this.assertUserExists(otherId);
@@ -89,12 +84,8 @@ export class FriendsService
     return { status: getFriendshipStatus(row, me) };
   }
 
-  // Users whose name contains `text`, with my status for each one. This is how
-  // you find someone to add: there is no page for other users' profiles yet.
+  // finds users by name with my status for each
   async searchUsers(me: number, text: string): Promise<UserSearchResultDto[]> {
-    // The text goes in as a parameter (:pattern), never glued into the SQL,
-    // so it cannot inject SQL. escapeLikePattern stops % and _ acting as
-    // wildcards.
     const users = await this.userRepository
       .createQueryBuilder('u')
       .where('u.id <> :me', { me })
@@ -110,7 +101,6 @@ export class FriendsService
       return [];
     }
 
-    // One query for all the statuses instead of one query per user.
     const ids = users.map((user) => user.id);
     const rows = await this.friendshipRepository.find({
       where: [
@@ -125,14 +115,11 @@ export class FriendsService
     });
   }
 
-  // ---------------------------------------------------------------- actions
-
-  // I ask `otherId` to be my friend.
+  // sends a friend request
   async sendRequest(me: number, otherId: number): Promise<FriendshipStatusDto> {
     this.assertNotSelf(me, otherId);
     await this.assertUserExists(otherId);
 
-    // Check first, to give a clear message for each case.
     const existing = await this.findPair(me, otherId);
     if (existing) {
       this.throwAlreadyLinked(getFriendshipStatus(existing, me));
@@ -146,13 +133,11 @@ export class FriendsService
       });
     } catch (error) {
       const code = (error as { code?: string }).code;
-      // Two requests at the same moment (double click, or both users clicking
-      // "Add" together): the unique pair index let only one row in.
+      // both clicked at the same time
       if (code === UNIQUE_VIOLATION) {
         const row = await this.findPair(me, otherId);
         this.throwAlreadyLinked(getFriendshipStatus(row, me));
       }
-      // The other user was deleted between our check and the insert.
       if (code === FOREIGN_KEY_VIOLATION) {
         throw new NotFoundException('User not found');
       }
@@ -162,12 +147,7 @@ export class FriendsService
     return { status: 'pending_sent' };
   }
 
-  // I accept the request `otherId` sent me.
-  //
-  // The WHERE does the security check: it only matches a row where THEY are
-  // the requester, I am the addressee, and it is still pending. If I try to
-  // accept my own request, or a request that was already answered, nothing
-  // matches and I get 404.
+  // accepts a request they sent me
   async acceptRequest(me: number, otherId: number): Promise<FriendshipStatusDto> {
     const result = await this.friendshipRepository.update(
       { requesterId: otherId, addresseeId: me, status: 'pending' },
@@ -179,8 +159,7 @@ export class FriendsService
     return { status: 'friends' };
   }
 
-  // I reject the request `otherId` sent me. The row is deleted: we become
-  // strangers again, and either of us may send a new request later.
+  // rejects a request they sent me
   async rejectRequest(me: number, otherId: number): Promise<FriendshipStatusDto> {
     const result = await this.friendshipRepository.delete({
       requesterId: otherId,
@@ -193,7 +172,7 @@ export class FriendsService
     return { status: 'none' };
   }
 
-  // I take back the request I sent to `otherId`, before they answer.
+  // cancels a request i sent
   async cancelRequest(me: number, otherId: number): Promise<FriendshipStatusDto> {
     const result = await this.friendshipRepository.delete({
       requesterId: me,
@@ -206,8 +185,7 @@ export class FriendsService
     return { status: 'none' };
   }
 
-  // I remove `otherId` from my friends. Either of the two friends may do it,
-  // whoever sent the original request, so we look in both directions.
+  // removes a friend
   async removeFriend(me: number, otherId: number): Promise<FriendshipStatusDto> {
     const result = await this.friendshipRepository
       .createQueryBuilder()
@@ -224,9 +202,7 @@ export class FriendsService
     return { status: 'none' };
   }
 
-  // ---------------------------------------------------------------- helpers
-
-  // The row between two users, in whichever direction it was created.
+  // finds the row between two users
   private findPair(me: number, otherId: number): Promise<Friendship | null> {
     return this.friendshipRepository.findOne({
       where: [
@@ -236,12 +212,14 @@ export class FriendsService
     });
   }
 
+  // stops adding yourself
   private assertNotSelf(me: number, otherId: number): void {
     if (me === otherId) {
       throw new BadRequestException('You cannot be friends with yourself');
     }
   }
 
+  // 404 if the user does not exist
   private async assertUserExists(userId: number): Promise<void> {
     const exists = await this.userRepository.existsBy({ id: userId });
     if (!exists) {
@@ -249,7 +227,7 @@ export class FriendsService
     }
   }
 
-  // Explains why a new request is refused, depending on what already exists.
+  // throws the right 409 message
   private throwAlreadyLinked(status: FriendshipStatus): never {
     if (status === 'friends') {
       throw new ConflictException('You are already friends');
