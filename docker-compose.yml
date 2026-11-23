@@ -13,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -21,11 +21,13 @@ services:
   backend:
     build: ./backend
     container_name: backend
-    command: sh -c "npm run migration:run && npm run start:dev"
+    # Run migrations automatically on startup, then start the development server
+    command: bash start.sh
     ports:
       - "3000:3000"
     env_file:
       - .env
+    # PostgreSQL is reached by its Docker service name, not localhost.
     environment:
       DB_HOST: database
       DB_PORT: ${DB_PORT}
@@ -42,17 +44,19 @@ services:
       database:
         condition: service_healthy
     healthcheck:
+      # The frontend must wait until the session endpoint itself exists.
+      # Both 200 (signed in) and 401 (signed out) mean the backend is ready.
       test:
         [
           "CMD",
           "node",
           "-e",
-          "fetch('http://localhost:3000').then(() => process.exit(0)).catch(() => process.exit(1))"
+          "fetch('http://localhost:3000/auth/me').then((response) => process.exit(response.status === 200 || response.status === 401 ? 0 : 1)).catch(() => process.exit(1))"
         ]
       interval: 5s
       timeout: 3s
       retries: 20
-      start_period: 30s
+      start_period: 10s
 
 
   frontend:

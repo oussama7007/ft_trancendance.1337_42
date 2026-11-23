@@ -1,6 +1,9 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { DataSource } from 'typeorm';
+import { LoginChallenge } from './auth/login-challenge.entity.js';
+
+
 
 
 import { Handshake } from './handshake/entities/handshake.entity.js';
@@ -14,7 +17,7 @@ import { RegistrationSession } from './auth/registration-session-entity.js';
 import { User } from './auth/user.entity.js';
 import { Listing } from './listings/listing.entity.js';
 import { RoommatePost } from './roommates/roommate-post.entity.js';
-
+import { EmailChangeChallenge } from './auth/email-change-challenge.entity.js';
 config({
   path: fileURLToPath(new URL('../.env', import.meta.url)),
 });
@@ -30,12 +33,14 @@ const dataSource = new DataSource({
   RegistrationSession,
   User,
   Listing,
+  LoginChallenge,
   RoommatePost,
   Handshake,
   Review,
   Message,
   Conversation,
   InterestRequest,
+  EmailChangeChallenge,
 ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

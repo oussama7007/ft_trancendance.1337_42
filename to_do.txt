@@ -1,2 +1,5 @@
 To hide your readable TypeScript/React code from the browser's Developer
 to improve the profile with the reusable components 
+check how to deal with 2FA(i think with sms)
+make sure that the auth is translateded well date of birth , text deriction 
+check the privacy policy before you push 

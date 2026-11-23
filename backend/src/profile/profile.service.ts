@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException,NotFoundException } from '@nestjs/common';
 
-
+import { unlink } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,6 +17,56 @@ export class ProfileService {
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
     ) {}
+
+
+    async updateAvatar(
+    userId: number,
+    avatarUrl: string,
+) {
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    const oldAvatar = user.avatarUrl;
+
+    user.avatarUrl = avatarUrl;
+
+    const updatedUser = await this.userRepository.save(user);
+
+    // Delete the previous avatar only if it belongs
+    // to the application's avatar upload directory.
+    if (
+        oldAvatar &&
+        oldAvatar.startsWith('/uploads/avatars/') &&
+        oldAvatar !== avatarUrl
+    ) {
+        const filename = oldAvatar.slice(
+            '/uploads/avatars/'.length,
+        );
+
+        if (
+            filename &&
+            !filename.includes('/') &&
+            !filename.includes('\\')
+        ) {
+            await unlink(
+                join(
+                    process.cwd(),
+                    'uploads',
+                    'avatars',
+                    filename,
+                ),
+            ).catch(() => undefined);
+        }
+    }
+
+    return this.toResponse(updatedUser);
+}
+
 
     async getMyProfile(userId: number) {
         const user = await this.userRepository.findOne({

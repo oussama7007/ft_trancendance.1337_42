@@ -1,8 +1,8 @@
 node_modules
 dist
 coverage
-.git
+uploads
 .env
-.env.*
-!.env.example
-npm-debug.log*
+*.log
+.git
+.vscode
