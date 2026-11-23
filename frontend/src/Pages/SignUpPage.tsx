@@ -412,7 +412,7 @@ export function SignUpPage({
                             role="alert"
                             className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm font-medium text-red-700"
                         >
-                            {t[errorKey]}
+                            {t[errorKey as keyof typeof t] as string}
                         </p>
                     )}
 
@@ -508,7 +508,7 @@ export function SignUpPage({
                                         id="contact"
                                         type="email"
                                         dir="ltr"
-                                        placeholder={t.contactPlaceholder}
+                                        
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required 

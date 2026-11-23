@@ -28,9 +28,10 @@ const PRICE_LIMITS: Record<PriceRange, { minPrice?: number; maxPrice?: number }>
 
 interface ListingsPageProps {
     lang: Language;
+    currentUserId?: number;
 }
 
-export const ListingsPage: React.FC<ListingsPageProps> = ({ lang }) => {
+export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId }) => {
     const t = translations[lang].homePage;
 
     const SORT_LABELS: Record<SortValue, string> = {
@@ -198,7 +199,7 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang }) => {
                             availableLabel={t.available}
                             detailsLabel={t.details}
                             onSelect={setActiveDetailItem}
-
+                            isMine={item.ownerId === currentUserId}
                         />
                     ))}
                 </div>
@@ -259,6 +260,9 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang }) => {
                 title={t.detailsTitle}
                 contactLabel={t.contactBtn}
                 locationLabel={t.location}
+                ownerLabel={t.owner}
+                currentUserId={currentUserId}
+                yourListingLabel={t.yourListing}
                 priceLabel={t.price}
                 perMonthLabel={t.perMonth}
                 closeLabel={t.close}

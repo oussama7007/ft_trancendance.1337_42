@@ -7,6 +7,7 @@ import {
   Home,
   Clock,
   CheckCircle2,
+  User,
 } from 'lucide-react';
 
 import type { Language, Listing } from '../../types';
@@ -21,6 +22,9 @@ interface PropertyDetailsDrawerProps {
     title: string;
     contactLabel: string;
     locationLabel: string;
+    ownerLabel: string;
+    currentUserId?: number;
+    yourListingLabel: string;
     priceLabel: string;
     perMonthLabel: string;
     closeLabel: string;
@@ -36,6 +40,9 @@ export const PropertyDetailsDrawer: React.FC<
   lang,
   title,
   locationLabel,
+  ownerLabel,
+  currentUserId,
+  yourListingLabel,
   priceLabel,
   perMonthLabel,
   contactLabel,
@@ -43,11 +50,14 @@ export const PropertyDetailsDrawer: React.FC<
   onClose,
   onContact,
 }) => {
+  // the signed-in user cannot contact the owner of his own listing
+  const isMine = item !== null && item.ownerId === currentUserId;
+
   const [requestStatus, setRequestStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED'>('NONE');
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!item) {
+    if (!item || isMine) {
       setRequestStatus('NONE');
       return;
     }
@@ -71,7 +81,7 @@ export const PropertyDetailsDrawer: React.FC<
     };
 
     fetchInterestStatus();
-  }, [item]);
+  }, [item, isMine]);
 
   if (!item) {
     return null;
@@ -218,6 +228,17 @@ export const PropertyDetailsDrawer: React.FC<
             </div>
             )}
 
+            {/* Owner */}
+            <div className="mt-5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+                    <User className="w-4 h-4 text-(--color-accent)" />
+                </div>
+                <div>
+                    <p className="text-[11px] font-bold text-gray-400">{ownerLabel}</p>
+                    <p className="text-xs font-semibold text-gray-700">{item.ownerName}</p>
+                </div>
+            </div>
+
             {/* Price information */}
             <div className="mt-5 p-4 rounded-2xl bg-gray-50 border border-gray-100">
 
@@ -240,36 +261,42 @@ export const PropertyDetailsDrawer: React.FC<
                 </div>
             </div>
 
-            {/* Contact / Request Button */}
-            <button
-                type="button"
-                onClick={handleContactClick}
-                disabled={loading || requestStatus === 'PENDING'}
-                className={`w-full mt-6 py-3.5 px-5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition cursor-pointer ${
-                  requestStatus === 'PENDING'
-                    ? 'bg-amber-500 text-white cursor-not-allowed'
-                    : requestStatus === 'ACCEPTED'
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-(--color-accent) hover:bg-(--color-accent-dark) text-white'
-                }`}
-            >
-                {requestStatus === 'PENDING' ? (
-                    <>
-                        <Clock className="w-4 h-4 animate-pulse" />
-                        Pending request to the owner
-                    </>
-                ) : requestStatus === 'ACCEPTED' ? (
-                    <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        Chat Unlocked - Open Chat
-                    </>
-                ) : (
-                    <>
-                        <MessageCircle className="w-4 h-4" />
-                        {contactLabel}
-                    </>
-                )}
-            </button>
+            {/* Contact / Request Button (hidden on the user's own listing) */}
+            {isMine ? (
+                <p className="w-full mt-6 py-3.5 px-5 rounded-xl text-sm font-black text-center bg-(--color-accent-soft) text-(--color-accent)">
+                    {yourListingLabel}
+                </p>
+            ) : (
+                <button
+                    type="button"
+                    onClick={handleContactClick}
+                    disabled={loading || requestStatus === 'PENDING'}
+                    className={`w-full mt-6 py-3.5 px-5 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-md transition cursor-pointer ${
+                      requestStatus === 'PENDING'
+                        ? 'bg-amber-500 text-white cursor-not-allowed'
+                        : requestStatus === 'ACCEPTED'
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-(--color-accent) hover:bg-(--color-accent-dark) text-white'
+                    }`}
+                >
+                    {requestStatus === 'PENDING' ? (
+                        <>
+                            <Clock className="w-4 h-4 animate-pulse" />
+                            Pending request to the owner
+                        </>
+                    ) : requestStatus === 'ACCEPTED' ? (
+                        <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Chat Unlocked - Open Chat
+                        </>
+                    ) : (
+                        <>
+                            <MessageCircle className="w-4 h-4" />
+                            {contactLabel}
+                        </>
+                    )}
+                </button>
+            )}
 
             </div>
         </aside>

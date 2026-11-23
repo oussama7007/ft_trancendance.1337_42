@@ -37,6 +37,20 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
+    const getTranslatedError = (backendMessage: string): string => {
+        const errorMap: Record<string, string> = {
+            'Please wait before requesting another code': t.tooManyRequests || 'Please wait before requesting another code',
+            'Email not found in our system': t.emailNotFound || 'Email not found',
+            'Invalid verification code': t.verificationFailed || 'Invalid verification code',
+            'Verification code has expired': t.codeExpired || 'Code expired',
+            'Too many incorrect attempts': t.tooManyAttempts || 'Too many attempts',
+            'Failed to send reset code': t.failedToSend || 'Failed to send code',
+            'Could not send password reset email': t.failedToSend || 'Failed to send email',
+        };
+
+        return errorMap[backendMessage] || backendMessage;
+    };
+
     // Request password reset code
     const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -75,9 +89,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
             setCountdown(300); // 5 minutes
             startCountdown();
         } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "An error occurred"
-            );
+            const errorMsg = err instanceof Error ? err.message : "An error occurred";
+            setError(getTranslatedError(errorMsg));
         } finally {
             setIsSubmitting(false);
         }
@@ -120,9 +133,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
 
             setStep("reset");
         } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "Verification failed"
-            );
+            const errorMsg = err instanceof Error ? err.message : "Verification failed";
+            setError(getTranslatedError(errorMsg));
         } finally {
             setIsSubmitting(false);
         }
@@ -173,9 +185,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
 
             setStep("success");
         } catch (err) {
-            setError(
-                err instanceof Error ? err.message : "Password reset failed"
-            );
+            const errorMsg = err instanceof Error ? err.message : "Password reset failed";
+            setError(getTranslatedError(errorMsg));
         } finally {
             setIsSubmitting(false);
         }
@@ -238,7 +249,7 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                     id="reset-email"
                                     type="email"
                                     dir={isRtl ? "rtl" : "ltr"}
-                                    placeholder={t.contactPlaceholder}
+                                    
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     autoComplete="email"
@@ -331,7 +342,7 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
 
                             <PasswordStrength
                                 password={newPassword}
-                                lang={lang}
+                                labels={t.passwordStrength}
                             />
 
                             <PasswordField

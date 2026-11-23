@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 import { AccountSection } from '../shared/AccountSection';
 import { Link2 } from 'lucide-react';
 import type { Language } from '../../types';
@@ -51,6 +51,7 @@ async function request<T>(
 
 export function GoogleAccountSettings({ lang }: Props) {
     const t = translations[lang].settings.security;
+    const authT = translations[lang].auth;
     const [googleEmail, setGoogleEmail] =
         useState<string | null>(null);
 
@@ -85,6 +86,15 @@ export function GoogleAccountSettings({ lang }: Props) {
             setError(getErrorMessage(error));
         });
     }, []);
+
+    const googleLogin = useGoogleLogin({
+        onSuccess: (tokenResponse) => {
+            void linkGoogle(undefined, tokenResponse.access_token);
+        },
+        onError: () => {
+            setError(t.googleAuthFailed);
+        },
+    });
 
     async function linkGoogle(credential?: string, accessToken?: string) {
         setError('');
@@ -139,17 +149,14 @@ export function GoogleAccountSettings({ lang }: Props) {
                                         {t.sending}
                                     </p>
                                 ) : (
-                                    <GoogleLogin
-                                        text="continue_with"
-                                        onSuccess={(response) => {
-                                            if (response.credential) {
-                                                void linkGoogle(response.credential);
-                                            }
-                                        }}
-                                        onError={() => {
-                                            setError(t.googleAuthFailed);
-                                        }}
-                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => googleLogin()}
+                                        className="rounded-lg border border-irent-border bg-irent-surface px-4 py-2 text-sm font-medium text-irent-text hover:bg-irent-background"
+                                        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                                    >
+                                        {authT.googleSignIn}
+                                    </button>
                                 )
                             ) : (
                                 <p className="text-sm text-amber-600">

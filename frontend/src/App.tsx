@@ -236,6 +236,7 @@ function App() {
                             lang={lang}
                             onSelectListing={handleSelectListing}
                             isLoggedIn={currentUser !== null}
+                            currentUserId={currentUser?.id}
                         />
                     }
                 />
@@ -243,7 +244,7 @@ function App() {
                 {/* Your existing listings page */}
                 <Route
                     path="/listings"
-                    element={<ListingsPage lang={lang} />}
+                    element={<ListingsPage lang={lang} currentUserId={currentUser?.id} />}
                 />
 
                 <Route

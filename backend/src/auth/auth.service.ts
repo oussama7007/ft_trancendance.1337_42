@@ -1046,11 +1046,7 @@ async getSecuritySettings(userId: number) {
     });
 
     if (!user) {
-      // Don't reveal whether email exists for security
-      return {
-        message: 'If this email exists, a reset code will be sent',
-        expiresInSeconds: 300,
-      };
+      throw new BadRequestException('Email not found in our system');
     }
 
     const now = Date.now();

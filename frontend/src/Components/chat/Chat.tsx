@@ -8,6 +8,8 @@ import { chatService } from "../../services/chatService";
 import type { ApiMessage } from "../../services/chatService";
 import { translations } from "../../translations";
 import { io, Socket } from "socket.io-client";
+import { useSearchParams } from "react-router-dom";
+import ChatHandshake from "../handshakes/ChatHandshake";
 
 let socket: Socket;
 
@@ -21,6 +23,7 @@ export interface ChatMessage {
 export interface Conversation {
   id: number;
   name: string;
+  otherUserId: number;
   lastMessage: string;
   messages: ChatMessage[];
   isOnline: boolean;
@@ -50,40 +53,75 @@ function Chat({ lang, currentUserId }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const requestedConversationId = Number(searchParams.get("conversationId"));
+  const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
   useEffect(() => {
-    socket = io(import.meta.env.VITE_API_URL);
+    socket = io(import.meta.env.VITE_API_URL, {
+      withCredentials: true,
+    });
 
-    socket.on("newMessage", (message: { conversationId: number; senderId: number; content: string; createdAt: string }) => {
-      setConversations((previousConversations) =>
-        previousConversations.map((conv) => {
-          if (conv.id === Number(message.conversationId)) {
-            const newMsg: ChatMessage = {
-              id: Date.now(),
-              senderId: message.senderId,
-              content: message.content,
-              createdAt: message.createdAt,
-            };
-            return {
-              ...conv,
-              messages: [...conv.messages, newMsg],
-              lastMessage: newMsg.content,
-            };
+    socket.on("onlineUsers", (userIds: number[]) => {
+      setOnlineUserIds(userIds);
+    });
+
+    socket.on("userOnline", ({ userId }: { userId: number }) => {
+      setOnlineUserIds((previous) =>
+        previous.includes(userId) ? previous : [...previous, userId],
+      );
+    });
+
+    socket.on("userOffline", ({ userId }: { userId: number }) => {
+      setOnlineUserIds((previous) =>
+        previous.filter((id) => id !== userId),
+      );
+    });
+
+    socket.on("newMessage", (apiMessage: ApiMessage) => {
+      const newMsg = toChatMessage(apiMessage);
+
+      setConversations((previous) =>
+        previous.map((conv) => {
+          if (conv.id !== apiMessage.conversationId) return conv;
+
+          if (conv.messages.some((msg) => msg.id === newMsg.id)) {
+            return conv;
           }
-          return conv;
-        })
+
+          return {
+            ...conv,
+            messages: [...conv.messages, newMsg],
+            lastMessage: newMsg.content,
+          };
+        }),
       );
     });
 
     return () => {
+      socket.removeAllListeners();
       socket.disconnect();
     };
   }, []);
 
   useEffect(() => {
-    if (selectedConversationId && socket) {
-      socket.emit("joinConversation", { conversationId: selectedConversationId });
+    if (!selectedConversationId || !socket) return;
+
+    const joinConversation = () => {
+      socket.emit("joinConversation", {
+        conversationId: selectedConversationId,
+      });
+    };
+
+    if (socket.connected) {
+      joinConversation();
     }
+
+    socket.on("connect", joinConversation);
+
+    return () => {
+      socket.off("connect", joinConversation);
+    };
   }, [selectedConversationId]);
 
   useEffect(() => {
@@ -128,10 +166,10 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
             return {
               id: conversation.id,
-              name: participantName,
+              name: participantName, otherUserId,
               lastMessage: messages.at(-1)?.content ?? "",
               messages,
-              isOnline: false,
+              isOnline: onlineUserIds.includes(otherUserId),
             };
           }),
         );
@@ -141,6 +179,13 @@ function Chat({ lang, currentUserId }: ChatProps) {
         setConversations(loadedConversations);
 
         setSelectedConversationId((previousId) => {
+          if (
+            requestedConversationId &&
+            loadedConversations.some((c) => c.id === requestedConversationId)
+          ) {
+            return requestedConversationId;
+          }
+
           if (
             previousId !== null &&
             loadedConversations.some(
@@ -171,7 +216,16 @@ function Chat({ lang, currentUserId }: ChatProps) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [reloadKey, currentUserId, searchQuery, t.chat.loadError]);
+  }, [reloadKey, currentUserId, searchQuery, requestedConversationId, t.chat.loadError]);
+
+  useEffect(() => {
+    setConversations((previous) =>
+      previous.map((conversation) => ({
+        ...conversation,
+        isOnline: onlineUserIds.includes(conversation.otherUserId),
+      })),
+    );
+  }, [onlineUserIds]);
 
   const selectedConversation = conversations.find(
     (conversation) => conversation.id === selectedConversationId,
@@ -196,19 +250,18 @@ function Chat({ lang, currentUserId }: ChatProps) {
       const message = toChatMessage(savedMessage);
 
       socket.emit("sendMessage", {
-        conversationId: selectedConversation.id,
-        senderId: currentUserId,
-        content: message.content,
+        id: savedMessage.id,
+        conversationId: savedMessage.conversationId,
       });
 
       setConversations((previousConversations) =>
         previousConversations.map((conversation) =>
           conversation.id === selectedConversation.id
             ? {
-                ...conversation,
-                messages: [...conversation.messages, message],
-                lastMessage: message.content,
-              }
+              ...conversation,
+              messages: [...conversation.messages, message],
+              lastMessage: message.content,
+            }
             : conversation,
         ),
       );
@@ -287,6 +340,8 @@ function Chat({ lang, currentUserId }: ChatProps) {
                     {selectedConversation.isOnline ? t.chat.online : t.chat.offline}
                   </p>
                 </div>
+
+                <ChatHandshake conversationId={selectedConversation.id} lang={lang} />
               </div>
 
               {error && (

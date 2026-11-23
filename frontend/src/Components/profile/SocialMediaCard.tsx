@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 import {
     ExternalLink,
-    Globe,
     Pencil,
     Save,
     Share2,
@@ -11,6 +10,8 @@ import {
 
 import type { Language, User } from '../../types';
 import type { ProfileTranslations } from '../../translations';
+
+import { FaFacebook, FaInstagram, FaLinkedin } from 'react-icons/fa';
 
 import { AccountSection } from '../shared/AccountSection';
 
@@ -35,9 +36,15 @@ type SocialErrorKey = 'invalidLink' | 'saveError';
 type SocialMessageKey = 'saveSuccess';
 
 interface SocialLink {
-    name: string;
+    name: 'linkedin' | 'instagram' | 'facebook';
     url: string;
 }
+
+const socialIcons = {
+    linkedin: FaLinkedin,
+    instagram: FaInstagram,
+    facebook: FaFacebook,
+};
 
 function getSafeSocialUrl(
     value: string,
@@ -199,7 +206,7 @@ export function SocialMediaCard({
 
         if (url) {
             links.push({
-                name: 'LinkedIn',
+                name: 'linkedin',
                 url,
             });
         }
@@ -213,7 +220,7 @@ export function SocialMediaCard({
 
         if (url) {
             links.push({
-                name: 'Instagram',
+                name: 'instagram',
                 url,
             });
         }
@@ -227,7 +234,7 @@ export function SocialMediaCard({
 
         if (url) {
             links.push({
-                name: 'Facebook',
+                name: 'facebook',
                 url,
             });
         }
@@ -260,7 +267,8 @@ export function SocialMediaCard({
                 >
                     <div className="space-y-2">
                         <Label htmlFor="linkedin">
-                            LinkedIn
+                            <FaLinkedin aria-hidden="true" />
+                            <span className="sr-only">LinkedIn</span>
                         </Label>
 
                         <Input
@@ -280,7 +288,8 @@ export function SocialMediaCard({
 
                     <div className="space-y-2">
                         <Label htmlFor="instagram">
-                            Instagram
+                            <FaInstagram aria-hidden="true" />
+                            <span className="sr-only">Instagram</span>
                         </Label>
 
                         <Input
@@ -300,7 +309,8 @@ export function SocialMediaCard({
 
                     <div className="space-y-2">
                         <Label htmlFor="facebook">
-                            Facebook
+                            <FaFacebook aria-hidden="true" />
+                            <span className="sr-only">Facebook</span>
                         </Label>
 
                         <Input
@@ -358,7 +368,10 @@ export function SocialMediaCard({
                                     className="group flex min-w-0 items-center gap-3 rounded-xl p-2 transition hover:bg-irent-background"
                                 >
                                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-irent-accent-soft text-irent-accent">
-                                        <Globe size={21} />
+                                        {(() => {
+                                            const Icon = socialIcons[link.name];
+                                            return <Icon size={21} aria-hidden="true" />;
+                                        })()}
                                     </span>
 
                                     <span className="min-w-0 flex-1">

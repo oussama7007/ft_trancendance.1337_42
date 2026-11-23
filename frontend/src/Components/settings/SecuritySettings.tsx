@@ -323,7 +323,7 @@ export function SecuritySettings({ lang }: Props) {
 
                     {passwordErrorKey && (
                         <p role="alert" className="text-sm text-red-600">
-                            {t[passwordErrorKey]}
+                            {t[passwordErrorKey as keyof typeof t] as string}
                         </p>
                     )}
 
