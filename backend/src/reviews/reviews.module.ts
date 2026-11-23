@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Handshake } from '../handshake/entities/handshake.entity.js';
+import { SharedJwtModule } from '../auth/jwt.module.js';
 import { Review } from './entities/review.entity.js';
 import { ReviewsController } from './reviews.controller.js';
 import { ReviewsService } from './reviews.service.js';
 
 @Module({
-    imports:        [TypeOrmModule.forFeature([Review, Handshake])],
+    imports:        [TypeOrmModule.forFeature([Review, Handshake]), SharedJwtModule],
     controllers:    [ReviewsController],
     providers:      [ReviewsService],
 })

@@ -4,6 +4,7 @@ import { Menu, X, ChevronDown, Globe, UserCircle } from 'lucide-react';
 import type {Language, User} from '../types';
 import {translations} from '../translations';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useChat } from '../context/ChatContext';
 
 interface NavbarProps {
 
@@ -22,6 +23,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     handleLogout,
 }) => {
     const t = translations[lang];
+    const { unreadTotal } = useChat();
+
+    const renderLabel = (path: string, label: string) => (
+        <span className="inline-flex items-center gap-2">
+            {label}
+            {path === '/chat' && currentUser && unreadTotal > 0 && (
+                <span aria-label={`${unreadTotal}`} className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white">
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                </span>
+            )}
+        </span>
+    );
 
     const [isLanguageOpen, setIsLanguageOpen] = useState(false);
     const [isUserOpen, setIsUserOpen] = useState(false);
@@ -128,7 +141,7 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                                 }`
                             }
                                             >
-                            {item.label}
+                            {renderLabel(item.path, item.label)}
 
                         </NavLink>
                     ))}
@@ -240,7 +253,7 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                                 }`
                             }
                         >
-                            {item.label}
+                            {renderLabel(item.path, item.label)}
                         </NavLink>
                     ))}
                     <div className="my-2 h-px bg-gray-100" />

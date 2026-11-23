@@ -25,9 +25,9 @@ export class LinkListingOwner1794800000000 implements MigrationInterface {
 
         for (const owner of DEMO_OWNERS) {
             const [row] = await queryRunner.query(
-                `INSERT INTO "user" ("firstName", "lastName", "dateOfBirth", "gender", "contact", "passwordHash")
+                `INSERT INTO "user" ("firstName", "lastName", "dateOfBirth", "gender", "email", "passwordHash")
                  VALUES ($1, $2, '1990-01-01', $3, $4, $5)
-                 ON CONFLICT ("contact") DO UPDATE SET "contact" = EXCLUDED."contact"
+                 ON CONFLICT ("email") DO UPDATE SET "email" = EXCLUDED."email"
                  RETURNING "id"`,
                 [owner.firstName, owner.lastName, owner.gender, owner.contact, passwordHash],
             );

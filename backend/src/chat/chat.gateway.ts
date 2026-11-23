@@ -10,16 +10,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
+import { PresenceService } from './presence.service.js';
+import { RateLimiter } from './rate-limiter.js';
+import { TYPING_RATE_LIMIT } from './chat.constants.js';
+import type { Conversation } from './entities/conversation.entity.js';
+import type { Message } from './entities/message.entity.js';
+import { isAllowedOrigin } from '../allowed-origins.js';
 
 interface JwtPayload {
   sub: number | string;
   iat?: number;
   exp?: number;
-}
-
-interface SendMessagePayload {
-  id: number;
-  conversationId: number;
 }
 
 export interface InterestAcceptedPayload {
@@ -42,40 +43,42 @@ export interface InterestRequestCreatedPayload {
   createdAt: string | Date;
 }
 
+const userRoom = (userId: number) => `user_${userId}`;
+
 @WebSocketGateway({
   cors: {
-    origin: true,
+    origin: (origin: string | undefined, done: (error: Error | null, allow?: boolean) => void) =>
+      done(null, isAllowedOrigin(origin)),
     credentials: true,
   },
+  maxHttpBufferSize: 16 * 1024,
 })
-export class ChatGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private readonly connectedUsers = new Map<number, Set<string>>();
+  private readonly typingLimiter = new RateLimiter(TYPING_RATE_LIMIT.max, TYPING_RATE_LIMIT.windowMs);
 
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
+    private readonly presence: PresenceService,
   ) {}
 
   async handleConnection(client: Socket) {
     try {
-      const token = this.getCookie(
-        client.handshake.headers.cookie,
-        'access_token',
-      );
+      if (!isAllowedOrigin(client.handshake.headers.origin)) {
+        client.disconnect(true);
+        return;
+      }
 
+      const token = this.getCookie(client.handshake.headers.cookie, 'access_token');
       if (!token) {
         client.disconnect(true);
         return;
       }
 
-      const payload =
-        await this.jwtService.verifyAsync<JwtPayload>(token);
-
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
       const userId = Number(payload.sub);
 
       if (!Number.isSafeInteger(userId) || userId <= 0) {
@@ -84,51 +87,63 @@ export class ChatGateway
       }
 
       client.data.userId = userId;
-      await client.join(`user_${userId}`);
+      await client.join(userRoom(userId));
 
-      const sockets = this.connectedUsers.get(userId) ?? new Set<string>();
-      const wasOffline = sockets.size === 0;
-
-      sockets.add(client.id);
-      this.connectedUsers.set(userId, sockets);
-
-      client.emit('onlineUsers', Array.from(this.connectedUsers.keys()));
-
-      if (wasOffline) {
-        this.server.emit('userOnline', { userId });
+      if (this.presence.add(userId, client.id)) {
+        await this.broadcastPresence(userId, true);
       }
     } catch {
       client.disconnect(true);
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     const userId = Number(client.data.userId);
-
     if (!Number.isSafeInteger(userId) || userId <= 0) return;
 
-    const sockets = this.connectedUsers.get(userId);
-
-    if (!sockets) return;
-
-    sockets.delete(client.id);
-
-    if (sockets.size === 0) {
-      this.connectedUsers.delete(userId);
-      this.server.emit('userOffline', { userId });
+    if (this.presence.remove(userId, client.id)) {
+      await this.broadcastPresence(userId, false).catch(() => undefined);
     }
   }
 
-  notifyInterestRequestCreated(
-    ownerId: number,
-    payload: InterestRequestCreatedPayload,
-  ) {
-    const normalizedOwnerId = Number(ownerId);
-    if (!Number.isSafeInteger(normalizedOwnerId) || normalizedOwnerId <= 0) {
-      return;
-    }
+  private async broadcastPresence(userId: number, online: boolean) {
+    const contacts = await this.chatService.getContacts(userId);
+    const lastSeen = online ? null : this.presence.getLastSeen(userId);
 
-    this.server.to(`user_${normalizedOwnerId}`).emit('newInterestRequest', {
+    for (const { conversationId, peerId } of contacts) {
+      this.server.to(userRoom(peerId)).emit('presence', { conversationId, online, lastSeen });
+    }
+  }
+
+  emitNewMessage(conversation: Conversation, message: Message, senderName: string) {
+    for (const viewerId of [conversation.participantOneId, conversation.participantTwoId]) {
+      this.server.to(userRoom(viewerId)).emit('newMessage', {
+        ...this.chatService.toPublicMessage(message, viewerId),
+        senderName,
+      });
+    }
+  }
+
+  emitMessageDeleted(conversation: Conversation, message: Message) {
+    for (const viewerId of [conversation.participantOneId, conversation.participantTwoId]) {
+      this.server
+        .to(userRoom(viewerId))
+        .emit('messageDeleted', this.chatService.toPublicMessage(message, viewerId));
+    }
+  }
+
+  emitMessagesRead(conversation: Conversation, readerId: number) {
+    const peerId = this.chatService.getPeerId(conversation, readerId);
+    const readAt = new Date();
+    this.server.to(userRoom(peerId)).emit('messagesRead', { conversationId: conversation.id, readAt });
+    this.server.to(userRoom(readerId)).emit('conversationRead', { conversationId: conversation.id });
+  }
+
+  notifyInterestRequestCreated(ownerId: number, payload: InterestRequestCreatedPayload) {
+    const normalizedOwnerId = Number(ownerId);
+    if (!Number.isSafeInteger(normalizedOwnerId) || normalizedOwnerId <= 0) return;
+
+    this.server.to(userRoom(normalizedOwnerId)).emit('newInterestRequest', {
       ...payload,
       id: Number(payload.id),
       tenantId: Number(payload.tenantId),
@@ -137,113 +152,44 @@ export class ChatGateway
     });
   }
 
-  notifyInterestRequestAccepted(
-    tenantId: number,
-    payload: InterestAcceptedPayload,
-  ) {
+  notifyInterestRequestAccepted(tenantId: number, payload: InterestAcceptedPayload) {
     const normalizedTenantId = Number(tenantId);
-    if (!Number.isSafeInteger(normalizedTenantId) || normalizedTenantId <= 0) {
-      return;
-    }
+    if (!Number.isSafeInteger(normalizedTenantId) || normalizedTenantId <= 0) return;
 
-    this.server
-      .to(`user_${normalizedTenantId}`)
-      .emit('interestRequestAccepted', {
-        ...payload,
-        requestId: Number(payload.requestId),
-        listingId: Number(payload.listingId),
-        ownerId: Number(payload.ownerId),
-        tenantId: Number(payload.tenantId),
-        conversationId: Number(payload.conversationId),
-      });
+    this.server.to(userRoom(normalizedTenantId)).emit('interestRequestAccepted', {
+      ...payload,
+      requestId: Number(payload.requestId),
+      listingId: Number(payload.listingId),
+      ownerId: Number(payload.ownerId),
+      tenantId: Number(payload.tenantId),
+      conversationId: Number(payload.conversationId),
+    });
   }
 
-  @SubscribeMessage('joinConversation')
-  async handleJoinConversation(
-    @MessageBody() data: { conversationId: number },
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @MessageBody() data: { conversationId?: unknown; isTyping?: unknown },
     @ConnectedSocket() client: Socket,
   ) {
     const userId = Number(client.data.userId);
     const conversationId = Number(data?.conversationId);
 
-    if (
-      !Number.isSafeInteger(userId) ||
-      userId <= 0 ||
-      !Number.isSafeInteger(conversationId) ||
-      conversationId <= 0
-    ) {
-      return;
-    }
+    if (!Number.isSafeInteger(userId) || userId <= 0) return;
+    if (!Number.isSafeInteger(conversationId) || conversationId <= 0) return;
+    if (!this.typingLimiter.tryConsume(userId)) return;
 
     try {
-      await this.chatService.verifyConversationAccess(
+      const conversation = await this.chatService.verifyConversationAccess(conversationId, userId);
+      const peerId = this.chatService.getPeerId(conversation, userId);
+      this.server.to(userRoom(peerId)).emit('typing', {
         conversationId,
-        userId,
-      );
-
-      await client.join(`conversation_${conversationId}`);
-    } catch {
-      client.emit('chatError', {
-        message: 'You are not allowed to join this conversation',
+        isTyping: data?.isTyping === true,
       });
+    } catch {
     }
   }
 
-  @SubscribeMessage('sendMessage')
-  async handleSendMessage(
-    @MessageBody() data: SendMessagePayload,
-    @ConnectedSocket() client: Socket,
-  ) {
-    const senderId = Number(client.data.userId);
-    const messageId = Number(data?.id);
-    const conversationId = Number(data?.conversationId);
-
-    if (
-      !Number.isSafeInteger(senderId) ||
-      senderId <= 0 ||
-      !Number.isSafeInteger(messageId) ||
-      messageId <= 0 ||
-      !Number.isSafeInteger(conversationId) ||
-      conversationId <= 0
-    ) {
-      return;
-    }
-
-    try {
-      const message = await this.chatService.getMessageForBroadcast(
-        messageId,
-        conversationId,
-        senderId,
-      );
-
-      const conversation = await this.chatService.verifyConversationAccess(
-        conversationId,
-        senderId,
-      );
-
-      const recipientId =
-        conversation.participantOneId === senderId
-          ? conversation.participantTwoId
-          : conversation.participantOneId;
-
-      client
-        .to(`conversation_${message.conversationId}`)
-        .emit('newMessage', message);
-
-      this.server
-        .to(`user_${recipientId}`)
-        .emit('newMessage', message);
-    } catch {
-      client.emit('chatError', {
-        message: 'Unable to broadcast this message',
-      });
-    }
-  }
-
-  private getCookie(
-    cookieHeader: string | undefined,
-    name: string,
-  ): string | undefined {
+  private getCookie(cookieHeader: string | undefined, name: string): string | undefined {
     if (!cookieHeader) return undefined;
 
     const cookie = cookieHeader
@@ -251,8 +197,11 @@ export class ChatGateway
       .map((part) => part.trim())
       .find((part) => part.startsWith(`${name}=`));
 
-    return cookie
-      ? decodeURIComponent(cookie.substring(name.length + 1))
-      : undefined;
+    if (!cookie) return undefined;
+    try {
+      return decodeURIComponent(cookie.substring(name.length + 1));
+    } catch {
+      return undefined;
+    }
   }
 }

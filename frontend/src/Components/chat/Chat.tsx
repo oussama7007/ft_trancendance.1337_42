@@ -1,423 +1,503 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { MessageSquareOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, BellRing, MessageSquareOff } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
+import ChatAvatar from "./ChatAvatar";
+import PeerProfilePanel from "./PeerProfilePanel";
 import type { Language } from "../../types";
 import { chatService } from "../../services/chatService";
-import type { ApiMessage } from "../../services/chatService";
+import type { ApiConversation, ApiMessage } from "../../services/chatService";
 import { translations } from "../../translations";
-import { io, Socket } from "socket.io-client";
-import { useSearchParams } from "react-router-dom";
 import { formatChatError } from "./chatErrorFormatter";
+import { fmt, formatLastSeen } from "./chatUtils";
 import ChatHandshake from "../handshakes/ChatHandshake";
+import { useChat } from "../../context/ChatContext";
 
-export interface ChatMessage {
-	id: number;
-	senderId: number;
-	content: string;
-	createdAt: string;
-}
-
-export interface Conversation {
-	id: number;
-	name: string;
-	otherUserId: number;
-	lastMessage: string;
-	messages: ChatMessage[];
-	isOnline: boolean;
+interface Thread {
+  messages: ApiMessage[];
+  hasMore: boolean;
+  loadingOlder: boolean;
 }
 
 interface ChatProps {
-	lang: Language;
-	currentUserId?: number;
+  lang: Language;
 }
 
-function toChatMessage(message: ApiMessage): ChatMessage {
-	return {
-		id: Number(message.id),
-		senderId: Number(message.senderId),
-		content: message.content,
-		createdAt: message.createdAt,
-	};
+const TYPING_TIMEOUT_MS = 5000;
+
+function mergeMessages(current: ApiMessage[], incoming: ApiMessage[]): ApiMessage[] {
+  const byId = new Map(current.map((message) => [message.id, message]));
+  for (const message of incoming) byId.set(message.id, message);
+  return Array.from(byId.values()).sort((a, b) => a.id - b.id);
 }
 
-function Chat({ lang, currentUserId }: ChatProps) {
-	const t = translations[lang] ?? translations.en;
+function Chat({ lang }: ChatProps) {
+  const t = translations[lang] ?? translations.en;
+  const { socket, refreshUnread, setActiveConversation, notificationPermission, requestNotificationPermission } = useChat();
 
-	const [rawConversations, setRawConversations] = useState<Omit<Conversation, "isOnline">[]>([]);
-	const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-	const [showConversationList, setShowConversationList] = useState(true);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [reloadKey, setReloadKey] = useState(0);
-	const [searchQuery, setSearchQuery] = useState("");
-	const [searchParams] = useSearchParams();
-	const requestedConversationId = Number(searchParams.get("conversationId"));
-	const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
+  const [conversations, setConversations] = useState<ApiConversation[]>([]);
+  const [threads, setThreads] = useState<Record<number, Thread>>({});
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showList, setShowList] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [typingIds, setTypingIds] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-	const socketRef = useRef<Socket | null>(null);
+  const [searchParams] = useSearchParams();
+  const requestedId = Number(searchParams.get("conversationId")) || null;
 
-	const onlineSet = useMemo(
-		() => new Set(onlineUserIds.map((id) => Number(id))),
-		[onlineUserIds],
-	);
+  const selectedIdRef = useRef<number | null>(null);
+  const conversationsRef = useRef<ApiConversation[]>([]);
+  const typingTimers = useRef(new Map<number, number>());
+  const langRef = useRef(lang);
 
-	const conversations: Conversation[] = useMemo(
-		() =>
-			rawConversations.map((conversation) => ({
-				...conversation,
-				otherUserId: Number(conversation.otherUserId),
-				isOnline: onlineSet.has(Number(conversation.otherUserId)),
-			})),
-		[rawConversations, onlineSet],
-	);
+  useEffect(() => { langRef.current = lang; }, [lang]);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
-	useEffect(() => {
-		if (currentUserId == null) return;
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+    setActiveConversation(selectedId);
+  }, [selectedId, setActiveConversation]);
 
-		const wsUrl = (import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
-		const socket = io(wsUrl, {
-			withCredentials: true,
-		});
+  useEffect(() => () => setActiveConversation(null), [setActiveConversation]);
 
-		socketRef.current = socket;
+  const isOnScreen = (conversationId: number) =>
+    selectedIdRef.current === conversationId && document.visibilityState === "visible";
 
-		const handleOnlineUsers = (userIds: number[]) => {
-			setOnlineUserIds(
-				Array.from(
-					new Set(
-						(Array.isArray(userIds) ? userIds : [])
-							.map((id) => Number(id))
-							.filter((id) => Number.isSafeInteger(id) && id > 0),
-					),
-				),
-			);
-		};
+  const markRead = useCallback((conversationId: number) => {
+    setConversations((previous) =>
+      previous.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
+    );
+    chatService.markAsRead(conversationId).then(refreshUnread).catch(() => undefined);
+  }, [refreshUnread]);
 
-		const handleUserOnline = ({ userId }: { userId: number }) => {
-			const normalizedId = Number(userId);
-			if (!Number.isSafeInteger(normalizedId) || normalizedId <= 0) return;
+  useEffect(() => {
+    let cancelled = false;
 
-			setOnlineUserIds((previous) =>
-				previous.includes(normalizedId) ? previous : [...previous, normalizedId],
-			);
-		};
+    const timer = window.setTimeout(async () => {
+      try {
+        const list = await chatService.getConversations(searchQuery);
+        if (cancelled) return;
+        setConversations(list);
+        setError(null);
+        setSelectedId((previousId) => {
+          if (previousId !== null && list.some((c) => c.id === previousId)) return previousId;
+          if (searchQuery.trim()) return previousId;
+          return list[0]?.id ?? null;
+        });
+      } catch (err) {
+        if (!cancelled) setError(formatChatError(err, langRef.current, translations[langRef.current].chat.loadError));
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }, searchQuery ? 300 : 0);
 
-		const handleUserOffline = ({ userId }: { userId: number }) => {
-			const normalizedId = Number(userId);
-			setOnlineUserIds((previous) => previous.filter((id) => id !== normalizedId));
-		};
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery, reloadKey]);
 
-		const handleNewMessage = (apiMessage: ApiMessage) => {
-			const newMsg = toChatMessage(apiMessage);
-			const targetConversationId = Number(apiMessage.conversationId);
+  useEffect(() => {
+    if (!requestedId) return;
+    if (conversations.some((c) => c.id === requestedId)) {
+      setSelectedId(requestedId);
+      setShowList(false);
+    } else if (!isLoading && !searchQuery) {
+      setReloadKey((key) => key + 1);
+    }
+  }, [requestedId, conversations.length, isLoading]);
 
-			setRawConversations((previous) =>
-				previous.map((conv) => {
-					if (Number(conv.id) !== targetConversationId) return conv;
+  const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  const thread = selectedId !== null ? threads[selectedId] : undefined;
 
-					if (conv.messages.some((msg) => Number(msg.id) === newMsg.id)) {
-						return conv;
-					}
+  useEffect(() => {
+    if (selectedId === null) return;
+    let cancelled = false;
 
-					return {
-						...conv,
-						messages: [...conv.messages, newMsg],
-						lastMessage: newMsg.content,
-					};
-				}),
-			);
-		};
+    chatService
+      .getMessages(selectedId)
+      .then((page) => {
+        if (cancelled) return;
+        setThreads((previous) => ({
+          ...previous,
+          [selectedId]: {
+            messages: mergeMessages(previous[selectedId]?.messages ?? [], page.messages),
+            hasMore: previous[selectedId]?.hasMore ?? page.hasMore,
+            loadingOlder: false,
+          },
+        }));
+        const conversation = conversationsRef.current.find((c) => c.id === selectedId);
+        if (conversation?.unreadCount && document.visibilityState === "visible") markRead(selectedId);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(formatChatError(err, langRef.current, translations[langRef.current].chat.loadError));
+      });
 
-		const handleSocketError = (payload: { message?: string } | string) => {
-			setError(formatChatError(payload, lang, t.chat.sendError));
-		};
+    return () => { cancelled = true; };
+  }, [selectedId, reloadKey, markRead]);
 
-		socket.on("onlineUsers", handleOnlineUsers);
-		socket.on("userOnline", handleUserOnline);
-		socket.on("userOffline", handleUserOffline);
-		socket.on("newMessage", handleNewMessage);
-		socket.on("chatError", handleSocketError);
+  useEffect(() => {
+    const onVisible = () => {
+      const id = selectedIdRef.current;
+      if (document.visibilityState !== "visible" || id === null) return;
+      if (conversationsRef.current.find((c) => c.id === id)?.unreadCount) markRead(id);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [markRead]);
 
-		return () => {
-			socket.off("onlineUsers", handleOnlineUsers);
-			socket.off("userOnline", handleUserOnline);
-			socket.off("userOffline", handleUserOffline);
-			socket.off("newMessage", handleNewMessage);
-			socket.off("chatError", handleSocketError);
-			socket.disconnect();
-			if (socketRef.current === socket) {
-				socketRef.current = null;
-			}
-		};
-	}, [currentUserId, lang, t.chat.sendError]);
+  async function loadOlder() {
+    if (selectedId === null || !thread || thread.loadingOlder || !thread.hasMore) return;
+    const conversationId = selectedId;
+    const before = thread.messages[0]?.id;
 
-	useEffect(() => {
-		const socket = socketRef.current;
-		if (!selectedConversationId || !socket) return;
+    setThreads((previous) => ({ ...previous, [conversationId]: { ...previous[conversationId], loadingOlder: true } }));
+    try {
+      const page = await chatService.getMessages(conversationId, before);
+      setThreads((previous) => ({
+        ...previous,
+        [conversationId]: {
+          messages: mergeMessages(previous[conversationId]?.messages ?? [], page.messages),
+          hasMore: page.hasMore,
+          loadingOlder: false,
+        },
+      }));
+    } catch (err) {
+      setThreads((previous) => ({ ...previous, [conversationId]: { ...previous[conversationId], loadingOlder: false } }));
+      setError(formatChatError(err, lang, t.chat.loadError));
+    }
+  }
 
-		const joinConversation = () => {
-			socket.emit("joinConversation", {
-				conversationId: Number(selectedConversationId),
-			});
-		};
+  const addMessage = useCallback((message: ApiMessage) => {
+    const id = message.conversationId;
 
-		if (socket.connected) {
-			joinConversation();
-		}
+    setThreads((previous) =>
+      previous[id]
+        ? { ...previous, [id]: { ...previous[id], messages: mergeMessages(previous[id].messages, [message]) } }
+        : previous,
+    );
 
-		socket.on("connect", joinConversation);
+    setConversations((previous) => {
+      const existing = previous.find((c) => c.id === id);
+      if (!existing) return previous;
+      const isNewer = !existing.lastMessage || message.id >= existing.lastMessage.id;
+      const countsAsUnread = !message.isMine && !isOnScreen(id) && isNewer && !message.deleted;
+      const updated: ApiConversation = {
+        ...existing,
+        lastMessage: isNewer ? message : existing.lastMessage,
+        updatedAt: isNewer ? message.createdAt : existing.updatedAt,
+        unreadCount: countsAsUnread ? existing.unreadCount + 1 : existing.unreadCount,
+      };
+      return [updated, ...previous.filter((c) => c.id !== id)];
+    });
+  }, []);
 
-		return () => {
-			socket.off("connect", joinConversation);
-		};
-	}, [selectedConversationId, currentUserId]);
+  const setTyping = useCallback((conversationId: number, isTyping: boolean) => {
+    const timers = typingTimers.current;
+    window.clearTimeout(timers.get(conversationId));
+    timers.delete(conversationId);
 
-	useEffect(() => {
-		let cancelled = false;
+    setTypingIds((previous) => {
+      if (previous.has(conversationId) === isTyping) return previous;
+      const next = new Set(previous);
+      if (isTyping) next.add(conversationId);
+      else next.delete(conversationId);
+      return next;
+    });
 
-		if (currentUserId == null) {
-			setRawConversations([]);
-			setSelectedConversationId(null);
-			setError(null);
-			setIsLoading(false);
+    if (isTyping) {
+      timers.set(conversationId, window.setTimeout(() => setTyping(conversationId, false), TYPING_TIMEOUT_MS));
+    }
+  }, []);
 
-			return () => {
-				cancelled = true;
-			};
-		}
+  useEffect(() => {
+    const timers = typingTimers.current;
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, []);
 
-		const timer = setTimeout(async () => {
-			setIsLoading(true);
-			setError(null);
+  useEffect(() => {
+    if (!socket) return;
 
-			try {
-				const apiConversations = await chatService.getConversations(currentUserId, searchQuery);
+    const handleNewMessage = (message: ApiMessage) => {
+      if (!conversationsRef.current.some((c) => c.id === message.conversationId)) {
+        setReloadKey((key) => key + 1);
+        return;
+      }
+      addMessage(message);
+      if (!message.isMine) {
+        setTyping(message.conversationId, false);
+        if (isOnScreen(message.conversationId)) markRead(message.conversationId);
+      }
+    };
 
-				const loadedConversations = await Promise.all(
-					apiConversations.map(async (conversation) => {
-						const apiMessages = await chatService.getMessages(
-							conversation.id,
-							currentUserId,
-						);
+    const handleDeleted = (message: ApiMessage) => addMessage(message);
 
-						const messages = apiMessages.map(toChatMessage);
+    const handleRead = ({ conversationId, readAt }: { conversationId: number; readAt: string }) => {
+      setThreads((previous) => {
+        const current = previous[conversationId];
+        if (!current) return previous;
+        return {
+          ...previous,
+          [conversationId]: {
+            ...current,
+            messages: current.messages.map((m) => (m.isMine && !m.readAt ? { ...m, readAt } : m)),
+          },
+        };
+      });
+      setConversations((previous) =>
+        previous.map((c) =>
+          c.id === conversationId && c.lastMessage?.isMine && !c.lastMessage.readAt
+            ? { ...c, lastMessage: { ...c.lastMessage, readAt } }
+            : c,
+        ),
+      );
+    };
 
-						const p1Id = Number(conversation.participantOneId);
-						const p2Id = Number(conversation.participantTwoId);
-						const currentId = Number(currentUserId);
+    const handleConversationRead = ({ conversationId }: { conversationId: number }) => {
+      setConversations((previous) => previous.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    };
 
-						const otherUserId = p1Id === currentId ? p2Id : p1Id;
+    const handlePresence = ({ conversationId, online, lastSeen }: { conversationId: number; online: boolean; lastSeen: string | null }) => {
+      setConversations((previous) =>
+        previous.map((c) =>
+          c.id === conversationId ? { ...c, peer: { ...c.peer, online, lastSeen: lastSeen ?? c.peer.lastSeen } } : c,
+        ),
+      );
+      if (!online) setTyping(conversationId, false);
+    };
 
-						const participantName =
-							p1Id === currentId
-								? (conversation as any).participantTwoName ?? `User ${otherUserId}`
-								: (conversation as any).participantOneName ?? `User ${otherUserId}`;
+    const handleTyping = ({ conversationId, isTyping }: { conversationId: number; isTyping: boolean }) =>
+      setTyping(Number(conversationId), Boolean(isTyping));
 
-						return {
-							id: Number(conversation.id),
-							name: participantName,
-							otherUserId,
-							lastMessage: messages.at(-1)?.content ?? "",
-							messages,
-						};
-					}),
-				);
+    const handleReconnect = () => setReloadKey((key) => key + 1);
 
-				if (cancelled) return;
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messageDeleted", handleDeleted);
+    socket.on("messagesRead", handleRead);
+    socket.on("conversationRead", handleConversationRead);
+    socket.on("presence", handlePresence);
+    socket.on("typing", handleTyping);
+    socket.io.on("reconnect", handleReconnect);
 
-				setRawConversations(loadedConversations);
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messageDeleted", handleDeleted);
+      socket.off("messagesRead", handleRead);
+      socket.off("conversationRead", handleConversationRead);
+      socket.off("presence", handlePresence);
+      socket.off("typing", handleTyping);
+      socket.io.off("reconnect", handleReconnect);
+    };
+  }, [socket, addMessage, markRead, setTyping]);
 
-				setSelectedConversationId((previousId) => {
-					if (
-						requestedConversationId &&
-						loadedConversations.some((c) => c.id === requestedConversationId)
-					) {
-						return requestedConversationId;
-					}
+  async function handleSendText(content: string): Promise<boolean> {
+    if (!selected) return false;
+    setError(null);
+    try {
+      addMessage(await chatService.sendMessage(selected.id, content));
+      return true;
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+      return false;
+    }
+  }
 
-					if (
-						previousId !== null &&
-						loadedConversations.some(
-							(conversation) => conversation.id === previousId,
-						)
-					) {
-						return previousId;
-					}
+  async function handleSendAttachment(file: Blob, fileName: string, caption: string, duration?: number): Promise<boolean> {
+    if (!selected) return false;
+    setError(null);
+    try {
+      addMessage(await chatService.sendAttachment(selected.id, file, fileName, caption, duration));
+      return true;
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+      return false;
+    }
+  }
 
-					return loadedConversations[0]?.id ?? null;
-				});
-			} catch (err) {
-				if (!cancelled) {
-					setError(formatChatError(err, lang, t.chat.loadError));
-				}
-			} finally {
-				if (!cancelled) {
-					setIsLoading(false);
-				}
-			}
-		}, 300);
+  async function handleDelete(message: ApiMessage) {
+    if (!window.confirm(t.chat.confirmDelete)) return;
+    try {
+      addMessage(await chatService.deleteMessage(message.id));
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+    }
+  }
 
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [reloadKey, currentUserId, searchQuery, requestedConversationId, lang, t.chat.loadError]);
+  const handleTypingSignal = useCallback((isTyping: boolean) => {
+    const id = selectedIdRef.current;
+    if (id !== null) socket?.emit("typing", { conversationId: id, isTyping });
+  }, [socket]);
 
-	const selectedConversation = conversations.find(
-		(conversation) => conversation.id === selectedConversationId,
-	);
+  function handleSelectConversation(conversation: ApiConversation) {
+    setSelectedId(conversation.id);
+    setShowList(false);
+    setProfileOpen(false);
+  }
 
-	async function handleSendMessage(text: string) {
-		const content = text.trim();
+  if (isLoading && conversations.length === 0) {
+    return (
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
+        <p>{t.chat.loadingConversations}</p>
+      </div>
+    );
+  }
 
-		if (!content || !selectedConversation || currentUserId == null) {
-			return;
-		}
+  if (conversations.length === 0 && !searchQuery.trim()) {
+    return (
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
+        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] shadow-sm">
+          <MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
+        </div>
+        <h2 className="mb-2 text-2xl font-bold text-[var(--color-text)]">{t.chat.noConversationsTitle}</h2>
+        <p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">{t.chat.noConversationsDesc}</p>
+        {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
+      </div>
+    );
+  }
 
-		setError(null);
+  const peerName = selected?.peer.name ?? t.chat.conversation;
+  const isPeerTyping = selected ? typingIds.has(selected.id) : false;
+  const lastSeen = selected && !selected.peer.online ? formatLastSeen(selected.peer.lastSeen, lang) : null;
+  const statusText = isPeerTyping
+    ? t.chat.typing
+    : selected?.peer.online
+      ? t.chat.online
+      : lastSeen
+        ? fmt(t.chat.lastSeen, { time: lastSeen })
+        : t.chat.offline;
 
-		try {
-			const savedMessage = await chatService.sendMessage(
-				selectedConversation.id,
-				currentUserId,
-				content,
-			);
+  return (
+    <div className="flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col overflow-hidden bg-[var(--color-surface)]">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className={`${showList ? "flex" : "hidden"} h-full min-h-0 w-full min-w-0 shrink-0 flex-col md:flex md:w-80 lg:w-96`}>
+          <ConversationList
+            conversations={conversations}
+            selectedConversationId={selectedId}
+            typingConversationIds={typingIds}
+            onSelectConversation={handleSelectConversation}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            lang={lang}
+          />
+        </div>
 
-			const message = toChatMessage(savedMessage);
+        <div className={`${showList ? "hidden" : "flex"} h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)] md:flex`}>
+          {selected ? (
+            <>
+              <div className="flex min-w-0 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-sm sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setShowList(true)}
+                  aria-label={t.chat.back}
+                  className="shrink-0 rounded-lg bg-[var(--color-background)] p-2 text-[var(--color-text)] transition hover:bg-[var(--color-border)] md:hidden"
+                >
+                  <ArrowLeft size={18} className="rtl:rotate-180" />
+                </button>
 
-			socketRef.current?.emit("sendMessage", {
-				id: Number(savedMessage.id),
-				conversationId: Number(savedMessage.conversationId),
-			});
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(true)}
+                  aria-label={t.chat.viewProfile}
+                  title={t.chat.viewProfile}
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-start transition hover:bg-[var(--color-background)]"
+                >
+                  <ChatAvatar
+                    name={peerName}
+                    avatarUrl={selected.peer.avatarUrl}
+                    online={selected.peer.online}
+                    size="sm"
+                    onlineLabel={t.chat.online}
+                    offlineLabel={t.chat.offline}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-start text-lg font-bold text-[var(--color-text)]"><bdi>{peerName}</bdi></span>
+                    <span className={`block truncate text-xs ${isPeerTyping ? "italic text-[var(--color-accent-dark)]" : "text-[var(--color-muted)]"}`}>
+                      {statusText}
+                    </span>
+                  </span>
+                </button>
 
-			setRawConversations((previousConversations) =>
-				previousConversations.map((conversation) =>
-					conversation.id === selectedConversation.id
-						? {
-							...conversation,
-							messages: [...conversation.messages, message],
-							lastMessage: message.content,
-						}
-						: conversation,
-				),
-			);
-		} catch (err) {
-			setError(formatChatError(err, lang, t.chat.sendError));
-		}
-	}
+                {notificationPermission === "default" && (
+                  <button
+                    type="button"
+                    onClick={() => void requestNotificationPermission()}
+                    aria-label={t.chat.enableNotifications}
+                    title={t.chat.enableNotifications}
+                    className="shrink-0 rounded-lg p-2 text-[var(--color-muted)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-accent)]"
+                  >
+                    <BellRing size={18} />
+                  </button>
+                )}
 
-	function handleSelectConversation(conversation: Conversation) {
-		setSelectedConversationId(conversation.id);
-		setShowConversationList(false);
-	}
+                <ChatHandshake conversationId={selected.id} lang={lang} />
+              </div>
 
-	if (isLoading && conversations.length === 0) {
-		return (
-			<div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
-				<p>{t.chat.loadingConversations}</p>
-			</div>
-		);
-	}
+              {error && (
+                <div className="m-4 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
+                  <p className="min-w-0 break-words text-sm">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => setError(null)}
+                    aria-label={t.chat.dismiss}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
-	if (conversations.length === 0 && !searchQuery.trim()) {
-		return (
-			<div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
-				<div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] mb-6 text-[var(--color-accent)] shadow-sm">
-					<MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
-				</div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {thread ? (
+                  <MessageList
+                    messages={thread.messages}
+                    lang={lang}
+                    conversationId={selected.id}
+                    hasMore={thread.hasMore}
+                    loadingOlder={thread.loadingOlder}
+                    isTyping={isPeerTyping}
+                    onLoadOlder={() => void loadOlder()}
+                    onDelete={(message) => void handleDelete(message)}
+                  />
+                ) : (
+                  <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">…</div>
+                )}
+              </div>
 
-				<h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-					{t.chat.noConversationsTitle}
-				</h2>
+              <div className="min-w-0 shrink-0">
+                <MessageInput
+                  key={selected.id}
+                  lang={lang}
+                  onSendText={handleSendText}
+                  onSendAttachment={handleSendAttachment}
+                  onTyping={handleTypingSignal}
+                  onError={setError}
+                />
+              </div>
 
-				<p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
-					{t.chat.noConversationsDesc}
-				</p>
-			</div>
-		);
-	}
-
-	return (
-		<div className="flex flex-col h-[calc(100dvh-5.5rem)] min-h-[420px] max-h-[calc(100dvh-5.5rem)] w-full bg-[var(--color-surface)] overflow-hidden">
-			<div className="flex flex-1 min-w-0 min-h-0 overflow-hidden">
-				{showConversationList && (
-					<div className="h-full min-h-0 min-w-0 w-full sm:w-80 lg:w-96 shrink-0 flex flex-col">
-						<ConversationList
-							conversations={conversations}
-							selectedConversation={selectedConversation ?? conversations[0]}
-							onSelectConversation={handleSelectConversation}
-							searchQuery={searchQuery}
-							onSearchChange={setSearchQuery}
-							lang={lang}
-						/>
-					</div>
-				)}
-
-				<div className="flex flex-1 min-w-0 min-h-0 flex-col bg-[var(--color-background)] h-full overflow-hidden">
-					{selectedConversation ? (
-						<>
-							<div className="shrink-0 min-w-0 flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
-								{!showConversationList && (
-									<button
-										type="button"
-										onClick={() => setShowConversationList(true)}
-										aria-label="Back to conversations"
-										className="shrink-0 p-2 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition"
-									>
-										←
-									</button>
-								)}
-
-								<div className="min-w-0 flex-1">
-									<h2 className="truncate font-bold text-lg text-[var(--color-text)]">{selectedConversation.name}</h2>
-									<p className="text-xs text-[var(--color-muted)]">
-										{selectedConversation.isOnline ? t.chat.online : t.chat.offline}
-									</p>
-								</div>
-                <ChatHandshake conversationId={selectedConversation.id} lang={lang} />
-							</div>
-
-							{error && (
-								<div
-									className="shrink-0 m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-red-700"
-									role="alert"
-								>
-									<p className="min-w-0 break-words text-sm">{error}</p>
-									<button
-										type="button"
-										onClick={() => setError(null)}
-										aria-label="Dismiss error"
-										className="shrink-0 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 rounded-lg transition"
-									>
-										✕
-									</button>
-								</div>
-							)}
-
-							<div className="flex-1 min-w-0 min-h-0 flex flex-col">
-								<MessageList
-									messages={selectedConversation.messages}
-									currentUserId={currentUserId ?? -1}
-									lang={lang}
-									conversationId={selectedConversation.id}
-								/>
-							</div>
-
-							<div className="shrink-0 min-w-0">
-								<MessageInput onSend={handleSendMessage} lang={lang} />
-							</div>
-						</>
-					) : (
-						<div className="flex-1 min-w-0 flex flex-col items-center justify-center text-[var(--color-muted)] p-6">
-							<p>{t.chat.selectToStart}</p>
-						</div>
-					)}
-				</div>
-			</div>
-		</div>
-	);
+              {profileOpen && (
+                <PeerProfilePanel
+                  conversationId={selected.id}
+                  lang={lang}
+                  online={selected.peer.online}
+                  onClose={() => setProfileOpen(false)}
+                />
+              )}
+            </>
+          ) : (
+            <div className="flex min-w-0 flex-1 flex-col items-center justify-center p-6 text-[var(--color-muted)]">
+              <p>{t.chat.selectToStart}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default Chat;

@@ -1,24 +1,46 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  NotFoundException,
   Param,
   ParseIntPipe,
-  Post,
-  Req,
-  UseGuards,
   Patch,
+  Post,
   Query,
+  Req,
+  Res,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import type { Request, Response } from 'express';
 import { ChatService } from './chat.service.js';
+import type { UploadedChatFile } from './chat.service.js';
 import { ChatGateway } from './chat.gateway.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
+import { MAX_UPLOAD_SIZE } from './chat.constants.js';
+import {
+  ConversationsQueryDto,
+  MessagesQueryDto,
+  SendAttachmentDto,
+  SendMessageDto,
+} from './dto/chat.dto.js';
 
 interface AuthenticatedRequest extends Request {
   user: {
     userId: number;
   };
+}
+
+function contentDisposition(type: 'inline' | 'attachment', fileName: string): string {
+  const ascii = fileName.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+  return `${type}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
 }
 
 @Controller('chat')
@@ -29,78 +51,137 @@ export class ChatController {
     private readonly chatGateway: ChatGateway,
   ) {}
 
-  @Post('conversations')
-  createConversation(
-    @Req() request: AuthenticatedRequest,
-    @Body('participantTwoId', ParseIntPipe) participantTwoId: number,
-  ) {
-    const currentUserId = request.user.userId;
-
-    return this.chatService.createConversation(
-      currentUserId,
-      participantTwoId,
-    );
+  @Get('conversations')
+  getConversations(@Req() request: AuthenticatedRequest, @Query() query: ConversationsQueryDto) {
+    return this.chatService.getConversations(request.user.userId, query.search);
   }
 
-  @Get('conversations')
-  getConversations(
-    @Req() request: AuthenticatedRequest,
-    @Query('search') search?: string,
-  ) {
-    return this.chatService.getConversations(request.user.userId, search);
+  @Get('unread-count')
+  async getUnreadCount(@Req() request: AuthenticatedRequest) {
+    return { count: await this.chatService.getUnreadTotal(request.user.userId) };
+  }
+
+  @Get('conversations/:id/peer')
+  getPeer(@Param('id', ParseIntPipe) conversationId: number, @Req() request: AuthenticatedRequest) {
+    return this.chatService.getPeerProfile(conversationId, request.user.userId);
   }
 
   @Get('conversations/:id/messages')
   getMessages(
     @Param('id', ParseIntPipe) conversationId: number,
+    @Query() query: MessagesQueryDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.chatService.getMessages(
-      conversationId,
-      request.user.userId,
-    );
+    return this.chatService.getMessages(conversationId, request.user.userId, query.before, query.limit);
   }
 
   @Post('conversations/:id/messages')
-  sendMessage(
+  async sendMessage(
     @Param('id', ParseIntPipe) conversationId: number,
-    @Body('content') content: string,
+    @Body() body: SendMessageDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.chatService.sendMessage(
+    const userId = request.user.userId;
+    const { conversation, message } = await this.chatService.sendText(conversationId, userId, body.content);
+
+    this.chatGateway.emitNewMessage(conversation, message, await this.chatService.getUserName(userId));
+    return this.chatService.toPublicMessage(message, userId);
+  }
+
+  @Post('conversations/:id/attachments')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_UPLOAD_SIZE, files: 1, fields: 5, fieldSize: 8 * 1024, parts: 8 },
+    }),
+  )
+  async sendAttachment(
+    @Param('id', ParseIntPipe) conversationId: number,
+    @UploadedFile() file: UploadedChatFile | undefined,
+    @Body() body: SendAttachmentDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const userId = request.user.userId;
+    const { conversation, message } = await this.chatService.sendAttachment(
       conversationId,
-      request.user.userId,
-      content,
+      userId,
+      file,
+      body.caption,
+      body.duration,
     );
+
+    this.chatGateway.emitNewMessage(conversation, message, await this.chatService.getUserName(userId));
+    return this.chatService.toPublicMessage(message, userId);
+  }
+
+  @Post('conversations/:id/read')
+  @HttpCode(HttpStatus.OK)
+  async markAsRead(@Param('id', ParseIntPipe) conversationId: number, @Req() request: AuthenticatedRequest) {
+    const userId = request.user.userId;
+    const { conversation, updated } = await this.chatService.markAsRead(conversationId, userId);
+
+    if (updated > 0) this.chatGateway.emitMessagesRead(conversation, userId);
+    return { updated };
+  }
+
+  @Get('messages/:id/attachment')
+  async getAttachment(
+    @Param('id', ParseIntPipe) messageId: number,
+    @Req() request: AuthenticatedRequest,
+    @Res() response: Response,
+  ) {
+    const file = await this.chatService.getAttachment(messageId, request.user.userId);
+    const inline = file.mime.startsWith('image/') || file.mime.startsWith('audio/');
+
+    response.setHeader('Content-Type', file.mime);
+    response.setHeader('Content-Disposition', contentDisposition(inline ? 'inline' : 'attachment', file.name));
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; media-src 'self'; sandbox");
+    response.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    response.setHeader('Cache-Control', 'private, max-age=86400');
+
+    response.sendFile(file.path, { dotfiles: 'deny' }, (error) => {
+      if (error && !response.headersSent) {
+        response.removeHeader('Content-Disposition');
+        response.status(404).json(new NotFoundException('Attachment not found').getResponse());
+      }
+    });
+  }
+
+  @Delete('messages/:id')
+  async deleteMessage(@Param('id', ParseIntPipe) messageId: number, @Req() request: AuthenticatedRequest) {
+    const userId = request.user.userId;
+    const { conversation, message } = await this.chatService.deleteMessage(messageId, userId);
+
+    this.chatGateway.emitMessageDeleted(conversation, message);
+    return this.chatService.toPublicMessage(message, userId);
   }
 
   @Post('interest-requests')
   async sendInterestRequest(
     @Req() request: AuthenticatedRequest,
     @Body('listingId', ParseIntPipe) listingId: number,
-    @Body('ownerId', ParseIntPipe) ownerId: number,
   ) {
-    const created = await this.chatService.sendInterestRequest(
+    const { request: created, created: isNew } = await this.chatService.sendInterestRequest(
       request.user.userId,
       listingId,
-      ownerId,
     );
 
-    const ownerRequests =
-      await this.chatService.getOwnerInterestRequests(ownerId);
-    const enriched =
-      ownerRequests.find((item) => item.id === created.id) ?? created;
+    if (isNew) {
+      const ownerRequests = await this.chatService.getOwnerInterestRequests(created.ownerId);
+      const enriched = ownerRequests.find((item) => item.id === created.id);
 
-    this.chatGateway.notifyInterestRequestCreated(ownerId, {
-      id: enriched.id,
-      tenantId: enriched.tenantId,
-      tenantName: (enriched as { tenantName?: string }).tenantName,
-      ownerId: enriched.ownerId,
-      listingId: enriched.listingId,
-      listingTitle: (enriched as { listingTitle?: string }).listingTitle,
-      status: enriched.status,
-      createdAt: enriched.createdAt,
-    });
+      this.chatGateway.notifyInterestRequestCreated(created.ownerId, {
+        id: created.id,
+        tenantId: created.tenantId,
+        tenantName: enriched?.tenantName,
+        ownerId: created.ownerId,
+        listingId: created.listingId,
+        listingTitle: enriched?.listingTitle,
+        status: created.status,
+        createdAt: created.createdAt,
+      });
+    }
 
     return created;
   }
@@ -110,10 +191,7 @@ export class ChatController {
     @Req() request: AuthenticatedRequest,
     @Param('listingId', ParseIntPipe) listingId: number,
   ) {
-    return this.chatService.getInterestStatus(
-      request.user.userId,
-      listingId,
-    );
+    return this.chatService.getInterestStatus(request.user.userId, listingId);
   }
 
   @Get('interest-requests/owner')
@@ -126,10 +204,7 @@ export class ChatController {
     @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) requestId: number,
   ) {
-    const result = await this.chatService.acceptInterestRequest(
-      request.user.userId,
-      requestId,
-    );
+    const result = await this.chatService.acceptInterestRequest(request.user.userId, requestId);
 
     this.chatGateway.notifyInterestRequestAccepted(result.request.tenantId, {
       requestId: result.request.id,

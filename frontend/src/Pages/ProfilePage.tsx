@@ -72,7 +72,7 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
                             />
 
                             {/* TODO: Teammates can add future profile sections in this column. */}
-                            <OwnerInterestRequests onAcceptSuccess={handleAcceptRequest} />
+                            <OwnerInterestRequests lang={lang} onAcceptSuccess={handleAcceptRequest} />
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,7 @@
 import { translations } from "../../translations";
 import type { Language } from "../../types";
+import { ChatApiError, CHAT_LIMITS } from "../../services/chatService";
+import { fmt, formatBytes } from "./chatUtils";
 
 interface ParsedApiError {
   statusCode?: number;
@@ -49,6 +51,25 @@ export function formatChatError(
   const tChat = (translations[lang] ?? translations.en).chat;
   const errorStrings = tChat.errors;
   const fallback = fallbackMessage?.trim() || errorStrings.generic;
+
+  if (err instanceof ChatApiError) {
+    switch (err.code) {
+      case "QUOTA":
+        return errorStrings.quota;
+      case "RATE_LIMIT":
+        return errorStrings.rateLimit;
+      case "FILE_TYPE":
+        return errorStrings.fileType;
+      case "FILE_TOO_LARGE":
+        return fmt(errorStrings.fileTooLarge, { max: formatBytes(CHAT_LIMITS.maxFileSize, lang) });
+      case "MESSAGE_TOO_LONG":
+        return errorStrings.tooLong;
+    }
+    if (err.status === 413 && /file/i.test(err.message)) {
+      return fmt(errorStrings.fileTooLarge, { max: formatBytes(CHAT_LIMITS.maxFileSize, lang) });
+    }
+    if (err.status === 429) return errorStrings.rateLimit;
+  }
 
   const rawText =
     err instanceof Error

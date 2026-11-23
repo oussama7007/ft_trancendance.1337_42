@@ -148,8 +148,6 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
     setLoading(true);
     try {
-      const ownerId = item.ownerId || 1;
-
       const res = await fetch(`${API_URL}/chat/interest-requests`, {
         method: 'POST',
         credentials: 'include',
@@ -158,7 +156,6 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
         },
         body: JSON.stringify({
           listingId: item.id,
-          ownerId,
         }),
       });
 
