@@ -51,11 +51,11 @@ export interface User {
   fullName: string;
   gender?: string;
   email: string;
-  phone: string;
+ 
 
   dateOfBirth: string;
 
-  cin?: string;
+ 
 
   avatar?: string;
 

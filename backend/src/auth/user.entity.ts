@@ -17,12 +17,35 @@ export class User {
   @Column()
   gender: string;
 
-  @Column({ nullable: true })
-  cin?: string;
-
   @Column({ unique: true })
-  contact: string;
+  email: string;
 
   @Column()
   passwordHash: string;
+
+
+    
+  @Column({ type: 'text', nullable: true })
+  bio: string | null;
+
+  
+  @Column({ type: 'varchar', nullable: true })
+  avatarUrl: string | null;
+
+  
+  @Column({ type: 'varchar', nullable: true })
+  linkedin: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  instagram: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  facebook: string | null;
+
+  
+  @Column({ type: 'varchar', nullable: true, unique: true })
+  googleId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  googleEmail: string | null;
 }

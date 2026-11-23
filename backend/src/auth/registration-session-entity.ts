@@ -18,11 +18,10 @@ export class RegistrationSession
   @Column()
   gender: string;
 
-  @Column({ nullable: true })
-  cin?: string;
+
 
   @Column({ nullable: true })
-  contact?: string;
+  email: string;
 
   @Column({ nullable: true })
   verificationCode?: string;

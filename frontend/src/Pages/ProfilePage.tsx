@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import type { Language, User } from '../types';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { ProfileHeader } from '../Components/profile/ProfileHeader';
-import { CINCard } from '../Components/profile/CINCard';
 import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
 import { FeedbackSection } from '../Components/profile/FeedbackSection';
@@ -50,7 +49,7 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
 
                     <div className="mt-5 grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-2">
                         <div className="flex min-w-0 flex-col gap-5">
-                            <CINCard cin={user.cin} t={t.cin}/>
+                            
                             <ProfileDescription
                                 description={description}
                                 onSave={setDescription}
