@@ -31,6 +31,17 @@ export interface InterestAcceptedPayload {
   status: string;
 }
 
+export interface InterestRequestCreatedPayload {
+  id: number;
+  tenantId: number;
+  tenantName?: string;
+  ownerId: number;
+  listingId: number;
+  listingTitle?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string | Date;
+}
+
 @WebSocketGateway({
   cors: {
     origin: true,
@@ -106,6 +117,24 @@ export class ChatGateway
       this.connectedUsers.delete(userId);
       this.server.emit('userOffline', { userId });
     }
+  }
+
+  notifyInterestRequestCreated(
+    ownerId: number,
+    payload: InterestRequestCreatedPayload,
+  ) {
+    const normalizedOwnerId = Number(ownerId);
+    if (!Number.isSafeInteger(normalizedOwnerId) || normalizedOwnerId <= 0) {
+      return;
+    }
+
+    this.server.to(`user_${normalizedOwnerId}`).emit('newInterestRequest', {
+      ...payload,
+      id: Number(payload.id),
+      tenantId: Number(payload.tenantId),
+      ownerId: Number(payload.ownerId),
+      listingId: Number(payload.listingId),
+    });
   }
 
   notifyInterestRequestAccepted(

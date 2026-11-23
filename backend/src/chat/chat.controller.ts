@@ -75,16 +75,34 @@ export class ChatController {
   }
 
   @Post('interest-requests')
-  sendInterestRequest(
+  async sendInterestRequest(
     @Req() request: AuthenticatedRequest,
     @Body('listingId', ParseIntPipe) listingId: number,
     @Body('ownerId', ParseIntPipe) ownerId: number,
   ) {
-    return this.chatService.sendInterestRequest(
+    const created = await this.chatService.sendInterestRequest(
       request.user.userId,
       listingId,
       ownerId,
     );
+
+    const ownerRequests =
+      await this.chatService.getOwnerInterestRequests(ownerId);
+    const enriched =
+      ownerRequests.find((item) => item.id === created.id) ?? created;
+
+    this.chatGateway.notifyInterestRequestCreated(ownerId, {
+      id: enriched.id,
+      tenantId: enriched.tenantId,
+      tenantName: (enriched as { tenantName?: string }).tenantName,
+      ownerId: enriched.ownerId,
+      listingId: enriched.listingId,
+      listingTitle: (enriched as { listingTitle?: string }).listingTitle,
+      status: enriched.status,
+      createdAt: enriched.createdAt,
+    });
+
+    return created;
   }
 
   @Get('interest-requests/status/:listingId')
