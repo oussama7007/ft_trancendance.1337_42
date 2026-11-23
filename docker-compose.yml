@@ -5,7 +5,7 @@ services:
     ports:
       - "5432:5432"
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
@@ -25,7 +25,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./backend/.env
+      - .env
     environment:
       DB_HOST: database
       DB_PORT: ${DB_PORT}
@@ -62,7 +62,7 @@ services:
     ports:
       - "5173:5173"
     env_file:
-      - ./frontend/.env
+      - .env
     volumes:
       - ./frontend:/app
       - /app/node_modules

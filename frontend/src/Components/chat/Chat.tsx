@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageSquareOff } from "lucide-react";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
@@ -9,371 +9,415 @@ import type { ApiMessage } from "../../services/chatService";
 import { translations } from "../../translations";
 import { io, Socket } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
+import { formatChatError } from "./chatErrorFormatter";
 import ChatHandshake from "../handshakes/ChatHandshake";
 
-let socket: Socket;
-
 export interface ChatMessage {
-  id: number;
-  senderId: number;
-  content: string;
-  createdAt: string;
+	id: number;
+	senderId: number;
+	content: string;
+	createdAt: string;
 }
 
 export interface Conversation {
-  id: number;
-  name: string;
-  otherUserId: number;
-  lastMessage: string;
-  messages: ChatMessage[];
-  isOnline: boolean;
+	id: number;
+	name: string;
+	otherUserId: number;
+	lastMessage: string;
+	messages: ChatMessage[];
+	isOnline: boolean;
 }
 
 interface ChatProps {
-  lang: Language;
-  currentUserId?: number;
+	lang: Language;
+	currentUserId?: number;
 }
 
 function toChatMessage(message: ApiMessage): ChatMessage {
-  return {
-    id: message.id,
-    senderId: message.senderId,
-    content: message.content,
-    createdAt: message.createdAt,
-  };
+	return {
+		id: Number(message.id),
+		senderId: Number(message.senderId),
+		content: message.content,
+		createdAt: message.createdAt,
+	};
 }
 
 function Chat({ lang, currentUserId }: ChatProps) {
-  const t = translations[lang] ?? translations.en;
+	const t = translations[lang] ?? translations.en;
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-  const [showConversationList, setShowConversationList] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchParams] = useSearchParams();
-  const requestedConversationId = Number(searchParams.get("conversationId"));
-  const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
+	const [rawConversations, setRawConversations] = useState<Omit<Conversation, "isOnline">[]>([]);
+	const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+	const [showConversationList, setShowConversationList] = useState(true);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const [reloadKey, setReloadKey] = useState(0);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [searchParams] = useSearchParams();
+	const requestedConversationId = Number(searchParams.get("conversationId"));
+	const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
 
-  useEffect(() => {
-    socket = io(import.meta.env.VITE_API_URL, {
-      withCredentials: true,
-    });
+	const socketRef = useRef<Socket | null>(null);
 
-    socket.on("onlineUsers", (userIds: number[]) => {
-      setOnlineUserIds(userIds);
-    });
+	const onlineSet = useMemo(
+		() => new Set(onlineUserIds.map((id) => Number(id))),
+		[onlineUserIds],
+	);
 
-    socket.on("userOnline", ({ userId }: { userId: number }) => {
-      setOnlineUserIds((previous) =>
-        previous.includes(userId) ? previous : [...previous, userId],
-      );
-    });
+	const conversations: Conversation[] = useMemo(
+		() =>
+			rawConversations.map((conversation) => ({
+				...conversation,
+				otherUserId: Number(conversation.otherUserId),
+				isOnline: onlineSet.has(Number(conversation.otherUserId)),
+			})),
+		[rawConversations, onlineSet],
+	);
 
-    socket.on("userOffline", ({ userId }: { userId: number }) => {
-      setOnlineUserIds((previous) =>
-        previous.filter((id) => id !== userId),
-      );
-    });
+	useEffect(() => {
+		if (currentUserId == null) return;
 
-    socket.on("newMessage", (apiMessage: ApiMessage) => {
-      const newMsg = toChatMessage(apiMessage);
+		const wsUrl = (import.meta.env.VITE_WS_URL || import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "");
+		const socket = io(wsUrl, {
+			withCredentials: true,
+		});
 
-      setConversations((previous) =>
-        previous.map((conv) => {
-          if (conv.id !== apiMessage.conversationId) return conv;
+		socketRef.current = socket;
 
-          if (conv.messages.some((msg) => msg.id === newMsg.id)) {
-            return conv;
-          }
+		const handleOnlineUsers = (userIds: number[]) => {
+			setOnlineUserIds(
+				Array.from(
+					new Set(
+						(Array.isArray(userIds) ? userIds : [])
+							.map((id) => Number(id))
+							.filter((id) => Number.isSafeInteger(id) && id > 0),
+					),
+				),
+			);
+		};
 
-          return {
-            ...conv,
-            messages: [...conv.messages, newMsg],
-            lastMessage: newMsg.content,
-          };
-        }),
-      );
-    });
+		const handleUserOnline = ({ userId }: { userId: number }) => {
+			const normalizedId = Number(userId);
+			if (!Number.isSafeInteger(normalizedId) || normalizedId <= 0) return;
 
-    return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
-    };
-  }, []);
+			setOnlineUserIds((previous) =>
+				previous.includes(normalizedId) ? previous : [...previous, normalizedId],
+			);
+		};
 
-  useEffect(() => {
-    if (!selectedConversationId || !socket) return;
+		const handleUserOffline = ({ userId }: { userId: number }) => {
+			const normalizedId = Number(userId);
+			setOnlineUserIds((previous) => previous.filter((id) => id !== normalizedId));
+		};
 
-    const joinConversation = () => {
-      socket.emit("joinConversation", {
-        conversationId: selectedConversationId,
-      });
-    };
+		const handleNewMessage = (apiMessage: ApiMessage) => {
+			const newMsg = toChatMessage(apiMessage);
+			const targetConversationId = Number(apiMessage.conversationId);
 
-    if (socket.connected) {
-      joinConversation();
-    }
+			setRawConversations((previous) =>
+				previous.map((conv) => {
+					if (Number(conv.id) !== targetConversationId) return conv;
 
-    socket.on("connect", joinConversation);
+					if (conv.messages.some((msg) => Number(msg.id) === newMsg.id)) {
+						return conv;
+					}
 
-    return () => {
-      socket.off("connect", joinConversation);
-    };
-  }, [selectedConversationId]);
+					return {
+						...conv,
+						messages: [...conv.messages, newMsg],
+						lastMessage: newMsg.content,
+					};
+				}),
+			);
+		};
 
-  useEffect(() => {
-    let cancelled = false;
+		const handleSocketError = (payload: { message?: string } | string) => {
+			setError(formatChatError(payload, lang, t.chat.sendError));
+		};
 
-    if (currentUserId == null) {
-      setConversations([]);
-      setSelectedConversationId(null);
-      setError(null);
-      setIsLoading(false);
+		socket.on("onlineUsers", handleOnlineUsers);
+		socket.on("userOnline", handleUserOnline);
+		socket.on("userOffline", handleUserOffline);
+		socket.on("newMessage", handleNewMessage);
+		socket.on("chatError", handleSocketError);
 
-      return () => {
-        cancelled = true;
-      };
-    }
+		return () => {
+			socket.off("onlineUsers", handleOnlineUsers);
+			socket.off("userOnline", handleUserOnline);
+			socket.off("userOffline", handleUserOffline);
+			socket.off("newMessage", handleNewMessage);
+			socket.off("chatError", handleSocketError);
+			socket.disconnect();
+			if (socketRef.current === socket) {
+				socketRef.current = null;
+			}
+		};
+	}, [currentUserId, lang, t.chat.sendError]);
 
-    const timer = setTimeout(async () => {
-      setIsLoading(true);
-      setError(null);
+	useEffect(() => {
+		const socket = socketRef.current;
+		if (!selectedConversationId || !socket) return;
 
-      try {
-        const apiConversations = await chatService.getConversations(currentUserId, searchQuery);
+		const joinConversation = () => {
+			socket.emit("joinConversation", {
+				conversationId: Number(selectedConversationId),
+			});
+		};
 
-        const loadedConversations = await Promise.all(
-          apiConversations.map(async (conversation) => {
-            const apiMessages = await chatService.getMessages(
-              conversation.id,
-              currentUserId,
-            );
+		if (socket.connected) {
+			joinConversation();
+		}
 
-            const messages = apiMessages.map(toChatMessage);
+		socket.on("connect", joinConversation);
 
-            const otherUserId =
-              conversation.participantOneId === currentUserId
-                ? conversation.participantTwoId
-                : conversation.participantOneId;
+		return () => {
+			socket.off("connect", joinConversation);
+		};
+	}, [selectedConversationId, currentUserId]);
 
-            const participantName =
-              conversation.participantOneId === currentUserId
-                ? (conversation as any).participantTwoName ?? `User ${otherUserId}`
-                : (conversation as any).participantOneName ?? `User ${otherUserId}`;
+	useEffect(() => {
+		let cancelled = false;
 
-            return {
-              id: conversation.id,
-              name: participantName, otherUserId,
-              lastMessage: messages.at(-1)?.content ?? "",
-              messages,
-              isOnline: onlineUserIds.includes(otherUserId),
-            };
-          }),
-        );
+		if (currentUserId == null) {
+			setRawConversations([]);
+			setSelectedConversationId(null);
+			setError(null);
+			setIsLoading(false);
 
-        if (cancelled) return;
+			return () => {
+				cancelled = true;
+			};
+		}
 
-        setConversations(loadedConversations);
+		const timer = setTimeout(async () => {
+			setIsLoading(true);
+			setError(null);
 
-        setSelectedConversationId((previousId) => {
-          if (
-            requestedConversationId &&
-            loadedConversations.some((c) => c.id === requestedConversationId)
-          ) {
-            return requestedConversationId;
-          }
+			try {
+				const apiConversations = await chatService.getConversations(currentUserId, searchQuery);
 
-          if (
-            previousId !== null &&
-            loadedConversations.some(
-              (conversation) => conversation.id === previousId,
-            )
-          ) {
-            return previousId;
-          }
+				const loadedConversations = await Promise.all(
+					apiConversations.map(async (conversation) => {
+						const apiMessages = await chatService.getMessages(
+							conversation.id,
+							currentUserId,
+						);
 
-          return loadedConversations[0]?.id ?? null;
-        });
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : t.chat.loadError,
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      }
-    }, 300);
+						const messages = apiMessages.map(toChatMessage);
 
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [reloadKey, currentUserId, searchQuery, requestedConversationId, t.chat.loadError]);
+						const p1Id = Number(conversation.participantOneId);
+						const p2Id = Number(conversation.participantTwoId);
+						const currentId = Number(currentUserId);
 
-  useEffect(() => {
-    setConversations((previous) =>
-      previous.map((conversation) => ({
-        ...conversation,
-        isOnline: onlineUserIds.includes(conversation.otherUserId),
-      })),
-    );
-  }, [onlineUserIds]);
+						const otherUserId = p1Id === currentId ? p2Id : p1Id;
 
-  const selectedConversation = conversations.find(
-    (conversation) => conversation.id === selectedConversationId,
-  );
+						const participantName =
+							p1Id === currentId
+								? (conversation as any).participantTwoName ?? `User ${otherUserId}`
+								: (conversation as any).participantOneName ?? `User ${otherUserId}`;
 
-  async function handleSendMessage(text: string) {
-    const content = text.trim();
+						return {
+							id: Number(conversation.id),
+							name: participantName,
+							otherUserId,
+							lastMessage: messages.at(-1)?.content ?? "",
+							messages,
+						};
+					}),
+				);
 
-    if (!content || !selectedConversation || currentUserId == null) {
-      return;
-    }
+				if (cancelled) return;
 
-    setError(null);
+				setRawConversations(loadedConversations);
 
-    try {
-      const savedMessage = await chatService.sendMessage(
-        selectedConversation.id,
-        currentUserId,
-        content,
-      );
+				setSelectedConversationId((previousId) => {
+					if (
+						requestedConversationId &&
+						loadedConversations.some((c) => c.id === requestedConversationId)
+					) {
+						return requestedConversationId;
+					}
 
-      const message = toChatMessage(savedMessage);
+					if (
+						previousId !== null &&
+						loadedConversations.some(
+							(conversation) => conversation.id === previousId,
+						)
+					) {
+						return previousId;
+					}
 
-      socket.emit("sendMessage", {
-        id: savedMessage.id,
-        conversationId: savedMessage.conversationId,
-      });
+					return loadedConversations[0]?.id ?? null;
+				});
+			} catch (err) {
+				if (!cancelled) {
+					setError(formatChatError(err, lang, t.chat.loadError));
+				}
+			} finally {
+				if (!cancelled) {
+					setIsLoading(false);
+				}
+			}
+		}, 300);
 
-      setConversations((previousConversations) =>
-        previousConversations.map((conversation) =>
-          conversation.id === selectedConversation.id
-            ? {
-              ...conversation,
-              messages: [...conversation.messages, message],
-              lastMessage: message.content,
-            }
-            : conversation,
-        ),
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t.chat.sendError,
-      );
-    }
-  }
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	}, [reloadKey, currentUserId, searchQuery, requestedConversationId, lang, t.chat.loadError]);
 
-  function handleSelectConversation(conversation: Conversation) {
-    setSelectedConversationId(conversation.id);
-    setShowConversationList(false);
-  }
+	const selectedConversation = conversations.find(
+		(conversation) => conversation.id === selectedConversationId,
+	);
 
-  if (isLoading && conversations.length === 0) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
-        <p>{t.chat.loadingConversations}</p>
-      </div>
-    );
-  }
+	async function handleSendMessage(text: string) {
+		const content = text.trim();
 
-  if (conversations.length === 0 && !searchQuery.trim()) {
-    return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] mb-6 text-[var(--color-accent)] shadow-sm">
-          <MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
-        </div>
+		if (!content || !selectedConversation || currentUserId == null) {
+			return;
+		}
 
-        <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-          {t.chat.noConversationsTitle}
-        </h2>
+		setError(null);
 
-        <p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
-          {t.chat.noConversationsDesc}
-        </p>
-      </div>
-    );
-  }
+		try {
+			const savedMessage = await chatService.sendMessage(
+				selectedConversation.id,
+				currentUserId,
+				content,
+			);
 
-  return (
-    <div className="flex flex-col h-screen w-full bg-[var(--color-surface)]">
-      <div className="flex flex-1 overflow-hidden">
-        {showConversationList && (
-          <ConversationList
-            conversations={conversations}
-            selectedConversation={selectedConversation ?? conversations[0]}
-            onSelectConversation={handleSelectConversation}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            lang={lang}
-          />
-        )}
+			const message = toChatMessage(savedMessage);
 
-        <div className="flex flex-1 flex-col bg-[var(--color-background)] h-full overflow-hidden">
-          {selectedConversation ? (
-            <>
-              <div className="flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
-                {!showConversationList && (
-                  <button
-                    type="button"
-                    onClick={() => setShowConversationList(true)}
-                    aria-label="Back to conversations"
-                    className="p-2 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition"
-                  >
-                    ←
-                  </button>
-                )}
+			socketRef.current?.emit("sendMessage", {
+				id: Number(savedMessage.id),
+				conversationId: Number(savedMessage.conversationId),
+			});
 
-                <div>
-                  <h2 className="font-bold text-lg text-[var(--color-text)]">{selectedConversation.name}</h2>
-                  <p className="text-xs text-[var(--color-muted)]">
-                    {selectedConversation.isOnline ? t.chat.online : t.chat.offline}
-                  </p>
-                </div>
+			setRawConversations((previousConversations) =>
+				previousConversations.map((conversation) =>
+					conversation.id === selectedConversation.id
+						? {
+							...conversation,
+							messages: [...conversation.messages, message],
+							lastMessage: message.content,
+						}
+						: conversation,
+				),
+			);
+		} catch (err) {
+			setError(formatChatError(err, lang, t.chat.sendError));
+		}
+	}
 
+	function handleSelectConversation(conversation: Conversation) {
+		setSelectedConversationId(conversation.id);
+		setShowConversationList(false);
+	}
+
+	if (isLoading && conversations.length === 0) {
+		return (
+			<div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
+				<p>{t.chat.loadingConversations}</p>
+			</div>
+		);
+	}
+
+	if (conversations.length === 0 && !searchQuery.trim()) {
+		return (
+			<div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
+				<div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] mb-6 text-[var(--color-accent)] shadow-sm">
+					<MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
+				</div>
+
+				<h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+					{t.chat.noConversationsTitle}
+				</h2>
+
+				<p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
+					{t.chat.noConversationsDesc}
+				</p>
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex flex-col h-[calc(100dvh-5.5rem)] min-h-[420px] max-h-[calc(100dvh-5.5rem)] w-full bg-[var(--color-surface)] overflow-hidden">
+			<div className="flex flex-1 min-w-0 min-h-0 overflow-hidden">
+				{showConversationList && (
+					<div className="h-full min-h-0 min-w-0 w-full sm:w-80 lg:w-96 shrink-0 flex flex-col">
+						<ConversationList
+							conversations={conversations}
+							selectedConversation={selectedConversation ?? conversations[0]}
+							onSelectConversation={handleSelectConversation}
+							searchQuery={searchQuery}
+							onSearchChange={setSearchQuery}
+							lang={lang}
+						/>
+					</div>
+				)}
+
+				<div className="flex flex-1 min-w-0 min-h-0 flex-col bg-[var(--color-background)] h-full overflow-hidden">
+					{selectedConversation ? (
+						<>
+							<div className="shrink-0 min-w-0 flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
+								{!showConversationList && (
+									<button
+										type="button"
+										onClick={() => setShowConversationList(true)}
+										aria-label="Back to conversations"
+										className="shrink-0 p-2 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition"
+									>
+										←
+									</button>
+								)}
+
+								<div className="min-w-0 flex-1">
+									<h2 className="truncate font-bold text-lg text-[var(--color-text)]">{selectedConversation.name}</h2>
+									<p className="text-xs text-[var(--color-muted)]">
+										{selectedConversation.isOnline ? t.chat.online : t.chat.offline}
+									</p>
+								</div>
                 <ChatHandshake conversationId={selectedConversation.id} lang={lang} />
-              </div>
+							</div>
 
-              {error && (
-                <div className="m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-red-700" role="alert">
-                  <p className="text-sm">{error}</p>
-                  <button
-                    type="button"
-                    onClick={() => setReloadKey((key) => key + 1)}
-                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition"
-                  >
-                    {t.chat.retry}
-                  </button>
-                </div>
-              )}
+							{error && (
+								<div
+									className="shrink-0 m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3 text-red-700"
+									role="alert"
+								>
+									<p className="min-w-0 break-words text-sm">{error}</p>
+									<button
+										type="button"
+										onClick={() => setError(null)}
+										aria-label="Dismiss error"
+										className="shrink-0 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 rounded-lg transition"
+									>
+										✕
+									</button>
+								</div>
+							)}
 
-              <MessageList
-                messages={selectedConversation.messages}
-                currentUserId={currentUserId ?? -1}
-                lang={lang}
-              />
+							<div className="flex-1 min-w-0 min-h-0 flex flex-col">
+								<MessageList
+									messages={selectedConversation.messages}
+									currentUserId={currentUserId ?? -1}
+									lang={lang}
+									conversationId={selectedConversation.id}
+								/>
+							</div>
 
-              <MessageInput onSend={handleSendMessage} lang={lang} />
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-muted)] p-6">
-              <p>{t.chat.selectToStart}</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+							<div className="shrink-0 min-w-0">
+								<MessageInput onSend={handleSendMessage} lang={lang} />
+							</div>
+						</>
+					) : (
+						<div className="flex-1 min-w-0 flex flex-col items-center justify-center text-[var(--color-muted)] p-6">
+							<p>{t.chat.selectToStart}</p>
+						</div>
+					)}
+				</div>
+			</div>
+		</div>
+	);
 }
 
 export default Chat;

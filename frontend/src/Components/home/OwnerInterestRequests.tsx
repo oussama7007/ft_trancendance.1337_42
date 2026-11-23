@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { User, CheckCircle, Home } from 'lucide-react';
+import { io, type Socket } from 'socket.io-client';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 interface InterestRequest {
   id: number;
   tenantId: number;
+  tenantName?: string;
   listingId: number;
+  listingTitle?: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   createdAt: string;
 }
@@ -45,6 +48,35 @@ export const OwnerInterestRequests: React.FC<OwnerInterestRequestsProps> = ({
 
   useEffect(() => {
     fetchRequests();
+  }, []);
+
+  useEffect(() => {
+    const wsUrl = (import.meta.env.VITE_WS_URL || API_URL || '').replace(
+      /\/api\/?$/,
+      '',
+    );
+    const socket: Socket = io(wsUrl, {
+      withCredentials: true,
+    });
+
+    const handleNewInterestRequest = (incoming: InterestRequest) => {
+      setRequests((prev) => {
+        const exists = prev.some((item) => item.id === incoming.id);
+        if (exists) {
+          return prev.map((item) =>
+            item.id === incoming.id ? { ...item, ...incoming } : item,
+          );
+        }
+        return [incoming, ...prev];
+      });
+    };
+
+    socket.on('newInterestRequest', handleNewInterestRequest);
+
+    return () => {
+      socket.off('newInterestRequest', handleNewInterestRequest);
+      socket.disconnect();
+    };
   }, []);
 
   const handleAccept = async (requestId: number) => {
@@ -104,10 +136,15 @@ export const OwnerInterestRequests: React.FC<OwnerInterestRequestsProps> = ({
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-[var(--color-text)]">
-                    Applicant ID: #{req.tenantId}
+                    {req.tenantName ?? `Applicant #${req.tenantId}`}
                   </p>
                   <p className="text-xs text-[var(--color-muted)]">
-                    Listing ID: #{req.listingId} • {new Date(req.createdAt).toLocaleDateString()}
+                    {req.listingTitle ?? `Listing #${req.listingId}`} •{" "}
+                    {new Date(req.createdAt).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </p>
                 </div>
               </div>
