@@ -2,10 +2,6 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomBytes } from 'node:crypto';
 import * as bcrypt from 'bcrypt';
 
-// TEST DATA ONLY. The sample listings (seed migrations) pointed to owners that did
-// not exist. These demo owners take them over so the foreign key can be added and
-// the contact/chat flow can be tested. Real users and listings come from sign-up
-// and the add-listing page.
 const DEMO_OWNERS = [
     { firstName: 'Hassan', lastName: 'Alaoui', gender: 'male', email: 'hassan.owner@irent.local' },
     { firstName: 'Imane', lastName: 'Bennani', gender: 'female', email: 'imane.owner@irent.local' },
@@ -17,7 +13,6 @@ export class LinkListingOwner1794800000000 implements MigrationInterface {
     name = 'LinkListingOwner1794800000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // 1) create the demo owners (the password comes from DEMO_OWNER_PASSWORD)
         const password = process.env.DEMO_OWNER_PASSWORD || randomBytes(32).toString('hex');
         const passwordHash = await bcrypt.hash(password, 10);
 
@@ -33,8 +28,6 @@ export class LinkListingOwner1794800000000 implements MigrationInterface {
             );
             ownerIds.push(row.id);
         }
-    // 2) give the orphan listings to the demo owners, one after the other,
-    //    and write the owner's real name on the listing
     const orphans: { id: number }[] = await queryRunner.query(
         `SELECT "id" FROM "listing"
         WHERE "ownerId" NOT IN (SELECT "id" FROM "user")
@@ -51,7 +44,6 @@ export class LinkListingOwner1794800000000 implements MigrationInterface {
         );
     }
 
-        // 4) now every listing has a real owner, so the database can enforce it
         await queryRunner.query(
             `ALTER TABLE "listing" ADD CONSTRAINT "FK_listing_owner"
             FOREIGN KEY ("ownerId") REFERENCES "user"("id") ON DELETE CASCADE`,

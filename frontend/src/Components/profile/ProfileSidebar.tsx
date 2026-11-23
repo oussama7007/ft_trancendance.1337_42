@@ -18,28 +18,15 @@ interface ProfileSidebarProps {
     children?: ReactNode;
 }
 
-// Pages that already exist in the application.
 const navigationItems = [
-    // TODO [DASHBOARD TEAMMATE]:
-    // Replace this destination with the Dashboard route when implemented.
     { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
     { key: 'settings', path: '/settings', icon: Settings },
-
-    // PROFILE: Implemented by the Profile developer.
     { key: 'profile', path: '/profile', icon: UserRound },
-
-    // TODO [CHAT TEAMMATE]:
-    // Integrate the Chat / Messages page here.
     { key: 'messages', path: '/chat', icon: MessageCircle },
-] as const ;
+] as const;
 
-// Future pages. Keep their icons visible until implementation.
 const futureItems = [
-    // TODO [FAVORITES TEAMMATE]:
-    // Implement the user's favorite properties and connect the route.
     { key: 'favorites', icon: Heart },
-
-    
 ] as const;
 
 export function ProfileSidebar({t, children} : ProfileSidebarProps) {

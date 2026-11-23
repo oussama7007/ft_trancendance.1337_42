@@ -4,22 +4,6 @@ import {
     ServiceUnavailableException,
 } from '@nestjs/common';
 
-/**
- * SMS verification service — provider not yet selected.
- *
- * The business logic, controller routes, DTOs, entities and database fields
- * for SMS 2FA are intentionally preserved here so they can be completed once
- * the owner chooses a provider (Twilio, TextBee, EnvoiSMS.ma, …).
- *
- * While SMS_2FA_ENABLED=false (the default), every method throws
- * ServiceUnavailableException without touching any external service.
- *
- * To enable later:
- *   1. Set SMS_2FA_ENABLED=true in backend/.env.
- *   2. Install the chosen provider's SDK.
- *   3. Replace the method bodies below with the real provider calls.
- *   4. Remove the "provider not yet integrated" comments.
- */
 @Injectable()
 export class SmsVerificationService {
     private get isEnabled(): boolean {

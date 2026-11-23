@@ -102,9 +102,6 @@ export class AuthService {
         if (accessToken) {
             const tokenInfo = await client.getTokenInfo(accessToken);
 
-            // Access tokens from Google can have the client ID in either 'audience' (aud) or 'azp' fields.
-            // Some tokens might not even have a strictly matching 'aud' if they are scoped differently,
-            // but the fact that we can fetch userinfo with it is a strong proof of validity.
             const tokenAudience = (tokenInfo as any).audience;
             const tokenAzp = (tokenInfo as any).azp;
             if (tokenAudience !== clientId && tokenAzp !== clientId) {
@@ -113,7 +110,6 @@ export class AuthService {
                     tokenAzp,
                     clientId,
                 });
-                // We'll proceed anyway if we can fetch userinfo, but we keep this log for debugging.
             }
 
             const response = await fetch(
@@ -231,11 +227,6 @@ private async issueAuthenticatedSession(user: User) {
 
 
 
-/**
- * createLoginChallenge: preserved for later use once an SMS provider is selected.
- * It creates a login verification challenge, sends an SMS code, and returns
- * a challenge token that the frontend submits to /auth/2fa/login/verify.
- */
 private async createLoginChallenge(user: User) {
     if (!user.phoneNumber || !user.phoneVerified) {
         throw new BadRequestException(
@@ -284,15 +275,10 @@ private async createLoginChallenge(user: User) {
 private async prepareLogin(user: User) {
     const sms2faAvailable = process.env.SMS_2FA_ENABLED === 'true';
 
-    // SMS two-factor authentication is deferred: never block a login because
-    // the SMS provider is not configured. Only start a 2FA challenge when SMS
-    // is both enabled on the account and actually available.
     if (user.sms2faEnabled && sms2faAvailable) {
         return this.createLoginChallenge(user);
     }
 
-    // Normal login for users without SMS 2FA, or when the SMS provider is not
-    // yet configured.
     return this.issueAuthenticatedSession(user);
 }
 
@@ -352,7 +338,6 @@ private hashEmailChangeCode(
 }
 
 
-// Step 1: verify the password and send one code to the new email address.
 async startEmailChange(
     userId: number,
     newEmail: string,
@@ -448,7 +433,6 @@ async startEmailChange(
     };
 }
 
-// Step 2: verify the new email code and then update the account email.
 async verifyEmailChange(
     userId: number,
     code: string,
@@ -519,8 +503,6 @@ async verifyEmailChange(
     try {
         await this.mailService.sendEmailChangeCompleted(oldEmail, user.email);
     } catch {
-        // The email update is already complete; notification failure must not
-        // roll back the database change.
     }
 
     return {
@@ -593,8 +575,6 @@ async verifyEmailChange(
     if (existingUser)
       throw new ConflictException('This contact is already registered');
 
-    // Do not send multiple verification codes within 30 seconds.
-    // The frontend also shows a countdown, but this backend check cannot be bypassed.
     if (session.verificationCodeExpiresAt) {
       const lastSentAt =
         session.verificationCodeExpiresAt.getTime() - 5 * 60 * 1000;
@@ -741,9 +721,6 @@ async verifyEmailChange(
         accessToken,
     );
 
-    // Prefer the immutable Google subject, but fall back to the verified
-    // Google email. This repairs older links created before googleId was
-    // persisted consistently and still cannot match an unverified address.
     const user = await this.userRepository.findOne({
         where: [
             { googleId: identity.googleId },
@@ -767,16 +744,12 @@ async verifyEmailChange(
             });
         }
 
-        // Do not link automatically by matching email. The user must first
-        // sign in with the iRent password and link Google from Settings.
         throw new UnauthorizedException({
             code: 'GOOGLE_ACCOUNT_NOT_LINKED',
             message: 'This Google account is not linked to your iRent account',
         });
     }
 
-    // If this was a legacy email-only link, persist Google's immutable
-    // subject so all later sign-ins use the primary lookup.
     if (user.googleId !== identity.googleId) {
         user.googleId = identity.googleId;
         user.googleEmail = identity.googleEmail;
@@ -1015,8 +988,6 @@ async getSecuritySettings(userId: number) {
         phoneNumber: user.phoneNumber,
         phoneVerified: user.phoneVerified,
         sms2faEnabled: user.sms2faEnabled,
-        // sms2faAvailable tells the frontend whether to show SMS controls.
-        // It is false until an SMS provider is configured and SMS_2FA_ENABLED=true.
         sms2faAvailable: process.env.SMS_2FA_ENABLED === 'true',
         googleEmail: user.googleEmail,
         googleLinked: Boolean(user.googleId),

@@ -35,7 +35,6 @@ type PasswordErrorKey =
     | 'requestFailed'
     | 'currentPasswordError';
 
-// Send requests to the backend with the authenticated cookie.
 async function request<T>(
     path: string,
     method = 'GET',
@@ -75,8 +74,6 @@ export function SecuritySettings({ lang }: Props) {
 
     const [disablePassword, setDisablePassword] = useState('');
 
-    // These controls remain available for future provider integration, but
-    // are only rendered and used when the backend reports availability.
     const [phoneNumber, setPhoneNumber] = useState('');
     const [smsCode, setSmsCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
@@ -87,7 +84,6 @@ export function SecuritySettings({ lang }: Props) {
     const [passwordMessageKey, setPasswordMessageKey] = useState<'passwordUpdated' | ''>('');
     const [loading, setLoading] = useState(false);
 
-    // Load the current phone verification and 2FA status.
     const loadSecurity = useCallback(async () => {
         const data = await request<SecurityInfo>('/auth/security');
 
@@ -101,10 +97,8 @@ export function SecuritySettings({ lang }: Props) {
         });
     }, [loadSecurity]);
 
-    // Whether the SMS feature is available on the backend.
     const smsAvailable = security?.sms2faAvailable ?? false;
 
-    // Change the account password.
     async function handlePasswordChange(
         event: FormEvent<HTMLFormElement>,
     ) {
@@ -152,7 +146,6 @@ export function SecuritySettings({ lang }: Props) {
         }
     }
 
-    // Request an SMS verification code when a provider is configured.
     async function sendPhoneCode() {
         if (!smsAvailable) {
             return;
@@ -182,7 +175,6 @@ export function SecuritySettings({ lang }: Props) {
         }
     }
 
-    // Verify the SMS code when a provider is configured.
     async function verifyPhone() {
         if (!smsAvailable) {
             return;
@@ -208,7 +200,6 @@ export function SecuritySettings({ lang }: Props) {
         }
     }
 
-    // Enable SMS two-factor authentication when a provider is configured.
     async function enable2fa() {
         if (!smsAvailable) {
             return;
@@ -229,8 +220,6 @@ export function SecuritySettings({ lang }: Props) {
         }
     }
 
-    // Disable SMS two-factor authentication (allowed even when provider is unavailable,
-    // as long as the backend allows the password-confirmed disable flow).
     async function disable2fa(
         event: FormEvent<HTMLFormElement>,
     ) {
