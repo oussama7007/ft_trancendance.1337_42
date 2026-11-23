@@ -1,19 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-// Creates the `handshakes` table. TypeORM's synchronize is turned off in this
-// project, so every table change has to go through a migration.
-//
-// Run it from backend/ (the connection comes from backend/.env):
-//   npx typeorm-ts-node-commonjs migration:run -d src/data-source.ts
-//   npx typeorm-ts-node-commonjs migration:revert -d src/data-source.ts
-//
-// Never edit a migration that has already been shared, write a new one.
 export class CreateHandshakesTable1792573298345 implements MigrationInterface {
   name = 'CreateHandshakesTable1792573298345';
 
-  // Creates the table. The unique rule must keep the same name as the @Unique
-  // in handshake.entity.ts. The check is a safety net: the database itself
-  // refuses a handshake between a user and themselves.
+  // creates the handshakes table
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "handshakes" (
@@ -33,7 +23,7 @@ export class CreateHandshakesTable1792573298345 implements MigrationInterface {
     `);
   }
 
-  // Undoes `up`. Used by migration:revert.
+  // drops the table
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE "handshakes"`);
   }

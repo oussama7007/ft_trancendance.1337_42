@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { reviewService } from '../services/reviewService';
 import type { ReviewRole, ReviewTab, ReviewsResult } from '../services/reviewService';
 
-// Loads the reviews of a profile and says if the current user can leave one.
+// loads the reviews and if i can leave one
 export function useReviews(profileUserId: number, currentUserId?: number)
 {
   const [tab, setTab] = useState<ReviewTab>('all');
@@ -38,7 +38,7 @@ export function useReviews(profileUserId: number, currentUserId?: number)
     return () => { ignore = true; };
   }, [profileUserId, currentUserId, refresh]);
 
-  // Saves the review, then loads everything again so it shows up.
+  // saves the review then reloads
   async function submit(rating: number, comment: string)
   {
     if (!currentUserId)

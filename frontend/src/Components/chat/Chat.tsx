@@ -10,6 +10,7 @@ import { translations } from "../../translations";
 import { io, Socket } from "socket.io-client";
 import { useSearchParams } from "react-router-dom";
 import { formatChatError } from "./chatErrorFormatter";
+import ChatHandshake from "../handshakes/ChatHandshake";
 
 export interface ChatMessage {
 	id: number;
@@ -375,6 +376,7 @@ function Chat({ lang, currentUserId }: ChatProps) {
 										{selectedConversation.isOnline ? t.chat.online : t.chat.offline}
 									</p>
 								</div>
+                <ChatHandshake conversationId={selectedConversation.id} lang={lang} />
 							</div>
 
 							{error && (

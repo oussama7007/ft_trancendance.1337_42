@@ -4,11 +4,7 @@ import type {
   HandshakeStatus
 } from './dto/handshake-response.dto.js';
 
-// Pure helpers that turn a row into the answer the frontend expects. There is
-// no database here, which keeps the rules easy to test (handshake.utils.spec.ts).
-
-// The status is not stored, it is derived from the two yes flags. A missing row
-// (null) means nobody has clicked yet.
+// gets the status from the two yes flags
 export function getStatus(handshake: Handshake | null): HandshakeStatus {
   if (handshake?.ownerApproved && handshake.clientApproved) {
     return 'confirmed';
@@ -19,8 +15,7 @@ export function getStatus(handshake: Handshake | null): HandshakeStatus {
   return 'none';
 }
 
-// Did this user already say yes? The owner's yes and the client's yes live in
-// different columns, so we first work out which of the two the user is.
+// checks if this user already said yes
 export function hasUserApproved(
   handshake: Handshake | null,
   userId: number,
@@ -33,7 +28,7 @@ export function hasUserApproved(
     : handshake.clientApproved;
 }
 
-// Builds the JSON the frontend receives, from `userId`'s point of view.
+// builds what the frontend gets
 export function toResponse(
   handshake: Handshake | null,
   userId: number,

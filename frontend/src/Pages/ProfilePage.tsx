@@ -5,7 +5,8 @@ import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { ProfileHeader } from '../Components/profile/ProfileHeader';
 import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
-import { FeedbackSection } from '../Components/profile/FeedbackSection';
+import ReviewsSection from '../Components/reviews/ReviewsSection';
+import { FriendsMenu } from '../Components/friends/FriendsMenu';
 import { OwnerInterestRequests } from '../Components/home/OwnerInterestRequests';
 
 import { translations } from '../translations';
@@ -35,7 +36,9 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
             className="min-h-[65vh] bg-(--color-background) px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
             <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 md:grid-cols-[72px_minmax(0,1fr)] md:gap-5 lg:gap-6">
-                <ProfileSidebar t={t.sidebar} />
+                <ProfileSidebar t={t.sidebar}>
+                    <FriendsMenu lang={lang} />
+                </ProfileSidebar>
 
                 <div className="min-w-0">
                     <ProfileHeader
@@ -61,18 +64,12 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
                         </div>
 
                         <div className="flex min-w-0 flex-col gap-5">
-                        {/* ===================================================
-                        TODO [FEEDBACK TEAMMATE]:
-                        Integrate the Feedback component here.
-
-                        This teammate is responsible for:
-                        - Displaying tenant feedback.
-                        - Displaying reviews and ratings.
-                        - Feedback interactions.
-
-                        Do not implement feedback functionality in ProfilePage.
-                        =================================================== */}
-                            <FeedbackSection t={t.feedback}/>
+                            <ReviewsSection
+                                profileUserId={user.id}
+                                profileName={user.firstName}
+                                currentUserId={user.id}
+                                lang={lang}
+                            />
 
                             {/* TODO: Teammates can add future profile sections in this column. */}
                             <OwnerInterestRequests onAcceptSuccess={handleAcceptRequest} />
