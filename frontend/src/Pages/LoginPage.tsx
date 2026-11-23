@@ -1,5 +1,6 @@
 
 import { useState, type FormEvent } from "react";
+import { GoogleLogin } from '@react-oauth/google';
 import type { Language } from "@/types";
 import { translations } from "@/translations";
 import {
@@ -10,7 +11,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 
-import { GoogleLogin } from '@react-oauth/google';
+import { Link } from 'react-router-dom';
 import { PasswordField } from "@/Components/auth/PasswordField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ type LoginUser = {
     lastName: string;
     dateOfBirth: string;
     email: string;
+    avatarUrl?: string | null;
 };
 
 interface LoginPageProps {
@@ -48,11 +50,15 @@ const [smsCode, setSmsCode] = useState('');
     // Form status
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [loginErrorKey, setLoginErrorKey] = useState<
+        'invalidCredentials' | 'connectionError' | 'googleNotRegistered' | 'googleNotLinked' | ''
+    >('');
 
 
 
     async function handleGoogleLogin(credential: string) {
     setError('');
+    setLoginErrorKey('');
     setIsSubmitting(true);
 
     try {
@@ -65,10 +71,18 @@ const [smsCode, setSmsCode] = useState('');
             body: JSON.stringify({ credential }),
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            throw new Error(data.message || 'Google login failed');
+            console.error('[Google login] HTTP', response.status, data);
+            if (data.code === 'GOOGLE_ACCOUNT_NOT_REGISTERED') {
+                setLoginErrorKey('googleNotRegistered');
+            } else if (data.code === 'GOOGLE_ACCOUNT_NOT_LINKED') {
+                setLoginErrorKey('googleNotLinked');
+            } else {
+                setError(`${t.googleLoginFailed} (${response.status})`);
+            }
+            return;
         }
 
         if (data.requiresTwoFactor) {
@@ -78,12 +92,8 @@ const [smsCode, setSmsCode] = useState('');
         }
 
         onLoginSuccess(data.user);
-    } catch (error) {
-        setError(
-            error instanceof Error
-                ? error.message
-                : 'Google login failed',
-        );
+    } catch {
+        setError(t.googleLoginFailed);
     } finally {
         setIsSubmitting(false);
     }
@@ -136,10 +146,10 @@ const [smsCode, setSmsCode] = useState('');
 }
 
 
-
     async function handleLogin(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError("");
+        setLoginErrorKey('');
 
         if (!email.trim() || !password) {
             setError(t.missingFields);
@@ -164,10 +174,10 @@ const [smsCode, setSmsCode] = useState('');
             const data = await response.json();
 
             if (!response.ok) {
-                setError(
-                    typeof data.message === "string"
-                        ? data.message
-                        : t.invalidCredentials
+                setLoginErrorKey(
+                    response.status === 401
+                        ? 'invalidCredentials'
+                        : 'connectionError',
                 );
                 return;
             }
@@ -185,7 +195,7 @@ const [smsCode, setSmsCode] = useState('');
 
             onLoginSuccess(data.user);
         } catch {
-            setError(t.connectionError);
+            setLoginErrorKey('connectionError');
         } finally {
             setIsSubmitting(false);
         }
@@ -209,9 +219,27 @@ return (
             </CardHeader>
 
             <CardContent>
-                            {error && (
+                            {(error || loginErrorKey) && (
                                 <Alert variant="danger" className="mb-4">
-                                    {error}
+                                    {loginErrorKey === 'invalidCredentials'
+                                        ? t.invalidCredentials
+                                        : loginErrorKey === 'connectionError'
+                                            ? t.connectionError
+                                            : loginErrorKey === 'googleNotRegistered'
+                                                ? (
+                                                    <>
+                                                        {t.googleAccountNotRegistered}{' '}
+                                                        <Link
+                                                            to="/signup"
+                                                            className="font-semibold underline"
+                                                        >
+                                                            {t.createAccount}
+                                                        </Link>
+                                                    </>
+                                                )
+                                                : loginErrorKey === 'googleNotLinked'
+                                                    ? t.googleAccountNotLinked
+                                                    : error}
                                 </Alert>
                             )}
 
@@ -263,7 +291,7 @@ return (
                                 <Input
                                     id="email"
                                     type="email"
-                                    dir="ltr"
+                                    dir={isRtl ? "rtl" : "ltr"}
                                     placeholder={t.contactPlaceholder}
                                     value={email}
                                     onChange={(event) =>
@@ -281,6 +309,7 @@ return (
                     autoComplete="current-password"
                     showPasswordText={t.showPassword}
                     hidePasswordText={t.hidePassword}
+                    textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
                 />
 
                 <Button
@@ -300,28 +329,27 @@ return (
                         <div className="h-px flex-1 bg-gray-200" />
 
                         <span className="text-xs text-gray-500">
-                            OR
+                            {t.or}
                         </span>
 
                         <div className="h-px flex-1 bg-gray-200" />
                     </div>
 
-                    <div className="flex justify-center">
-                        <GoogleLogin
-                            onSuccess={(response) => {
-                                if (response.credential) {
-                                    void handleGoogleLogin(
-                                        response.credential,
-                                    );
-                                }
-                            }}
-                            onError={() => {
-                                setError(t.googleLoginFailed);
-                            }}
-                            theme="outline"
-                            size="large"
-                            text="continue_with"
-                        />
+                    <div
+                        className="flex justify-center"
+                        dir={isRtl ? 'rtl' : 'ltr'}
+                    >
+                    <GoogleLogin
+                        text="continue_with"
+                        onSuccess={(response) => {
+                            if (response.credential) {
+                                void handleGoogleLogin(response.credential);
+                            }
+                        }}
+                        onError={() => {
+                            setError(t.googleLoginFailed);
+                        }}
+                    />
                     </div>
                 </>
             )}

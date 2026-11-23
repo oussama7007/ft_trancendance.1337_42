@@ -46,7 +46,7 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
         };
 
         reader.onerror = () => {
-            setError('Could not read this image. Please try another one.');
+            setError(t.readError);
         };
 
         reader.readAsDataURL(file);
@@ -59,13 +59,13 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
                 {avatar ? (
                     <img
                         src={avatar}
-                        alt={`${fullName} profile`}
+                        alt={`${t.profileAlt} ${fullName}`}
                         className="h-28 w-28 rounded-full border-4 border-(--color-accent-soft) object-cover"
                     />
                 ) : (
                     <div
                         role="img"
-                        aria-label={`${fullName} profile placeholder`}
+                        aria-label={`${t.profileAlt} ${fullName}`}
                         className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-(--color-accent-soft) bg-(--color-primary) text-white"
                     >
                         <UserRound size={42} />
@@ -75,7 +75,7 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
                 <button
                     type="button"
                     onClick={() => inputRef.current?.click()}
-                    aria-label="Upload a profile picture"
+                    aria-label={t.upload}
                     className="absolute bottom-0 end-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-(--color-accent) text-white shadow transition hover:bg-(--color-accent-dark)"
                 >
                     <Camera size={17} />
@@ -87,7 +87,7 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
                     accept="image/jpeg,image/png,image/webp"
                     onChange={handleFileChange}
                     className="sr-only"
-                    aria-label="Choose a profile picture"
+                    aria-label={t.choose}
                 />
             </div>
 
@@ -96,7 +96,7 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
                     {error}
                 </p>
             )}
-            <p className="text-xs text-(--color-muted)">JPG, PNG or WebP · 5 MB max</p>
+            <p className="text-xs text-(--color-muted)">{t.formats}</p>
         </div>
     );
 }

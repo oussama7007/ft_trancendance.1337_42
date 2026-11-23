@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Lock, ShieldCheck, Smartphone } from 'lucide-react';
+import { AlertTriangle, Lock, ShieldCheck, Smartphone } from 'lucide-react';
 
 import { AccountSection } from '../shared/AccountSection';
 import { PasswordField } from '../auth/PasswordField';
@@ -21,11 +21,19 @@ interface SecurityInfo {
     phoneNumber: string | null;
     phoneVerified: boolean;
     sms2faEnabled: boolean;
+    sms2faAvailable: boolean;
 }
 
 interface ApiError {
     message?: string | string[];
 }
+
+type PasswordErrorKey =
+    | 'newPasswordSameAsCurrent'
+    | 'passwordRequirements'
+    | 'passwordMismatch'
+    | 'requestFailed'
+    | 'currentPasswordError';
 
 // Send requests to the backend with the authenticated cookie.
 async function request<T>(
@@ -67,12 +75,16 @@ export function SecuritySettings({ lang }: Props) {
 
     const [disablePassword, setDisablePassword] = useState('');
 
+    // These controls remain available for future provider integration, but
+    // are only rendered and used when the backend reports availability.
     const [phoneNumber, setPhoneNumber] = useState('');
     const [smsCode, setSmsCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
 
-    const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
+    const [securityError, setSecurityError] = useState('');
+    const [securityMessage, setSecurityMessage] = useState('');
+    const [passwordErrorKey, setPasswordErrorKey] = useState<PasswordErrorKey | ''>('');
+    const [passwordMessageKey, setPasswordMessageKey] = useState<'passwordUpdated' | ''>('');
     const [loading, setLoading] = useState(false);
 
     // Load the current phone verification and 2FA status.
@@ -85,9 +97,12 @@ export function SecuritySettings({ lang }: Props) {
 
     useEffect(() => {
         loadSecurity().catch((error: Error) => {
-            setError(error.message);
+            setSecurityError(error.message);
         });
     }, [loadSecurity]);
+
+    // Whether the SMS feature is available on the backend.
+    const smsAvailable = security?.sms2faAvailable ?? false;
 
     // Change the account password.
     async function handlePasswordChange(
@@ -95,16 +110,21 @@ export function SecuritySettings({ lang }: Props) {
     ) {
         event.preventDefault();
 
-        setError('');
-        setMessage('');
+        setPasswordErrorKey('');
+        setPasswordMessageKey('');
+
+        if (newPassword === currentPassword) {
+            setPasswordErrorKey('newPasswordSameAsCurrent');
+            return;
+        }
 
         if (!isPasswordValid(newPassword)) {
-            setError(t.passwordRequirements);
+            setPasswordErrorKey('passwordRequirements');
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setError(t.passwordMismatch);
+            setPasswordErrorKey('passwordMismatch');
             return;
         }
 
@@ -120,112 +140,104 @@ export function SecuritySettings({ lang }: Props) {
             setNewPassword('');
             setConfirmPassword('');
 
-            setMessage(t.passwordUpdated);
+            setPasswordMessageKey('passwordUpdated');
         } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : t.requestFailed,
+            setPasswordErrorKey(
+                error instanceof Error && error.message === 'Current password is incorrect'
+                    ? 'currentPasswordError'
+                    : 'requestFailed',
             );
         } finally {
             setLoading(false);
         }
     }
 
-    // Request an SMS verification code.
+    // Request an SMS verification code when a provider is configured.
     async function sendPhoneCode() {
-        setError('');
-        setMessage('');
+        if (!smsAvailable) {
+            return;
+        }
+
+        setSecurityError('');
+        setSecurityMessage('');
 
         const normalizedPhone = phoneNumber.trim();
 
         if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-            setError(t.invalidPhone);
+            setSecurityError(t.invalidPhone);
             return;
         }
 
         try {
             setLoading(true);
-
             await request('/auth/2fa/phone/start', 'POST', {
                 phoneNumber: normalizedPhone,
             });
-
             setCodeSent(true);
-            setMessage(t.codeSent);
+            setSecurityMessage(t.codeSent);
         } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : t.requestFailed,
-            );
+            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
         } finally {
             setLoading(false);
         }
     }
 
-    // Verify the SMS code and save the phone number.
+    // Verify the SMS code when a provider is configured.
     async function verifyPhone() {
-        setError('');
-        setMessage('');
+        if (!smsAvailable) {
+            return;
+        }
+
+        setSecurityError('');
+        setSecurityMessage('');
 
         try {
             setLoading(true);
-
             await request('/auth/2fa/phone/verify', 'POST', {
                 phoneNumber: phoneNumber.trim(),
                 code: smsCode.trim(),
             });
-
             setCodeSent(false);
             setSmsCode('');
-
             await loadSecurity();
-
-            setMessage(t.phoneVerified);
+            setSecurityMessage(t.phoneVerified);
         } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : t.requestFailed,
-            );
+            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
         } finally {
             setLoading(false);
         }
     }
 
-    // Enable SMS two-factor authentication.
+    // Enable SMS two-factor authentication when a provider is configured.
     async function enable2fa() {
-        setError('');
-        setMessage('');
+        if (!smsAvailable) {
+            return;
+        }
+
+        setSecurityError('');
+        setSecurityMessage('');
 
         try {
             setLoading(true);
-
             await request('/auth/2fa/enable', 'POST');
-
             await loadSecurity();
-
-            setMessage(t.smsEnabled);
+            setSecurityMessage(t.smsEnabled);
         } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : t.requestFailed,
-            );
+            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
         } finally {
             setLoading(false);
         }
     }
 
-    // Disable SMS two-factor authentication.
+    // Disable SMS two-factor authentication (allowed even when provider is unavailable,
+    // as long as the backend allows the password-confirmed disable flow).
     async function disable2fa(
         event: FormEvent<HTMLFormElement>,
     ) {
         event.preventDefault();
 
-        setError('');
-        setMessage('');
+        setSecurityError('');
+        setSecurityMessage('');
 
         try {
             setLoading(true);
@@ -238,9 +250,9 @@ export function SecuritySettings({ lang }: Props) {
 
             await loadSecurity();
 
-            setMessage(t.smsDisabled);
+            setSecurityMessage(t.smsDisabled);
         } catch (error) {
-            setError(
+            setSecurityError(
                 error instanceof Error
                     ? error.message
                     : t.requestFailed,
@@ -252,10 +264,6 @@ export function SecuritySettings({ lang }: Props) {
 
     return (
         <div className="flex flex-col gap-5">
-            <p className="text-sm text-irent-muted">
-                {t.description}
-            </p>
-
             {/* Password settings */}
             <AccountSection
                 title={t.passwordTitle}
@@ -273,6 +281,7 @@ export function SecuritySettings({ lang }: Props) {
                         autoComplete="current-password"
                         showPasswordText={authT.showPassword}
                         hidePasswordText={authT.hidePassword}
+                        textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
                     />
 
                     <PasswordField
@@ -284,6 +293,7 @@ export function SecuritySettings({ lang }: Props) {
                         minLength={8}
                         showPasswordText={authT.showPassword}
                         hidePasswordText={authT.hidePassword}
+                        textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
                     />
 
                     <PasswordStrength
@@ -300,6 +310,7 @@ export function SecuritySettings({ lang }: Props) {
                         minLength={8}
                         showPasswordText={authT.showPassword}
                         hidePasswordText={authT.hidePassword}
+                        textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
                     />
 
                     <button
@@ -309,6 +320,18 @@ export function SecuritySettings({ lang }: Props) {
                     >
                         {loading ? t.updating : t.updatePassword}
                     </button>
+
+                    {passwordErrorKey && (
+                        <p role="alert" className="text-sm text-red-600">
+                            {t[passwordErrorKey]}
+                        </p>
+                    )}
+
+                    {passwordMessageKey && (
+                        <p role="status" className="text-sm text-green-700">
+                            {t[passwordMessageKey]}
+                        </p>
+                    )}
                 </form>
             </AccountSection>
 
@@ -318,142 +341,182 @@ export function SecuritySettings({ lang }: Props) {
                 icon={ShieldCheck}
             >
                 <div className="space-y-4">
-                    <p className="text-sm text-irent-muted">
-                        {t.smsDescription}
-                    </p>
+                    {!smsAvailable ? (
+                        /* SMS is temporarily unavailable — show notice, no SMS requests */
+                        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600" />
+                            <div>
+                                <p className="text-sm font-medium text-amber-800">
+                                    {t.smsUnavailable}
+                                </p>
 
-                    <div className="flex items-center gap-2 text-sm">
-                        <Smartphone size={18} />
+                                <div className="mt-2 flex items-center gap-2 text-sm text-irent-muted">
+                                    <Smartphone size={16} />
+                                    <span>
+                                        {t.status}:{' '}
+                                        {security?.sms2faEnabled
+                                            ? t.enabled
+                                            : t.disabled}
+                                    </span>
+                                </div>
 
-                        <span>
-                            {t.status}:{' '}
-                            {security
-                                ? security.sms2faEnabled
-                                    ? t.enabled
-                                    : t.disabled
-                                : '—'}
-                        </span>
-                    </div>
+                                {/* Allow a user with SMS 2FA already enabled to disable it
+                                    through the password-confirmed flow even while the SMS
+                                    provider is unavailable. */}
+                                {security?.sms2faEnabled && (
+                                    <form
+                                        onSubmit={disable2fa}
+                                        className="mt-4 space-y-3"
+                                    >
+                                        <PasswordField
+                                            id="disable2faPassword"
+                                            label={t.disable2faPassword}
+                                            value={disablePassword}
+                                            onChange={setDisablePassword}
+                                            autoComplete="current-password"
+                                            showPasswordText={authT.showPassword}
+                                            hidePasswordText={authT.hidePassword}
+                                            textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                                        />
 
-                    <div>
-                        <label
-                            htmlFor="securityPhone"
-                            className="mb-2 block text-sm font-medium"
-                        >
-                            {t.phoneNumber}
-                        </label>
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50"
+                                        >
+                                            {t.disable2fa}
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        /* SMS is available — show the preserved provider controls. */
+                        <>
+                            <p className="text-sm text-irent-muted">
+                                {t.smsDescription}
+                            </p>
 
-                        <input
-                            id="securityPhone"
-                            type="tel"
-                            dir="ltr"
-                            value={phoneNumber}
-                            onChange={(event) =>
-                                setPhoneNumber(event.target.value)
-                            }
-                            placeholder="+2126XXXXXXXX"
-                            className="h-11 w-full rounded-xl border border-irent-border bg-irent-surface px-3 text-left text-sm outline-none focus:border-irent-accent"
-                        />
+                            <div className="flex items-center gap-2 text-sm">
+                                <Smartphone size={18} />
+                                <span>
+                                    {t.status}:{' '}
+                                    {security?.sms2faEnabled
+                                        ? t.enabled
+                                        : t.disabled}
+                                </span>
+                            </div>
 
-                        <p className="mt-2 text-xs text-irent-muted">
-                            {t.phoneHint}
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={sendPhoneCode}
-                        disabled={loading || !phoneNumber.trim()}
-                        className="rounded-xl border border-irent-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
-                    >
-                        {loading ? t.sending : t.sendCode}
-                    </button>
-
-                    {codeSent && (
-                        <div className="space-y-3">
-                            <label
-                                htmlFor="smsCode"
-                                className="block text-sm font-medium"
-                            >
-                                {t.verificationCode}
-                            </label>
-
-                            <input
-                                id="smsCode"
-                                type="text"
-                                dir="ltr"
-                                inputMode="numeric"
-                                autoComplete="one-time-code"
-                                maxLength={6}
-                                value={smsCode}
-                                onChange={(event) =>
-                                    setSmsCode(event.target.value)
-                                }
-                                className="h-11 w-full rounded-xl border border-irent-border px-3 text-left"
-                            />
+                            <div>
+                                <label
+                                    htmlFor="securityPhone"
+                                    className="mb-2 block text-sm font-medium"
+                                >
+                                    {t.phoneNumber}
+                                </label>
+                                <input
+                                    id="securityPhone"
+                                    type="tel"
+                                    dir="ltr"
+                                    value={phoneNumber}
+                                    onChange={(event) => setPhoneNumber(event.target.value)}
+                                    placeholder="+2126XXXXXXXX"
+                                    className="h-11 w-full rounded-xl border border-irent-border bg-irent-surface px-3 text-left text-sm outline-none focus:border-irent-accent"
+                                />
+                                <p className="mt-2 text-xs text-irent-muted">
+                                    {t.phoneHint}
+                                </p>
+                            </div>
 
                             <button
                                 type="button"
-                                onClick={verifyPhone}
-                                disabled={loading || !smsCode.trim()}
-                                className="rounded-xl bg-irent-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                onClick={sendPhoneCode}
+                                disabled={loading || !phoneNumber.trim()}
+                                className="rounded-xl border border-irent-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
                             >
-                                {t.verifyPhone}
+                                {loading ? t.sending : t.sendCode}
                             </button>
-                        </div>
-                    )}
 
-                    {security?.phoneVerified && (
-                        <p className="text-sm font-medium text-green-700">
-                            {t.phoneVerified}
-                        </p>
-                    )}
+                            {codeSent && (
+                                <div className="space-y-3">
+                                    <label
+                                        htmlFor="smsCode"
+                                        className="block text-sm font-medium"
+                                    >
+                                        {t.verificationCode}
+                                    </label>
+                                    <input
+                                        id="smsCode"
+                                        type="text"
+                                        dir="ltr"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        maxLength={6}
+                                        value={smsCode}
+                                        onChange={(event) => setSmsCode(event.target.value)}
+                                        className="h-11 w-full rounded-xl border border-irent-border px-3 text-left"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={verifyPhone}
+                                        disabled={loading || !smsCode.trim()}
+                                        className="rounded-xl bg-irent-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                    >
+                                        {t.verifyPhone}
+                                    </button>
+                                </div>
+                            )}
 
-                    {!security?.sms2faEnabled ? (
-                        <button
-                            type="button"
-                            onClick={enable2fa}
-                            disabled={loading || !security?.phoneVerified}
-                            className="rounded-xl bg-irent-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
-                        >
-                            {t.enable2fa}
-                        </button>
-                    ) : (
-                        <form
-                            onSubmit={disable2fa}
-                            className="space-y-3"
-                        >
-                            <PasswordField
-                                id="disable2faPassword"
-                                label={t.disable2faPassword}
-                                value={disablePassword}
-                                onChange={setDisablePassword}
-                                autoComplete="current-password"
-                                showPasswordText={authT.showPassword}
-                                hidePasswordText={authT.hidePassword}
-                            />
+                            {security?.phoneVerified && (
+                                <p className="text-sm font-medium text-green-700">
+                                    {t.phoneVerified}
+                                </p>
+                            )}
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50"
-                            >
-                                {t.disable2fa}
-                            </button>
-                        </form>
+                            {!security?.sms2faEnabled ? (
+                                <button
+                                    type="button"
+                                    onClick={enable2fa}
+                                    disabled={loading || !security?.phoneVerified}
+                                    className="rounded-xl bg-irent-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                                >
+                                    {t.enable2fa}
+                                </button>
+                            ) : (
+                                <form onSubmit={disable2fa} className="space-y-3">
+                                    <PasswordField
+                                        id="disable2faPassword"
+                                        label={t.disable2faPassword}
+                                        value={disablePassword}
+                                        onChange={setDisablePassword}
+                                        autoComplete="current-password"
+                                        showPasswordText={authT.showPassword}
+                                        hidePasswordText={authT.hidePassword}
+                                        textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50"
+                                    >
+                                        {t.disable2fa}
+                                    </button>
+                                </form>
+                            )}
+                        </>
                     )}
                 </div>
             </AccountSection>
 
-            {error && (
+            {securityError && (
                 <p role="alert" className="text-sm text-red-600">
-                    {error}
+                    {securityError}
                 </p>
             )}
 
-            {message && (
+            {securityMessage && (
                 <p role="status" className="text-sm text-green-700">
-                    {message}
+                    {securityMessage}
                 </p>
             )}
         </div>

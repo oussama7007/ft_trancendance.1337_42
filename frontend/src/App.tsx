@@ -1,7 +1,7 @@
 
 import './index.css'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
     Routes,
     Route,
@@ -40,7 +40,7 @@ type BackendUser = {
     email: string;
     gender?: string;
     cin?: string;
-        bio?: string | null;
+    bio?: string | null;
     avatarUrl?: string | null;
     linkedin?: string | null;
     instagram?: string | null;
@@ -58,7 +58,7 @@ function mapBackendUser(user: BackendUser): User {
         gender: user.gender,
         fullName: `${user.firstName} ${user.lastName}`,
         email: isEmail ? user.email : '',
-                bio: user.bio,
+        bio: user.bio,
         avatarUrl: user.avatarUrl,
         linkedin: user.linkedin,
         instagram: user.instagram,
@@ -111,7 +111,6 @@ function App() {
     // Authentication state.
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authError, setAuthError] = useState('');
 
     // Restore the user's session when the application starts.
     useEffect(() => {
@@ -125,6 +124,7 @@ function App() {
                 });
 
                 if (response.status === 401) {
+                    // 401 is a normal result for a visitor who is not signed in.
                     if (isMounted) {
                         setCurrentUser(null);
                     }
@@ -141,11 +141,12 @@ function App() {
                     setCurrentUser(mapBackendUser(user));
                 }
             } catch (error) {
+                // The public pages can still work without a restored session.
+                // Keep the technical error in the browser console, not in the page.
                 console.error('Session restoration failed:', error);
 
                 if (isMounted) {
                     setCurrentUser(null);
-                    setAuthError('Could not verify your session.');
                 }
             } finally {
                 if (isMounted) {
@@ -154,7 +155,7 @@ function App() {
             }
         }
 
-        restoreSession();
+        void restoreSession();
 
         return () => {
             isMounted = false;
@@ -181,8 +182,6 @@ function App() {
 
     // Log out through the backend.
     const handleLogout = async () => {
-        setAuthError('');
-
         try {
             const response = await fetch(`${API_URL}/auth/logout`, {
                 method: 'POST',
@@ -197,15 +196,20 @@ function App() {
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
-            setAuthError('Could not log out. Please try again.');
         }
     };
+
+    const handleAvatarChanged = useCallback((avatarUrl: string | null) => {
+        setCurrentUser((previous) =>
+            previous ? { ...previous, avatarUrl } : previous,
+        );
+    }, []);
 
     // Wait until the backend session check finishes.
     if (isAuthLoading) {
         return (
             <main className="flex min-h-screen items-center justify-center">
-                <p>Checking your session...</p>
+                <p>Checking the server...</p>
             </main>
         );
     }
@@ -220,15 +224,6 @@ function App() {
                 currentUser={currentUser}
                 handleLogout={handleLogout}
             />
-
-            {authError && (
-                <p
-                    role="alert"
-                    className="p-3 text-center text-sm text-red-600"
-                >
-                    {authError}
-                </p>
-            )}
 
             <ScrollToTop />
 
@@ -268,10 +263,20 @@ function App() {
                                     <SettingsPage
                                         user={currentUser}
                                         lang={lang}
-                                        onLanguageChange={setLang}
                                         onEmailChanged={(newEmail: string) => {
                                             setCurrentUser((previous) =>
                                                 previous ? { ...previous, email: newEmail } : previous,
+                                            );
+                                        }}
+                                        onUserUpdated={(updatedUser) => {
+                                            setCurrentUser((previous) =>
+                                                previous
+                                                    ? {
+                                                        ...previous,
+                                                        ...updatedUser,
+                                                        fullName: `${updatedUser.firstName ?? previous.firstName} ${updatedUser.lastName ?? previous.lastName}`,
+                                                    }
+                                                    : previous,
                                             );
                                         }}
                                     />
@@ -294,7 +299,13 @@ function App() {
                     path="/profile"
                     element={
                         currentUser
-                            ? <ProfilePage user={currentUser} lang={lang}/>
+                            ? (
+                                <ProfilePage
+                                    user={currentUser}
+                                    lang={lang}
+                                    onAvatarChanged={handleAvatarChanged}
+                                />
+                            )
                             : <Navigate to="/signin" replace />
                     }
                 />
@@ -327,14 +338,17 @@ function App() {
                 <Route
                     path="/signup"
                     element={
-                        <SignUpPage
-                            lang={lang}
-                           
-                            onRegistrationSuccess={(user) => {
-                                setCurrentUser(mapBackendUser(user));
-                                navigate('/');
-                            }}
-                        />
+                        currentUser ? (
+                            <Navigate to="/" replace />
+                        ) : (
+                            <SignUpPage
+                                lang={lang}
+                                onRegistrationSuccess={(user) => {
+                                    setCurrentUser(mapBackendUser(user));
+                                    navigate('/');
+                                }}
+                            />
+                        )
                     }
                 />
 

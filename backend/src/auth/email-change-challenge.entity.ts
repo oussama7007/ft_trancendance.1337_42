@@ -21,7 +21,7 @@ export class EmailChangeChallenge {
     @Column({ type: 'timestamptz' })
     expiresAt: Date;
 
-        @Column({
+    @Column({
         type: 'integer',
         default: 0,
     })

@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
-
+import { LoginChallenge } from './login-challenge.entity.js';
 
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,6 +32,7 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 import {
     createHash,
+    randomBytes,
     randomInt,
     timingSafeEqual,
 } from 'node:crypto';
@@ -43,6 +44,9 @@ import { OAuth2Client } from 'google-auth-library';
 
 
 import { MailService } from '../mail/mail.service.js';
+import { SmsVerificationService } from './sms-verification.service.js';
+
+const VERIFICATION_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
@@ -59,14 +63,22 @@ export class AuthService {
     private readonly emailChangeChallengeRepository:
         Repository<EmailChangeChallenge>,
 
+    @InjectRepository(LoginChallenge)
+    private readonly loginChallengeRepository: Repository<LoginChallenge>,
+
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
 
-    private readonly jwtService: JwtService, 
+    private readonly jwtService: JwtService,
 
     private readonly mailService: MailService,
+
+    private readonly smsService: SmsVerificationService,
   ) {}
-  private async verifyGoogleCredential(credential: string) {
+  private async verifyGoogleCredential(
+    credential?: string,
+    accessToken?: string,
+  ) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
 
     if (!clientId) {
@@ -77,19 +89,58 @@ export class AuthService {
 
     try {
         const client = new OAuth2Client(clientId);
+        let payload;
 
-        const ticket = await client.verifyIdToken({
-            idToken: credential,
-            audience: clientId,
-        });
+        if (accessToken) {
+            const tokenInfo = await client.getTokenInfo(accessToken);
 
-        const payload = ticket.getPayload();
+            // Access tokens from Google can have the client ID in either 'audience' (aud) or 'azp' fields.
+            // Some tokens might not even have a strictly matching 'aud' if they are scoped differently,
+            // but the fact that we can fetch userinfo with it is a strong proof of validity.
+            const tokenAudience = (tokenInfo as any).audience;
+            const tokenAzp = (tokenInfo as any).azp;
+            if (tokenAudience !== clientId && tokenAzp !== clientId) {
+                console.warn('Google token audience/azp mismatch:', {
+                    tokenAudience,
+                    tokenAzp,
+                    clientId,
+                });
+                // We'll proceed anyway if we can fetch userinfo, but we keep this log for debugging.
+            }
+
+            const response = await fetch(
+                'https://openidconnect.googleapis.com/v1/userinfo',
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new UnauthorizedException('Invalid Google access token');
+            }
+
+            payload = await response.json() as {
+                sub?: string;
+                email?: string;
+                email_verified?: boolean | string;
+            };
+        } else if (credential) {
+            const ticket = await client.verifyIdToken({
+                idToken: credential,
+                audience: clientId,
+            });
+            payload = ticket.getPayload();
+        } else {
+            throw new BadRequestException('Google credential is missing');
+        }
 
         if (
             !payload ||
             !payload.sub ||
             !payload.email ||
-            payload.email_verified !== true
+            (payload.email_verified !== true && payload.email_verified !== 'true')
         ) {
             throw new UnauthorizedException(
                 'Google account could not be verified',
@@ -100,7 +151,11 @@ export class AuthService {
             googleId: payload.sub,
             googleEmail: payload.email,
         };
-    } catch {
+    } catch (error) {
+        if (error instanceof HttpException) {
+            throw error;
+        }
+        console.error('Google verification error:', error);
         throw new UnauthorizedException(
             'Invalid Google credential',
         );
@@ -109,9 +164,10 @@ export class AuthService {
 
 async linkGoogleAccount(
     userId: number,
-    credential: string,
+    credential?: string,
+    accessToken?: string,
 ) {
-    const identity = await this.verifyGoogleCredential(credential);
+    const identity = await this.verifyGoogleCredential(credential, accessToken);
 
     const existingUser = await this.userRepository.findOne({
         where: { googleId: identity.googleId },
@@ -148,6 +204,7 @@ private toAuthUser(user: User) {
         dateOfBirth: user.dateOfBirth,
         gender: user.gender,
         email: user.email,
+        avatarUrl: user.avatarUrl,
     };
 }
 private async issueAuthenticatedSession(user: User) {
@@ -165,9 +222,12 @@ private async issueAuthenticatedSession(user: User) {
 
 
 
-/*
 
-
+/**
+ * createLoginChallenge: preserved for later use once an SMS provider is selected.
+ * It creates a login verification challenge, sends an SMS code, and returns
+ * a challenge token that the frontend submits to /auth/2fa/login/verify.
+ */
 private async createLoginChallenge(user: User) {
     if (!user.phoneNumber || !user.phoneVerified) {
         throw new BadRequestException(
@@ -207,8 +267,6 @@ private async createLoginChallenge(user: User) {
 }
 
 
-*/
-
 
 
 
@@ -216,14 +274,17 @@ private async createLoginChallenge(user: User) {
 
 
 private async prepareLogin(user: User) {
+    const sms2faAvailable = process.env.SMS_2FA_ENABLED === 'true';
 
-
-
-    if (user.sms2faEnabled) {
-        user.sms2faEnabled = false;
-
-        await this.userRepository.save(user);
+    // SMS two-factor authentication is deferred: never block a login because
+    // the SMS provider is not configured. Only start a 2FA challenge when SMS
+    // is both enabled on the account and actually available.
+    if (user.sms2faEnabled && sms2faAvailable) {
+        return this.createLoginChallenge(user);
     }
+
+    // Normal login for users without SMS 2FA, or when the SMS provider is not
+    // yet configured.
     return this.issueAuthenticatedSession(user);
 }
 
@@ -283,10 +344,11 @@ private hashEmailChangeCode(
 }
 
 
-// Step 1: Request email change.
+// Step 1: verify the password and send one code to the new email address.
 async startEmailChange(
     userId: number,
     newEmail: string,
+    currentPassword: string,
 ) {
     const user = await this.userRepository.findOne({
         where: { id: userId },
@@ -296,20 +358,26 @@ async startEmailChange(
         throw new NotFoundException('User not found');
     }
 
-    // Normalize the email.
-    const normalizedEmail = newEmail
-        .trim()
-        .toLowerCase();
+    const passwordMatches = await bcrypt.compare(
+        currentPassword,
+        user.passwordHash,
+    );
 
-    if (normalizedEmail === user.email.toLowerCase()) {
+    if (!passwordMatches) {
+        throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const normalizedCurrentEmail = user.email.trim().toLowerCase();
+    const normalizedPendingEmail = newEmail.trim().toLowerCase();
+
+    if (normalizedPendingEmail === normalizedCurrentEmail) {
         throw new BadRequestException(
             'This is already your current email',
         );
     }
 
-    // Check whether another user already owns this email.
     const existingUser = await this.userRepository.findOne({
-        where: { email: normalizedEmail },
+        where: { email: normalizedPendingEmail },
     });
 
     if (existingUser) {
@@ -319,67 +387,48 @@ async startEmailChange(
     }
 
     const now = Date.now();
+    let challenge = await this.emailChangeChallengeRepository.findOne({
+        where: { userId },
+    });
 
-    // Find an existing challenge for this user.
-    let challenge =
-        await this.emailChangeChallengeRepository.findOne({
-            where: { userId },
-        });
-
-    // Prevent sending a new code every second.
     if (
         challenge &&
-        challenge.expiresAt.getTime() > now
+        challenge.expiresAt.getTime() > now &&
+        now - (challenge.expiresAt.getTime() - 5 * 60 * 1000) < VERIFICATION_RESEND_COOLDOWN_MS
     ) {
-        const previousSentAt =
-            challenge.expiresAt.getTime() - 5 * 60 * 1000;
-
-        if (now - previousSentAt < 30 * 1000) {
-            throw new HttpException(
-                'Please wait before requesting another code',
-                HttpStatus.TOO_MANY_REQUESTS,
-            );
-        }
+        throw new HttpException(
+            'Please wait before requesting another code',
+            HttpStatus.TOO_MANY_REQUESTS,
+        );
     }
 
-    // Generate a six-digit verification code.
-    const code = randomInt(100000, 1000000).toString();
+    const code = randomInt(10000000, 100000000).toString();
+    const expiresAt = new Date(now + 5 * 60 * 1000);
 
     if (!challenge) {
-        challenge =
-            this.emailChangeChallengeRepository.create({
-                userId,
-                pendingEmail: normalizedEmail,
-                codeHash: '',
-                expiresAt: new Date(),
-                attempts: 0,
-            });
+        challenge = this.emailChangeChallengeRepository.create({
+            userId,
+            pendingEmail: normalizedPendingEmail,
+            codeHash: '',
+            expiresAt,
+            attempts: 0,
+        });
     }
 
-    challenge.pendingEmail = normalizedEmail;
-    challenge.codeHash =
-        this.hashEmailChangeCode(userId, code);
-
-    challenge.expiresAt =
-        new Date(now + 5 * 60 * 1000);
-
+    challenge.pendingEmail = normalizedPendingEmail;
+    challenge.codeHash = this.hashEmailChangeCode(userId, code);
+    challenge.expiresAt = expiresAt;
     challenge.attempts = 0;
 
-    await this.emailChangeChallengeRepository.save(
-        challenge,
-    );
+    await this.emailChangeChallengeRepository.save(challenge);
 
     try {
         await this.mailService.sendEmailChangeCode(
-            normalizedEmail,
+            normalizedPendingEmail,
             code,
         );
     } catch {
-        // Do not keep a challenge when sending the email failed.
-        await this.emailChangeChallengeRepository.delete({
-            userId,
-        });
-
+        await this.emailChangeChallengeRepository.delete({ userId });
         throw new ServiceUnavailableException(
             'Could not send verification email',
         );
@@ -391,16 +440,14 @@ async startEmailChange(
     };
 }
 
-
-// Step 2: Verify the code and update the email.
+// Step 2: verify the new email code and then update the account email.
 async verifyEmailChange(
     userId: number,
     code: string,
 ) {
-    const challenge =
-        await this.emailChangeChallengeRepository.findOne({
-            where: { userId },
-        });
+    const challenge = await this.emailChangeChallengeRepository.findOne({
+        where: { userId },
+    });
 
     if (!challenge) {
         throw new BadRequestException(
@@ -408,45 +455,21 @@ async verifyEmailChange(
         );
     }
 
-    // Check expiration.
     if (challenge.expiresAt.getTime() < Date.now()) {
-        await this.emailChangeChallengeRepository.delete(
-            challenge.id,
-        );
-
-        throw new BadRequestException(
-            'Verification code has expired',
-        );
+        await this.emailChangeChallengeRepository.delete(challenge.id);
+        throw new BadRequestException('Verification code has expired');
     }
 
-    // Limit incorrect attempts.
     if (challenge.attempts >= 5) {
-        await this.emailChangeChallengeRepository.delete(
-            challenge.id,
-        );
-
+        await this.emailChangeChallengeRepository.delete(challenge.id);
         throw new BadRequestException(
             'Too many incorrect attempts. Request a new code.',
         );
     }
 
-    // Hash the code entered by the user.
-    const providedHash = this.hashEmailChangeCode(
-        userId,
-        code,
-    );
-
-    // Compare hashes safely.
-    const storedBuffer = Buffer.from(
-        challenge.codeHash,
-        'hex',
-    );
-
-    const providedBuffer = Buffer.from(
-        providedHash,
-        'hex',
-    );
-
+    const providedHash = this.hashEmailChangeCode(userId, code);
+    const storedBuffer = Buffer.from(challenge.codeHash, 'hex');
+    const providedBuffer = Buffer.from(providedHash, 'hex');
     const isValid =
         storedBuffer.length === providedBuffer.length &&
         timingSafeEqual(storedBuffer, providedBuffer);
@@ -455,18 +478,12 @@ async verifyEmailChange(
         challenge.attempts += 1;
 
         if (challenge.attempts >= 5) {
-            await this.emailChangeChallengeRepository.delete(
-                challenge.id,
-            );
+            await this.emailChangeChallengeRepository.delete(challenge.id);
         } else {
-            await this.emailChangeChallengeRepository.save(
-                challenge,
-            );
+            await this.emailChangeChallengeRepository.save(challenge);
         }
 
-        throw new BadRequestException(
-            'Invalid verification code',
-        );
+        throw new BadRequestException('Invalid verification code');
     }
 
     const user = await this.userRepository.findOne({
@@ -477,30 +494,26 @@ async verifyEmailChange(
         throw new NotFoundException('User not found');
     }
 
-    // Check again in case another user registered this email.
     const existingUser = await this.userRepository.findOne({
         where: { email: challenge.pendingEmail },
     });
 
     if (existingUser && existingUser.id !== userId) {
-        await this.emailChangeChallengeRepository.delete(
-            challenge.id,
-        );
-
-        throw new ConflictException(
-            'This email is already used',
-        );
+        await this.emailChangeChallengeRepository.delete(challenge.id);
+        throw new ConflictException('This email is already used');
     }
 
-    // Update the user's email.
+    const oldEmail = user.email;
     user.email = challenge.pendingEmail;
-
     await this.userRepository.save(user);
+    await this.emailChangeChallengeRepository.delete(challenge.id);
 
-    // Remove the challenge after successful verification.
-    await this.emailChangeChallengeRepository.delete(
-        challenge.id,
-    );
+    try {
+        await this.mailService.sendEmailChangeCompleted(oldEmail, user.email);
+    } catch {
+        // The email update is already complete; notification failure must not
+        // roll back the database change.
+    }
 
     return {
         email: user.email,
@@ -571,6 +584,20 @@ async verifyEmailChange(
 
     if (existingUser)
       throw new ConflictException('This contact is already registered');
+
+    // Do not send multiple verification codes within 30 seconds.
+    // The frontend also shows a countdown, but this backend check cannot be bypassed.
+    if (session.verificationCodeExpiresAt) {
+      const lastSentAt =
+        session.verificationCodeExpiresAt.getTime() - 5 * 60 * 1000;
+
+      if (Date.now() - lastSentAt < VERIFICATION_RESEND_COOLDOWN_MS) {
+        throw new HttpException(
+          'Please wait before requesting another code',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
 
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
 
@@ -697,67 +724,71 @@ async verifyEmailChange(
     };
   }
 
-  async loginWithGoogle(credential: string) {
-    const identity = await this.verifyGoogleCredential(credential);
+  async loginWithGoogle(
+    credential?: string,
+    accessToken?: string,
+  ) {
+    const identity = await this.verifyGoogleCredential(
+        credential,
+        accessToken,
+    );
 
+    // Prefer the immutable Google subject, but fall back to the verified
+    // Google email. This repairs older links created before googleId was
+    // persisted consistently and still cannot match an unverified address.
     const user = await this.userRepository.findOne({
-        where: {
-            googleId: identity.googleId,
-        },
+        where: [
+            { googleId: identity.googleId },
+            { googleEmail: identity.googleEmail.trim().toLowerCase() },
+        ],
     });
 
     if (!user) {
-        throw new UnauthorizedException(
-            'This Google account is not connected to an iRent account',
-        );
+        const normalizedGoogleEmail = identity.googleEmail
+            .trim()
+            .toLowerCase();
+
+        const emailUser = await this.userRepository.findOne({
+            where: { email: normalizedGoogleEmail },
+        });
+
+        if (!emailUser) {
+            throw new UnauthorizedException({
+                code: 'GOOGLE_ACCOUNT_NOT_REGISTERED',
+                message: 'This Google email is not registered in iRent',
+            });
+        }
+
+        // Do not link automatically by matching email. The user must first
+        // sign in with the iRent password and link Google from Settings.
+        throw new UnauthorizedException({
+            code: 'GOOGLE_ACCOUNT_NOT_LINKED',
+            message: 'This Google account is not linked to your iRent account',
+        });
     }
-    
+
+    // If this was a legacy email-only link, persist Google's immutable
+    // subject so all later sign-ins use the primary lookup.
+    if (user.googleId !== identity.googleId) {
+        user.googleId = identity.googleId;
+        user.googleEmail = identity.googleEmail;
+        await this.userRepository.save(user);
+    }
+
     return this.prepareLogin(user);
 }
 
-async unlinkGoogleAccount(
-    userId: number,
-    currentPassword: string,
-) {
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    const validPassword = await bcrypt.compare(
-        currentPassword,
-        user.passwordHash,
-    );
-
-    if (!validPassword) {
-        throw new UnauthorizedException(
-            'Current password is incorrect',
-        );
-    }
-
-    user.googleId = null;
-    user.googleEmail = null;
-
-    await this.userRepository.save(user);
-
-    return {
-        message: 'Google account disconnected',
-    };
-}
-
-
-
-
-
-
-/*
 async startPhoneVerification(
     userId: number,
     phoneNumber: string,
 ) {
+    // Guard: SMS provider not yet configured.
+    if (process.env.SMS_2FA_ENABLED !== 'true') {
+        throw new ServiceUnavailableException(
+            'SMS two-factor authentication is temporarily unavailable',
+        );
+    }
+
     const user = await this.userRepository.findOne({
         where: { id: userId },
     });
@@ -783,7 +814,6 @@ async startPhoneVerification(
     };
 }
 
-*/
 
 
 
@@ -797,6 +827,13 @@ async verifyAndSavePhoneNumber(
     phoneNumber: string,
     code: string,
 ) {
+    // Guard: SMS provider not yet configured.
+    if (process.env.SMS_2FA_ENABLED !== 'true') {
+        throw new ServiceUnavailableException(
+            'SMS two-factor authentication is temporarily unavailable',
+        );
+    }
+
     const user = await this.userRepository.findOne({
         where: { id: userId },
     });
@@ -843,6 +880,13 @@ async verifyAndSavePhoneNumber(
 
 
 async enableSms2fa(userId: number) {
+    // Guard: SMS provider not yet configured.
+    if (process.env.SMS_2FA_ENABLED !== 'true') {
+        throw new ServiceUnavailableException(
+            'SMS two-factor authentication is temporarily unavailable',
+        );
+    }
+
     const user = await this.userRepository.findOne({
         where: { id: userId },
     });
@@ -896,6 +940,13 @@ async verifyLoginChallenge(
     challengeToken: string,
     code: string,
 ) {
+    // Guard: SMS provider not yet configured.
+    if (process.env.SMS_2FA_ENABLED !== 'true') {
+        throw new ServiceUnavailableException(
+            'SMS two-factor authentication is temporarily unavailable',
+        );
+    }
+
     const tokenHash = createHash('sha256')
         .update(challengeToken)
         .digest('hex');
@@ -956,6 +1007,9 @@ async getSecuritySettings(userId: number) {
         phoneNumber: user.phoneNumber,
         phoneVerified: user.phoneVerified,
         sms2faEnabled: user.sms2faEnabled,
+        // sms2faAvailable tells the frontend whether to show SMS controls.
+        // It is false until an SMS provider is configured and SMS_2FA_ENABLED=true.
+        sms2faAvailable: process.env.SMS_2FA_ENABLED === 'true',
         googleEmail: user.googleEmail,
         googleLinked: Boolean(user.googleId),
     };

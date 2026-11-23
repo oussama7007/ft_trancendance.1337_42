@@ -42,6 +42,21 @@ This code expires in 5 minutes.`,
         });
     }
 
+    async sendEmailChangeCompleted(
+        oldEmail: string,
+        newEmail: string,
+    ) {
+        const transporter = this.createTransporter();
+        const changedAt = new Date().toISOString();
+
+        await transporter.sendMail({
+            from: process.env.MAIL_USER,
+            to: oldEmail,
+            subject: 'Your iRent email address was changed',
+            text: `Your iRent email address was successfully changed.\n\nOld email: ${oldEmail}\nNew email: ${newEmail}\nChanged at: ${changedAt}\n\nIf you did not make this change, contact iRent support immediately to secure your account.`,
+        });
+    }
+
     async sendEmailChangeCode(
         email: string,
         code: string,
@@ -52,13 +67,7 @@ This code expires in 5 minutes.`,
             from: process.env.MAIL_USER,
             to: email,
             subject: 'Verify your new iRent email address',
-            text: `Your iRent email change verification code is:
-
-${code}
-
-This code expires in 5 minutes.
-
-If you did not request this change, you can ignore this email.`,
+            text: `A request was made to use this address for an iRent account.\n\nYour verification code is:\n\n${code}\n\nThis code expires in 5 minutes. If you did not expect this message, you can ignore it and contact iRent support.`,
         });
     }
 }

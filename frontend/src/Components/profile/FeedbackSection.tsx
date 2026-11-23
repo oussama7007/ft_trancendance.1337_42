@@ -9,7 +9,7 @@ interface FeedbackSectionProps {
 export function FeedbackSection({t}: FeedbackSectionProps) {
     return (
         <section
-            aria-label="Feedback"
+            aria-label={t.title}
             data-feedback-slot="true"
             className="rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 shadow-sm sm:p-6"
         >

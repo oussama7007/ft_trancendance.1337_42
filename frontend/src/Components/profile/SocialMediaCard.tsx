@@ -9,7 +9,7 @@ import {
     X,
 } from 'lucide-react';
 
-import type { User } from '../../types';
+import type { Language, User } from '../../types';
 import type { ProfileTranslations } from '../../translations';
 
 import { AccountSection } from '../shared/AccountSection';
@@ -26,9 +26,13 @@ interface SocialLinks {
 
 interface SocialMediaCardProps {
     user: User;
+    lang: Language;
     t: ProfileTranslations['social'];
     onSave: (links: SocialLinks) => Promise<void>;
 }
+
+type SocialErrorKey = 'invalidLink' | 'saveError';
+type SocialMessageKey = 'saveSuccess';
 
 interface SocialLink {
     name: string;
@@ -72,6 +76,7 @@ function getSafeSocialUrl(
 
 export function SocialMediaCard({
     user,
+    lang,
     t,
     onSave,
 }: SocialMediaCardProps) {
@@ -84,8 +89,9 @@ export function SocialMediaCard({
     });
 
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
+    const [errorKey, setErrorKey] = useState<SocialErrorKey | ''>('');
+    const [messageKey, setMessageKey] = useState<SocialMessageKey | ''>('');
+    const direction = lang === 'ar' ? 'rtl' : 'ltr';
 
     // Keep the form synchronized with updated profile data.
     useEffect(() => {
@@ -107,8 +113,8 @@ export function SocialMediaCard({
             facebook: user.facebook ?? '',
         });
 
-        setError('');
-        setMessage('');
+        setErrorKey('');
+        setMessageKey('');
         setIsEditing(true);
     }
 
@@ -119,7 +125,7 @@ export function SocialMediaCard({
             facebook: user.facebook ?? '',
         });
 
-        setError('');
+        setErrorKey('');
         setIsEditing(false);
     }
 
@@ -128,8 +134,8 @@ export function SocialMediaCard({
     ) {
         event.preventDefault();
 
-        setError('');
-        setMessage('');
+        setErrorKey('');
+        setMessageKey('');
 
         // Validate LinkedIn.
         const linkedin = draft.linkedin.trim()
@@ -160,7 +166,7 @@ export function SocialMediaCard({
             (draft.instagram.trim() && !instagram) ||
             (draft.facebook.trim() && !facebook)
         ) {
-            setError(t.invalidLink);
+            setErrorKey('invalidLink');
             return;
         }
 
@@ -174,13 +180,9 @@ export function SocialMediaCard({
             });
 
             setIsEditing(false);
-            setMessage(t.saveSuccess);
+            setMessageKey('saveSuccess');
         } catch (error) {
-            setError(
-                error instanceof Error
-                    ? error.message
-                    : t.saveError,
-            );
+            setErrorKey('saveError');
         } finally {
             setLoading(false);
         }
@@ -254,6 +256,7 @@ export function SocialMediaCard({
                 <form
                     onSubmit={handleSave}
                     className="space-y-4"
+                    dir={direction}
                 >
                     <div className="space-y-2">
                         <Label htmlFor="linkedin">
@@ -263,7 +266,7 @@ export function SocialMediaCard({
                         <Input
                             id="linkedin"
                             type="url"
-                            dir="ltr"
+                            dir={direction}
                             placeholder="https://linkedin.com/in/username"
                             value={draft.linkedin}
                             onChange={(event) =>
@@ -283,7 +286,7 @@ export function SocialMediaCard({
                         <Input
                             id="instagram"
                             type="url"
-                            dir="ltr"
+                            dir={direction}
                             placeholder="https://instagram.com/username"
                             value={draft.instagram}
                             onChange={(event) =>
@@ -303,7 +306,7 @@ export function SocialMediaCard({
                         <Input
                             id="facebook"
                             type="url"
-                            dir="ltr"
+                            dir={direction}
                             placeholder="https://facebook.com/username"
                             value={draft.facebook}
                             onChange={(event) =>
@@ -315,9 +318,9 @@ export function SocialMediaCard({
                         />
                     </div>
 
-                    {error && (
+                    {errorKey && (
                         <p role="alert" className="text-sm text-red-600">
-                            {error}
+                            {t[errorKey]}
                         </p>
                     )}
 
@@ -383,9 +386,9 @@ export function SocialMediaCard({
                 </>
             )}
 
-            {message && (
+            {messageKey && (
                 <p role="status" className="mt-3 text-sm text-green-700">
-                    {message}
+                    {t[messageKey]}
                 </p>
             )}
         </AccountSection>

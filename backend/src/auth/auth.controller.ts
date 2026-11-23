@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post, Res,  HttpStatus, HttpCode, Get, Req, Delete ,UseGuards} from '@nestjs/common';
+import { Body, Controller, Patch, Post, Res, HttpStatus, HttpCode, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartEmailChangeDto } from './dto/start-email-change.dto.js';
@@ -26,9 +26,6 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
 import type { AuthenticatedRequest } from './jwt-auth.guard.js';
 
 import type { Response } from 'express';
-
-import { UnlinkGoogleDto } from './dto/unlink-google.dto.js';
-
 
 @Controller('auth')
 export class AuthController {
@@ -58,20 +55,10 @@ linkGoogle(
     return this.authService.linkGoogleAccount(
         request.user!.sub,
         data.credential,
+        data.accessToken,
     );
 }
 
-@Delete('google/link')
-@UseGuards(JwtAuthGuard)
-unlinkGoogle(
-    @Req() request: AuthenticatedRequest,
-    @Body() data: UnlinkGoogleDto,
-) {
-    return this.authService.unlinkGoogleAccount(
-        request.user!.sub,
-        data.currentPassword,
-    );
-}
   @Post('register/start')
   startRegistration(@Body() data: StartRegistrationDto) {
     return this.authService.startRegistration(data);
@@ -165,6 +152,7 @@ async googleLogin(
 ) {
     const result = await this.authService.loginWithGoogle(
         data.credential,
+        data.accessToken,
     );
 
     if ('accessToken' in result) {
@@ -280,6 +268,7 @@ startEmailChange(
     return this.authService.startEmailChange(
         request.user!.sub,
         data.email,
+        data.currentPassword,
     );
 }
 

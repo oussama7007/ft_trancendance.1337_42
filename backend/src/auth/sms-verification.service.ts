@@ -1,58 +1,52 @@
 
-/*
-
-
 import {
     Injectable,
     ServiceUnavailableException,
 } from '@nestjs/common';
 
-import { randomInt } from 'node:crypto';
-
+/**
+ * SMS verification service — provider not yet selected.
+ *
+ * The business logic, controller routes, DTOs, entities and database fields
+ * for SMS 2FA are intentionally preserved here so they can be completed once
+ * the owner chooses a provider (Twilio, TextBee, EnvoiSMS.ma, …).
+ *
+ * While SMS_2FA_ENABLED=false (the default), every method throws
+ * ServiceUnavailableException without touching any external service.
+ *
+ * To enable later:
+ *   1. Set SMS_2FA_ENABLED=true in backend/.env.
+ *   2. Install the chosen provider's SDK.
+ *   3. Replace the method bodies below with the real provider calls.
+ *   4. Remove the "provider not yet integrated" comments.
+ */
 @Injectable()
 export class SmsVerificationService {
-    private getConfiguration() {
-        const accountSid = process.env.TWILIO_ACCOUNT_SID;
-        const authToken = process.env.TWILIO_AUTH_TOKEN;
-        const serviceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
+    private get isEnabled(): boolean {
+        return process.env.SMS_2FA_ENABLED === 'true';
+    }
 
-        if (!accountSid || !authToken || !serviceSid) {
+    private assertEnabled(): void {
+        if (!this.isEnabled) {
             throw new ServiceUnavailableException(
-                'SMS verification is not configured',
+                'SMS two-factor authentication is temporarily unavailable',
             );
         }
-
-        return {
-            client: twilio(accountSid, authToken),
-            serviceSid,
-        };
     }
 
-    async sendVerificationCode(phoneNumber: string) {
-        const { client, serviceSid } = this.getConfiguration();
-
-        return client.verify.v2
-            .services(serviceSid)
-            .verifications.create({
-                to: phoneNumber,
-                channel: 'sms',
-            });
+    // TODO [SMS PROVIDER]: replace with real provider call.
+    async sendVerificationCode(_phoneNumber: string): Promise<void> {
+        this.assertEnabled();
+        // Provider-specific implementation goes here.
     }
 
+    // TODO [SMS PROVIDER]: replace with real provider call.
     async verifyCode(
-        phoneNumber: string,
-        code: string,
+        _phoneNumber: string,
+        _code: string,
     ): Promise<boolean> {
-        const { client, serviceSid } = this.getConfiguration();
-
-        const result = await client.verify.v2
-            .services(serviceSid)
-            .verificationChecks.create({
-                to: phoneNumber,
-                code,
-            });
-
-        return result.status === 'approved';
+        this.assertEnabled();
+        // Provider-specific implementation goes here.
+        return false;
     }
 }
-*/

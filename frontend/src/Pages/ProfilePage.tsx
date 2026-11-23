@@ -20,9 +20,10 @@ import { translations  } from '../translations';
 interface ProfilePageProps {
     user: User;
     lang: Language;
+    onAvatarChanged: (avatarUrl: string | null) => void;
 }
 
-export function ProfilePage({ user, lang, }: ProfilePageProps) {
+export function ProfilePage({ user, lang, onAvatarChanged }: ProfilePageProps) {
     // These states keep the new image and description visible in this page.
     // They are preview states only until the backend profile endpoints exist.
     const t = translations[lang].profile;
@@ -32,11 +33,14 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
 
         useEffect(() => {
             getMyProfile()
-                .then(setProfile)
+                .then((updatedProfile) => {
+                    setProfile(updatedProfile);
+                    onAvatarChanged(updatedProfile.avatarUrl ?? null);
+                })
                 .catch((error: Error) => {
                     setError(error.message);
                 });
-        }, []);
+        }, [onAvatarChanged]);
 
         async function handleAvatarChange(file: File) {
             try {
@@ -48,6 +52,8 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
                     ...previous,
                     ...updated,
                 }));
+
+                onAvatarChanged(updated.avatarUrl ?? null);
             } catch (error) {
                 setError(
                     error instanceof Error
@@ -77,24 +83,16 @@ export function ProfilePage({ user, lang, }: ProfilePageProps) {
 
 
 async function handleDescriptionSave(description: string) {
-    try {
-        setError('');
+    setError('');
 
-        const updated = await updateMyProfile({
-            bio: description,
-        });
+    const updated = await updateMyProfile({
+        bio: description,
+    });
 
-        setProfile((previous) => ({
-            ...previous,
-            ...updated,
-        }));
-    } catch (error) {
-        setError(
-            error instanceof Error
-                ? error.message
-                : 'Could not save description',
-        );
-    }
+    setProfile((previous) => ({
+        ...previous,
+        ...updated,
+    }));
 }
 
     return (
@@ -133,6 +131,7 @@ async function handleDescriptionSave(description: string) {
                                 t={t.description}
                             />
                             <SocialMediaCard user={profile}
+                                lang={lang}
                                 t={t.social}
                                 onSave={handleSocialSave}
                             />

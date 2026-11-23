@@ -1,4 +1,4 @@
-import { Mars, Venus, UserRound, CalendarDays } from 'lucide-react';
+import { Mars, Venus, UserRound } from 'lucide-react';
 import type { User, Language } from '../../types';
 import { AvatarUpload } from './AvatarUpload';
 import type { ProfileTranslations } from '../../translations';
@@ -72,13 +72,13 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
         ? t.ageUnavailable
         : `${t.age}: ${new Intl.NumberFormat(locale).format(age)}`;
 
-    const formattedCreatedAt = user.createdAt
-    ? new Date(user.createdAt).toLocaleDateString(locale)
-    : null;
-    const isMale = user.gender?.toLowerCase() === 'male';
-    
-    const GenderIcon = isMale ? Mars : Venus;
-    const genderLabel = isMale? t.male : t.female;
+    // Use the proper translated label: male, female, or "not specified" for any other value.
+    const genderLower = user.gender?.toLowerCase();
+    const isMale = genderLower === 'male';
+    const isFemale = genderLower === 'female';
+
+    const GenderIcon = isMale ? Mars : isFemale ? Venus : UserRound;
+    const genderLabel = isMale ? t.male : isFemale ? t.female : t.notSpecified;
 
     return (
         <section className="flex flex-col items-center gap-5 rounded-2xl border border-(--color-border) bg-(--color-surface) p-5 shadow-sm sm:flex-row sm:items-center sm:gap-7 sm:p-7">
@@ -107,13 +107,6 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
                         <GenderIcon size={18} className="text-(--color-accent)" />
                         {genderLabel}
                     </span>
-
-                    {user.createdAt && (
-                        <span className="inline-flex items-center gap-2">
-                            <CalendarDays size={18} className="text-(--color-accent)" />
-                            {t.tenantSince} {formattedCreatedAt}
-                        </span>
-                    )}
                 </div>
             </div>
         </section>

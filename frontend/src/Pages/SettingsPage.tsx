@@ -1,6 +1,6 @@
 
 
-import { Globe, UserRound } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 
 import type { Language, User } from '../types';
 import { translations } from '../translations';
@@ -11,25 +11,38 @@ import { AccountSection } from '../Components/shared/AccountSection';
 import { SecuritySettings } from '../Components/settings/SecuritySettings';
 
 import { GoogleAccountSettings } from '../Components/settings/GoogleAccountSettings';
+import { EditableNameField } from '../Components/settings/EditableNameField';
+import { updateMyProfile } from '../services/profile';
 
 interface SettingsPageProps {
     user: User;
     lang: Language;
-    onLanguageChange: (language: Language) => void;
-    onEmailChanged: (newEmail: string) => void; 
+    onEmailChanged: (newEmail: string) => void;
+    onUserUpdated: (user: Partial<User>) => void;
 }
 
 export function SettingsPage({
     user,
     lang,
-    onLanguageChange,
     onEmailChanged,
+    onUserUpdated,
 
 }: SettingsPageProps) {
     const t = translations[lang].settings;
     const sidebarT = translations[lang].profile.sidebar;
 
     const notAvailable = t.account.notAvailable;
+    const direction = lang === 'ar' ? 'rtl' : 'ltr';
+
+    async function saveFirstName(firstName: string) {
+        const updated = await updateMyProfile({ firstName });
+        onUserUpdated(updated);
+    }
+
+    async function saveLastName(lastName: string) {
+        const updated = await updateMyProfile({ lastName });
+        onUserUpdated(updated);
+    }
 
     return (
         <main
@@ -57,16 +70,30 @@ export function SettingsPage({
                             title={t.account.title}
                             icon={UserRound}
                         >
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                <div>
-                                    <p className="text-xs font-medium text-irent-muted">
-                                        {t.account.name}
-                                    </p>
+                            <div className="grid gap-5 sm:grid-cols-2" dir={direction}>
+                                <EditableNameField
+                                    id="settings-first-name"
+                                    label={t.account.firstName}
+                                    value={user.firstName}
+                                    editLabel={t.account.edit}
+                                    saveLabel={t.account.save}
+                                    cancelLabel={t.account.cancel}
+                                    savingLabel={t.account.saving}
+                                    errorLabel={t.account.nameRequired}
+                                    onSave={saveFirstName}
+                                />
 
-                                    <p className="mt-1 text-sm font-semibold text-irent-text">
-                                        {user.fullName || notAvailable}
-                                    </p>
-                                </div>
+                                <EditableNameField
+                                    id="settings-last-name"
+                                    label={t.account.lastName}
+                                    value={user.lastName}
+                                    editLabel={t.account.edit}
+                                    saveLabel={t.account.save}
+                                    cancelLabel={t.account.cancel}
+                                    savingLabel={t.account.saving}
+                                    errorLabel={t.account.nameRequired}
+                                    onSave={saveLastName}
+                                />
 
                                 <div>
                                     <p className="text-xs font-medium text-irent-muted">
@@ -98,52 +125,6 @@ export function SettingsPage({
                             currentEmail={user.email}
                             onEmailChanged={onEmailChanged}
                         />
-                        {/* Language preferences */}
-                        <AccountSection
-                            title={t.language.title}
-                            icon={Globe}
-                        >
-                            <div className="max-w-md space-y-3">
-                                <p className="text-sm text-irent-muted">
-                                    {t.language.description}
-                                </p>
-
-                                <label
-                                    htmlFor="settings-language"
-                                    className="block text-sm font-semibold text-irent-primary"
-                                >
-                                    {t.language.label}
-                                </label>
-
-                                <select
-                                    id="settings-language"
-                                    value={lang}
-                                    onChange={(event) =>
-                                        onLanguageChange(
-                                            event.target.value as Language,
-                                        )
-                                    }
-                                    className="h-11 w-full rounded-xl border border-irent-border bg-irent-surface px-3 text-sm text-irent-text outline-none transition focus:border-irent-accent focus:ring-2 focus:ring-irent-accent-soft"
-                                >
-                                    <option value="ar">
-                                        {t.language.arabic}
-                                    </option>
-
-                                    <option value="fr">
-                                        {t.language.french}
-                                    </option>
-
-                                    <option value="en">
-                                        {t.language.english}
-                                    </option>
-                                </select>
-
-                                <p className="text-xs leading-5 text-irent-muted">
-                                    {t.language.note}
-                                </p>
-                            </div>
-                        </AccountSection>
-
                         {/* Password and SMS security */}
                         <SecuritySettings lang={lang} />
 

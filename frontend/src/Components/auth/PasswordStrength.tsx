@@ -1,10 +1,4 @@
-
-
 import { passwordRules } from "@/utils/password";
-
-
-
-
 
 interface PasswordStrengthLabels {
     title: string;
@@ -19,13 +13,6 @@ interface PasswordStrengthProps {
     labels?: PasswordStrengthLabels;
 }
 
-
-
-
-interface PasswordStrengthProps {
-    password: string;
-}
-
 export function PasswordStrength({
     password,
     labels,
@@ -36,22 +23,19 @@ export function PasswordStrength({
 
     let strength = labels?.weak ?? 'Weak';
 
-
     if (passedRules >= 4) {
         strength = labels?.medium ?? 'Medium';
     }
-
-
 
     if (passedRules === passwordRules.length) {
          strength = labels?.strong ?? 'Strong';
     }
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 text-start">
             <div className="flex justify-between text-sm">
                 <span className="text-irent-muted">
-                    Password strength
+                    {labels?.title ?? 'Password strength'}
                 </span>
 
                 <span className="font-semibold">
@@ -85,7 +69,7 @@ export function PasswordStrength({
                                     : "text-irent-muted"
                             }`}
                         >
-                            <span className="mr-2">
+                            <span className="me-2">
                                 {passed ? "✓" : "○"}
                             </span>
 
@@ -97,4 +81,3 @@ export function PasswordStrength({
         </div>
     );
 }
-
