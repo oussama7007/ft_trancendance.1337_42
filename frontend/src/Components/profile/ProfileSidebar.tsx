@@ -7,6 +7,7 @@ import {
     UserRound,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
 
 
@@ -14,6 +15,7 @@ import type { ProfileTranslations } from '../../translations';
 
 interface ProfileSidebarProps {
     t: ProfileTranslations['sidebar'];
+    children?: ReactNode;
 }
 
 // Pages that already exist in the application.
@@ -41,7 +43,7 @@ const futureItems = [
     { key: 'settings', icon: Settings },
 ] as const;
 
-export function ProfileSidebar({t} : ProfileSidebarProps) {
+export function ProfileSidebar({t, children} : ProfileSidebarProps) {
     return (
         <aside className="h-fit rounded-2xl border border-(--color-border) bg-(--color-surface) p-2 shadow-sm">
             <nav
@@ -71,6 +73,8 @@ export function ProfileSidebar({t} : ProfileSidebarProps) {
                         </NavLink>
                     );
                 })}
+
+                {children}
 
                 <div className="mx-2 hidden h-px bg-(--color-border) md:block" />
 

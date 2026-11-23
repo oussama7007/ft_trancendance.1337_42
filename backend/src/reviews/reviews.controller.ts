@@ -15,14 +15,12 @@ import { ReviewsQueryDto } from './dto/reviews-query.dto.js';
 import { CanReviewDto, ReviewsResultDto } from './dto/review-response.dto.js';
 import { ReviewsService } from './reviews.service.js';
 
-// Routes for the reviews on a profile. :userId is the profile being viewed
-// The reviewer is whoever is logged in (CurrentUserId)
 @Controller('users/:userId/reviews')
 export class ReviewsController
 {
     constructor(private readonly reviewsService: ReviewsService) {}
 
-    // The list + overall rating + tab counts for one profile
+    // reviews of a profile with the rating and tab counts
     @Get()
     findByUser(
         @Param('userId', ParseIntPipe) userId: number,
@@ -32,7 +30,7 @@ export class ReviewsController
         return this.reviewsService.findByUser(userId, query.role ?? 'all');
     }
 
-    // Should the "Leave a review" button show for cuurent user on the profile
+    // can the current user review this profile
     @Get('can-review')
     canReview(
         @Param('userId', ParseIntPipe) userId: number,
@@ -42,7 +40,7 @@ export class ReviewsController
         return this.reviewsService.canReview(reviewerId, userId);
     }
 
-    // to save the review of this profile
+    // saves a review
     @Post()
     create(
         @Param('userId', ParseIntPipe) userId: number,
