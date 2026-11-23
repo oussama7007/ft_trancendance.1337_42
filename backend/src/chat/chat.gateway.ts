@@ -12,7 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service.js';
 
 interface JwtPayload {
-  sub: number;
+  sub: number | string;
   iat?: number;
   exp?: number;
 }
@@ -22,12 +22,29 @@ interface SendMessagePayload {
   conversationId: number;
 }
 
+export interface InterestAcceptedPayload {
+  requestId: number;
+  listingId: number;
+  ownerId: number;
+  tenantId: number;
+  conversationId: number;
+  status: string;
+}
+
+export interface InterestRequestCreatedPayload {
+  id: number;
+  tenantId: number;
+  tenantName?: string;
+  ownerId: number;
+  listingId: number;
+  listingTitle?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string | Date;
+}
+
 @WebSocketGateway({
   cors: {
-    origin: [
-      'https://musical-enigma-97q7p9p95pg7fx5p7-5173.app.github.dev',
-      'http://localhost:5173',
-    ],
+    origin: true,
     credentials: true,
   },
 })
@@ -59,14 +76,15 @@ export class ChatGateway
       const payload =
         await this.jwtService.verifyAsync<JwtPayload>(token);
 
-      if (!Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
+      const userId = Number(payload.sub);
+
+      if (!Number.isSafeInteger(userId) || userId <= 0) {
         client.disconnect(true);
         return;
       }
 
-      const userId = payload.sub;
-
       client.data.userId = userId;
+      await client.join(`user_${userId}`);
 
       const sockets = this.connectedUsers.get(userId) ?? new Set<string>();
       const wasOffline = sockets.size === 0;
@@ -79,17 +97,15 @@ export class ChatGateway
       if (wasOffline) {
         this.server.emit('userOnline', { userId });
       }
-
-      console.log(`User ${userId} connected: ${client.id}`);
     } catch {
       client.disconnect(true);
     }
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.data.userId as number | undefined;
+    const userId = Number(client.data.userId);
 
-    if (!userId) return;
+    if (!Number.isSafeInteger(userId) || userId <= 0) return;
 
     const sockets = this.connectedUsers.get(userId);
 
@@ -101,8 +117,45 @@ export class ChatGateway
       this.connectedUsers.delete(userId);
       this.server.emit('userOffline', { userId });
     }
+  }
 
-    console.log(`User ${userId} disconnected: ${client.id}`);
+  notifyInterestRequestCreated(
+    ownerId: number,
+    payload: InterestRequestCreatedPayload,
+  ) {
+    const normalizedOwnerId = Number(ownerId);
+    if (!Number.isSafeInteger(normalizedOwnerId) || normalizedOwnerId <= 0) {
+      return;
+    }
+
+    this.server.to(`user_${normalizedOwnerId}`).emit('newInterestRequest', {
+      ...payload,
+      id: Number(payload.id),
+      tenantId: Number(payload.tenantId),
+      ownerId: Number(payload.ownerId),
+      listingId: Number(payload.listingId),
+    });
+  }
+
+  notifyInterestRequestAccepted(
+    tenantId: number,
+    payload: InterestAcceptedPayload,
+  ) {
+    const normalizedTenantId = Number(tenantId);
+    if (!Number.isSafeInteger(normalizedTenantId) || normalizedTenantId <= 0) {
+      return;
+    }
+
+    this.server
+      .to(`user_${normalizedTenantId}`)
+      .emit('interestRequestAccepted', {
+        ...payload,
+        requestId: Number(payload.requestId),
+        listingId: Number(payload.listingId),
+        ownerId: Number(payload.ownerId),
+        tenantId: Number(payload.tenantId),
+        conversationId: Number(payload.conversationId),
+      });
   }
 
   @SubscribeMessage('joinConversation')
@@ -110,19 +163,25 @@ export class ChatGateway
     @MessageBody() data: { conversationId: number },
     @ConnectedSocket() client: Socket,
   ) {
-    const userId = client.data.userId as number | undefined;
+    const userId = Number(client.data.userId);
+    const conversationId = Number(data?.conversationId);
 
-    if (!userId || !Number.isSafeInteger(data.conversationId)) {
+    if (
+      !Number.isSafeInteger(userId) ||
+      userId <= 0 ||
+      !Number.isSafeInteger(conversationId) ||
+      conversationId <= 0
+    ) {
       return;
     }
 
     try {
       await this.chatService.verifyConversationAccess(
-        data.conversationId,
+        conversationId,
         userId,
       );
 
-      await client.join(`conversation_${data.conversationId}`);
+      await client.join(`conversation_${conversationId}`);
     } catch {
       client.emit('chatError', {
         message: 'You are not allowed to join this conversation',
@@ -135,25 +194,44 @@ export class ChatGateway
     @MessageBody() data: SendMessagePayload,
     @ConnectedSocket() client: Socket,
   ) {
-    const senderId = client.data.userId as number | undefined;
+    const senderId = Number(client.data.userId);
+    const messageId = Number(data?.id);
+    const conversationId = Number(data?.conversationId);
 
     if (
-      !senderId ||
-      !Number.isSafeInteger(data.id) ||
-      !Number.isSafeInteger(data.conversationId)
+      !Number.isSafeInteger(senderId) ||
+      senderId <= 0 ||
+      !Number.isSafeInteger(messageId) ||
+      messageId <= 0 ||
+      !Number.isSafeInteger(conversationId) ||
+      conversationId <= 0
     ) {
       return;
     }
 
     try {
       const message = await this.chatService.getMessageForBroadcast(
-        data.id,
-        data.conversationId,
+        messageId,
+        conversationId,
         senderId,
       );
 
+      const conversation = await this.chatService.verifyConversationAccess(
+        conversationId,
+        senderId,
+      );
+
+      const recipientId =
+        conversation.participantOneId === senderId
+          ? conversation.participantTwoId
+          : conversation.participantOneId;
+
       client
         .to(`conversation_${message.conversationId}`)
+        .emit('newMessage', message);
+
+      this.server
+        .to(`user_${recipientId}`)
         .emit('newMessage', message);
     } catch {
       client.emit('chatError', {
