@@ -3,6 +3,9 @@ import { AuthService } from './auth.service.js';
 
 import { StartEmailChangeDto } from './dto/start-email-change.dto.js';
 import { VerifyEmailChangeDto } from './dto/verify-email-change.dto.js';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
+import { VerifyPasswordResetDto } from './dto/verify-password-reset.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
 
 
 import { StartRegistrationDto } from './dto/start-registration.dto.js';
@@ -283,5 +286,20 @@ verifyEmailChange(
         request.user!.sub,
         data.code,
     );
+}
+
+@Post('password/reset/request')
+requestPasswordReset(@Body() data: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(data);
+}
+
+@Post('password/reset/verify')
+verifyPasswordReset(@Body() data: VerifyPasswordResetDto) {
+    return this.authService.verifyPasswordReset(data);
+}
+
+@Post('password/reset')
+resetPassword(@Body() data: ResetPasswordDto) {
+    return this.authService.resetPassword(data);
 }
 }

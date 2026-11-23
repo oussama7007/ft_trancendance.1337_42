@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
+import { ForgotPasswordModal } from "@/Components/auth/ForgotPasswordModal";
 
 // Backend URL
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -53,6 +54,7 @@ const [smsCode, setSmsCode] = useState('');
     const [loginErrorKey, setLoginErrorKey] = useState<
         'invalidCredentials' | 'connectionError' | 'googleNotRegistered' | 'googleNotLinked' | ''
     >('');
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
 
 
 
@@ -301,16 +303,30 @@ return (
                                     required
                                 />
                             </div>
-                                     <PasswordField
-                    id="password"
-                    label={t.password}
-                    value={password}
-                    onChange={setPassword}
-                    autoComplete="current-password"
-                    showPasswordText={t.showPassword}
-                    hidePasswordText={t.hidePassword}
-                    textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
-                />
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password">
+                                        {t.password}
+                                    </Label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForgotPassword(true)}
+                                        className="text-sm text-blue-600 hover:underline"
+                                    >
+                                        {t.forgotPassword}
+                                    </button>
+                                </div>
+                                <PasswordField
+                                    id="password"
+                                    label=""
+                                    value={password}
+                                    onChange={setPassword}
+                                    autoComplete="current-password"
+                                    showPasswordText={t.showPassword}
+                                    hidePasswordText={t.hidePassword}
+                                    textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                                />
+                            </div>
 
                 <Button
                     type="submit"
@@ -356,6 +372,13 @@ return (
         </>
     )}            </CardContent>
         </Card>
+
+        {showForgotPassword && (
+            <ForgotPasswordModal
+                lang={lang}
+                onClose={() => setShowForgotPassword(false)}
+            />
+        )}
     </main>
 );
 

@@ -14,8 +14,12 @@ import {
 
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
 import { LoginChallenge } from './login-challenge.entity.js';
+import { PasswordResetToken } from './password-reset-challenge.entity.js';
 
 import { ChangePasswordDto } from './dto/change-password.dto.js';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
+import { VerifyPasswordResetDto } from './dto/verify-password-reset.dto.js';
+import { ResetPasswordDto } from './dto/reset-password.dto.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -62,6 +66,10 @@ export class AuthService {
         @InjectRepository(EmailChangeChallenge)
     private readonly emailChangeChallengeRepository:
         Repository<EmailChangeChallenge>,
+
+    @InjectRepository(PasswordResetToken)
+    private readonly passwordResetTokenRepository:
+        Repository<PasswordResetToken>,
 
     @InjectRepository(LoginChallenge)
     private readonly loginChallengeRepository: Repository<LoginChallenge>,
@@ -1025,8 +1033,185 @@ async getSecuritySettings(userId: number) {
     );
     if(!passwordMatches)
         throw new UnauthorizedException('invalid contact or password');
- 
+
     return this.prepareLogin(user);
 
+  }
+
+  // Password reset flow
+  // Step 1: Request password reset by email
+  async requestPasswordReset(data: RequestPasswordResetDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: data.email.trim().toLowerCase() },
+    });
+
+    if (!user) {
+      // Don't reveal whether email exists for security
+      return {
+        message: 'If this email exists, a reset code will be sent',
+        expiresInSeconds: 300,
+      };
+    }
+
+    const now = Date.now();
+    let challenge = await this.passwordResetTokenRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    // Rate limiting: prevent spamming reset requests
+    if (
+      challenge &&
+      challenge.expiresAt.getTime() > now &&
+      !challenge.used &&
+      now - challenge.createdAt.getTime() < VERIFICATION_RESEND_COOLDOWN_MS
+    ) {
+      throw new HttpException(
+        'Please wait before requesting another code',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const code = randomInt(100000, 1000000).toString();
+    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes
+
+    if (!challenge) {
+      challenge = this.passwordResetTokenRepository.create({
+        userId: user.id,
+        tokenHash: '',
+        expiresAt,
+        used: false,
+      });
+    }
+
+    challenge.tokenHash = this.hashPasswordResetCode(user.id, code);
+    challenge.expiresAt = expiresAt;
+    challenge.used = false;
+
+    await this.passwordResetTokenRepository.save(challenge);
+
+    try {
+      await this.mailService.sendPasswordResetCode(user.email, code);
+    } catch {
+      await this.passwordResetTokenRepository.delete({ userId: user.id });
+      throw new ServiceUnavailableException(
+        'Could not send password reset email',
+      );
+    }
+
+    return {
+      message: 'If this email exists, a reset code will be sent',
+      expiresInSeconds: 300,
+    };
+  }
+
+  // Step 2: Verify the password reset code
+  async verifyPasswordReset(data: VerifyPasswordResetDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: data.email.trim().toLowerCase() },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email not found in our system');
+    }
+
+    const challenge = await this.passwordResetTokenRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!challenge) {
+      throw new BadRequestException(
+        'No password reset request was found',
+      );
+    }
+
+    if (challenge.expiresAt.getTime() < Date.now()) {
+      await this.passwordResetTokenRepository.delete(challenge.id);
+      throw new BadRequestException('Verification code has expired');
+    }
+
+    if (challenge.used) {
+      await this.passwordResetTokenRepository.delete(challenge.id);
+      throw new BadRequestException(
+        'This reset link has already been used',
+      );
+    }
+
+    const providedHash = this.hashPasswordResetCode(user.id, data.code);
+    const storedBuffer = Buffer.from(challenge.tokenHash, 'hex');
+    const providedBuffer = Buffer.from(providedHash, 'hex');
+    const isValid =
+      storedBuffer.length === providedBuffer.length &&
+      timingSafeEqual(storedBuffer, providedBuffer);
+
+    if (!isValid) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    // Mark code as verified so user can proceed to password reset
+    challenge.used = true;
+    await this.passwordResetTokenRepository.save(challenge);
+
+    return {
+      message: 'Code verified successfully',
+    };
+  }
+
+  // Step 3: Reset password with verified code
+  async resetPassword(data: ResetPasswordDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: data.email.trim().toLowerCase() },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Email not found in our system');
+    }
+
+    const challenge = await this.passwordResetTokenRepository.findOne({
+      where: { userId: user.id },
+    });
+
+    if (!challenge) {
+      throw new BadRequestException(
+        'No password reset request was found',
+      );
+    }
+
+    if (!challenge.used) {
+      throw new BadRequestException(
+        'You must verify the code first',
+      );
+    }
+
+    if (challenge.expiresAt.getTime() < Date.now()) {
+      await this.passwordResetTokenRepository.delete(challenge.id);
+      throw new BadRequestException('Password reset has expired');
+    }
+
+    // Hash and update password
+    user.passwordHash = await bcrypt.hash(data.newPassword, 12);
+    await this.userRepository.save(user);
+
+    // Clean up the challenge
+    await this.passwordResetTokenRepository.delete(challenge.id);
+
+    try {
+      await this.mailService.sendPasswordResetCompleted(user.email);
+    } catch {
+      // Password reset is already complete; notification failure must not
+      // roll back the database change.
+    }
+
+    return {
+      message: 'Password has been reset successfully',
+    };
+  }
+
+  private hashPasswordResetCode(
+    userId: number,
+    code: string,
+  ): string {
+    return createHash('sha256')
+      .update(`${userId}:${code}`)
+      .digest('hex');
   }
 }
