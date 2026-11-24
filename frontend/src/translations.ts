@@ -1,33 +1,146 @@
 export const translations = {
     ar: {
+
         settings: {
-                title: 'الإعدادات',
-                subtitle: 'إدارة تفضيلات حسابك.',
+            title: 'الإعدادات',
+            description: 'إدارة تفضيلات حسابك والأمان.',
                 account: {
                     title: 'معلومات الحساب',
                     name: 'الاسم الكامل',
+                    firstName: 'الاسم الشخصي',
+                    lastName: 'اسم العائلة',
+                    edit: 'تعديل',
+                    save: 'حفظ',
+                    cancel: 'إلغاء',
+                    saving: 'جار الحفظ...',
+                    nameRequired: 'يرجى إدخال اسم صحيح.',
                     email: 'البريد الإلكتروني',
                     dateOfBirth: 'تاريخ الميلاد',
-                    notAvailable: 'غير متاح',
-                    note: 'هذه البيانات مأخوذة من معلومات التسجيل. تعديلها سيتاح بعد تجهيز واجهة الحساب.',
+                    note: 'معلومات حسابك الشخصية.',
+                    notAvailable: 'غير متوفر',
                 },
+
                 language: {
-                    title: 'اللغة والمنطقة',
-                    description: 'اختر اللغة التي تريد استخدامها في iRent.',
+                    title: 'تفضيلات اللغة',
+                    description: 'اختر اللغة التي تفضل استخدامها في التطبيق.',
                     label: 'لغة التطبيق',
                     arabic: 'العربية',
                     french: 'الفرنسية',
                     english: 'الإنجليزية',
-                    note: 'سيتم تطبيق اللغة المختارة على صفحات التطبيق وحفظها في متصفحك.',
+                    note: 'ستتغير واجهة التطبيق حسب اختيارك.',
                 },
-                security: {
-                    title: 'الأمان',
-                    description: 'إعدادات كلمة المرور وأمان الحساب ستكون متاحة بعد ربط واجهة الأمان.',
-                    comingSoon: 'قريباً',
+
+            security: {
+                    description: 'إدارة كلمة المرور وحماية حسابك.',
+                    passwordTitle: 'تغيير كلمة المرور',
+                    currentPassword: 'كلمة المرور الحالية',
+                    currentPasswordError: 'كلمة المرور الحالية غير صحيحة.',
+                    newPassword: 'كلمة المرور الجديدة',
+                    confirmPassword: 'تأكيد كلمة المرور الجديدة',
+                    updatePassword: 'تحديث كلمة المرور',
+                    updating: 'جار التحديث...',
+                    passwordUpdated: 'تم تحديث كلمة المرور بنجاح.',
+                    passwordMismatch: 'كلمتا المرور غير متطابقتين.',
+                    newPasswordSameAsCurrent: 'يجب أن تختلف كلمة المرور الجديدة عن الحالية.',
+                    passwordRequirements: 'يرجى استيفاء جميع شروط كلمة المرور.',
+
+                    passwordStrength: {
+                        title: 'قوة كلمة المرور',
+                        weak: 'ضعيفة',
+                        medium: 'متوسطة',
+                        strong: 'قوية',
+                        rules: [
+                            '8 أحرف على الأقل',
+                            'حرف صغير واحد على الأقل',
+                            'حرف كبير واحد على الأقل',
+                            'رقم واحد على الأقل',
+                            'رمز خاص واحد على الأقل',
+                            '64 حرفاً كحد أقصى',
+                        ],
+                    },
+
+                    smsTitle: 'المصادقة الثنائية عبر الرسائل النصية القصيرة',
+                    smsDescription: 'أضف رقم هاتفك لتلقي رمز تحقق عند تسجيل الدخول.',
+                    status: 'الحالة',
+                    enabled: 'مفعّلة',
+                    disabled: 'غير مفعّلة',
+                    phoneNumber: 'رقم الهاتف',
+                    phoneHint: 'استخدم الصيغة الدولية. مثال للمغرب: +212XXXXXXXX',
+                    sendCode: 'إرسال رمز التحقق',
+                    sending: 'جار الإرسال...',
+                    codeSent: 'تم إرسال رمز التحقق.',
+                    verificationCode: 'رمز التحقق',
+                    verifyPhone: 'تأكيد رقم الهاتف',
+                    phoneVerified: 'تم تأكيد رقم الهاتف.',
+                    enable2fa: 'تفعيل المصادقة الثنائية',
+                    disable2fa: 'تعطيل المصادقة الثنائية',
+                    disable2faPassword: 'أدخل كلمة مرورك لتأكيد تعطيل المصادقة الثنائية.',
+                    smsEnabled: 'تم تفعيل المصادقة الثنائية بنجاح.',
+                    smsDisabled: 'تم تعطيل المصادقة الثنائية.',
+                    invalidPhone: 'أدخل رقم هاتف بصيغة دولية صحيحة.',
+                    requestFailed: 'تعذر إكمال الطلب. حاول مرة أخرى.',
+                    smsUnavailable: 'المصادقة الثنائية عبر الرسائل النصية القصيرة غير متاحة حالياً. لم يتم اختيار مزود خدمة الرسائل بعد.',
+
+                    googleTitle: 'الحسابات المرتبطة',
+                    googleDescription: 'اربط حساب جوجل لتسجيل الدخول باستخدامه.',
+                    googleConnected: 'حساب جوجل المرتبط:',
+                    googleDisconnectPassword: 'أدخل كلمة مرور iRent لإلغاء الربط.',
+                    googleDisconnect: 'إلغاء ربط جوجل',
+                    googleNotConfigured: 'لم يتم إعداد Google Authentication.',
+                    googleConnectSuccess: 'تم ربط حساب جوجل بنجاح.',
+                    googleDisconnectSuccess: 'تم إلغاء ربط حساب جوجل.',
+                    googleAuthFailed: 'فشل التحقق من حساب جوجل.',
                 },
+
+                emailChange: {
+                    title: 'تغيير البريد الإلكتروني',
+                    description: 'يمكنك تغيير بريدك الإلكتروني بعد تأكيد البريد الجديد برمز تحقق.',
+                    currentEmail: 'البريد الحالي',
+                    newEmail: 'البريد الإلكتروني الجديد',
+                    currentPassword: 'كلمة المرور الحالية',
+                    currentPasswordRequired: 'أدخل كلمة المرور الحالية.',
+                    currentPasswordError: 'كلمة المرور الحالية غير صحيحة.',
+                    emailAlreadyUsed: 'هذا البريد الإلكتروني مستخدم بالفعل.',
+                    invalidCode: 'رمز التحقق غير صحيح.',
+                    emailSameAsCurrent: 'البريد الجديد مطابق للبريد الحالي. أدخل بريداً مختلفاً.',
+                    sendCode: 'التحقق من المعلومات وإرسال الرمز',
+                    sending: 'جار الإرسال...',
+                    codeSent: 'تم إرسال رمز التحقق إلى بريدك الجديد.',
+                    verificationCode: 'رمز التحقق',
+                    verifyAndSave: 'تأكيد وتحديث البريد',
+                    verifying: 'جار التحقق...',
+                    success: 'تم تحديث البريد الإلكتروني بنجاح.',
+                    cancel: 'إلغاء',
+                    invalidEmail: 'أدخل بريداً إلكترونياً صحيحاً.',
+                    tooManyRequests: 'يرجى الانتظار قبل طلب رمز جديد.',
+                    requestFailed: 'تعذر إكمال الطلب. حاول مرة أخرى.',
+                },
+           
+
+
             },
+
+
+
+
         auth: {
-                nameRequired: 'يرجى إدخال الاسم الشخصي واسم العائلة',
+
+            twoFactorDescription: 'أرسلنا رمز تحقق إلى:',
+            smsVerificationCode: 'رمز التحقق عبر الرسائل النصية القصيرة',
+            verifyAndSignIn: 'تأكيد وتسجيل الدخول',
+            verifyingCode: 'جار التحقق...',
+            googleLoginFailed: 'فشل تسجيل الدخول باستخدام جوجل.',
+            googleAccountNotRegistered: 'هذا البريد المرتبط بحساب جوجل غير مسجل في iRent. يرجى إنشاء حساب أولاً.',
+            googleAccountNotLinked: 'حساب Google غير مرتبط بحساب iRent. سجّل الدخول بكلمة مرور iRent ثم اربطه من الإعدادات.',
+            googleSignIn: 'تسجيل الدخول باستخدام جوجل',
+            googleContinueWith: 'متابعة باستخدام جوجل',
+            createAccount: 'إنشاء حساب',
+            verificationFailed: 'فشل التحقق من الرمز.',
+            invalidCode: 'رمز التحقق غير صحيح.',
+            contact: 'البريد الإلكتروني',
+            or: 'أو',
+
+                nameRequired: 'يرجى إكمال معلومات الاسم.',
                 pleaseenteryouremail:  ' الرجاء إدخال بريدك الإلكتروني.',
                 emailVerificationRequired: 'يرجى تأكيد معلومات الاتصال أولاً.',
 
@@ -57,10 +170,27 @@ export const translations = {
         verificationCode: 'رمز التحقق',
         sendCode: 'إرسال رمز التحقق',
         sending: 'جار الإرسال...',
+        resendIn: 'يمكن إعادة الإرسال بعد',
+        seconds: 'ثانية',
+        tooManyCodeRequests: 'يرجى الانتظار قبل طلب رمز جديد.',
         verifyAndContinue: 'تحقق ومتابعة',
         verifying: 'جار التحقق...',
         createPassword: 'إنشاء كلمة المرور',
         confirmPassword: 'تأكيد كلمة المرور',
+        passwordStrength: {
+            title: 'قوة كلمة المرور',
+            weak: 'ضعيفة',
+            medium: 'متوسطة',
+            strong: 'قوية',
+            rules: [
+                '8 أحرف على الأقل',
+                'حرف صغير واحد على الأقل',
+                'حرف كبير واحد على الأقل',
+                'رقم واحد على الأقل',
+                'رمز خاص واحد على الأقل',
+                '64 حرفاً كحد أقصى',
+            ],
+        },
         passwordMismatch: 'كلمتا المرور غير متطابقتين.',
         passwordRequirements: 'يرجى استيفاء جميع شروط كلمة المرور.',
         back: 'رجوع',
@@ -75,26 +205,56 @@ export const translations = {
         invalidSession: 'جلسة التسجيل غير صالحة.',
         sessionMissing: 'جلسة التسجيل غير موجودة. يرجى إعادة التسجيل.',
         contactRequired: 'أدخل بريدك الإلكتروني أو رقم هاتفك.',
+        emailAlreadyRegistered: 'هذا البريد الإلكتروني مسجل بالفعل. استخدم بريداً آخر أو سجّل الدخول.',
         codeSent: 'تم إرسال رمز التحقق!',
-        invalidCode: 'رمز التحقق غير صحيح.',
+       
         verificationRequired: 'يرجى تأكيد معلومات الاتصال أولاً.',
 
             dateOfBirth: 'تاريخ الميلاد',
-            invalidDateOfBirth: 'يرجى إدخال تاريخ ميلاد صحيح.',
+            selectDay: 'اليوم',
+            selectMonth: 'الشهر',
+            selectYear: 'السنة',
+            months: [
+                'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+            ],
+            invalidDateOfBirth: 'يرجى إدخال تاريخ ميلاد صحيح.' ,
             showPassword: 'إظهار كلمة المرور',
             hidePassword: 'إخفاء كلمة المرور',
             signInTitle: 'تسجيل الدخول',
             signInDescription: 'أدخل بريدك الإلكتروني  ',
-            contact: 'البريد الإلكتروني أو رقم الهاتف',
-            contactPlaceholder: 'example@email.com',
+            
+            
             password: 'كلمة المرور',
             signingIn: 'جارٍ تسجيل الدخول...',
             missingFields: 'يرجى إدخال معلومات الاتصال وكلمة المرور.',
             invalidCredentials: 'معلومات الدخول غير صحيحة.',
             missingUser: 'لم يتم استلام معلومات المستخدم من الخادم.',
             connectionError: 'تعذر الاتصال بالخادم.',
+            forgotPassword: 'هل نسيت كلمة المرور؟',
+            resetPassword: 'إعادة تعيين كلمة المرور',
+            enterEmailForReset: 'أدخل بريدك الإلكتروني لإعادة تعيين كلمة المرور',
+            sendResetCode: 'إرسال رمز إعادة التعيين',
+
+            sendingCode: 'جار الإرسال...',
+            enterVerificationCode: 'أدخل رمز التحقق الذي أرسل إلى بريدك',
+            verificationCodeSent: 'تم إرسال رمز التحقق إلى',
+            verifyCode: 'تحقق من الرمز',
+            codeExpires: 'ينتهي الرمز في',
+            enterNewPassword: 'أدخل كلمة المرور الجديدة',
+            newPassword: 'كلمة المرور الجديدة',
+            resettingPassword: 'جار إعادة تعيين كلمة المرور...',
+            passwordResetSuccess: 'تم إعادة تعيين كلمة المرور بنجاح!',
+            passwordResetSuccessMessage: 'تم إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.',
+            close: 'إغلاق',
+            cancel: 'إلغاء',
+            tooManyRequests: 'يرجى الانتظار قبل طلب رمز جديد.',
+            emailNotFound: 'البريد الإلكتروني غير موجود في نظامنا.',
+            codeExpired: 'انتهت صلاحية الرمز.',
+            tooManyAttempts: 'عدد محاولات كثير جداً.',
+            failedToSend: 'فشل الإرسال. حاول مرة أخرى.',
         },
-        //navbar
+      
         navbar: {
             home: 'الرئيسية',
             listings: 'العروض',
@@ -181,9 +341,9 @@ export const translations = {
             privacyPolicy: 'سياسة الخصوصية',
             address: 'خريبكة، المغرب',
         },
-        // home page
+       
         homePage: {
-            // for pup
+            
             ticker1: 'اكتشف مسكنك المثالي في المغرب',
             ticker2: 'اعثر على رفيق سكن يناسبك',
 
@@ -193,7 +353,7 @@ export const translations = {
 
             tabHome: 'السكن',
             tabRoommate: 'رفيق السكن',
-            // TableRowsSplitIcon: 'جميع العروض',
+            
             locationPlaceholder : 'المدينة أو الحي',
             roommateLocationPlaceholder: 'فين باغي تسكن؟',
             tabList: 'جميع العروض',
@@ -462,12 +622,19 @@ export const translations = {
                         cancel: 'إلغاء',
                         save: 'حفظ',
                         characters: 'حرفاً',
-                        previewOnly: 'هذه معاينة فقط. سيتم تفعيل الحفظ الدائم عند توفر واجهة API.',
+                        previewOnly:  'سيتم حفظ التغييرات في ملفك الشخصي عند الضغط على حفظ.',
                         empty: 'لم تضف وصفاً بعد. اضغط على تعديل لكتابة نبذة عن نفسك.',
                     },
                     social: {
                         title: 'وسائل التواصل الاجتماعي',
                         empty: 'لم تتم إضافة حسابات التواصل الاجتماعي بعد.',
+                        edit: 'تعديل الروابط',           
+                        save: 'حفظ',
+                        saving: 'جار الحفظ...',
+                        cancel: 'إلغاء',
+                        invalidLink: 'تحقق من صحة روابط وسائل التواصل الاجتماعي.',
+                        saveSuccess: 'تم تحديث روابط التواصل الاجتماعي.',
+                        saveError: 'تعذر حفظ روابط التواصل الاجتماعي.',
                     },
                     feedback: {
                         title: 'التقييمات والآراء',
@@ -500,43 +667,150 @@ export const translations = {
             },
     en: {
 
+
         settings: {
+
                 title: 'Settings',
-                subtitle: 'Manage your account preferences.',
+                description: 'Manage your account preferences and security.',
+
                 account: {
                     title: 'Account information',
                     name: 'Full name',
+                    firstName: 'First name',
+                    lastName: 'Last name',
+                    edit: 'Edit',
+                    save: 'Save',
+                    cancel: 'Cancel',
+                    saving: 'Saving...',
+                    nameRequired: 'Please enter a valid name.',
                     email: 'Email address',
                     dateOfBirth: 'Date of birth',
+                    note: 'Your personal account information.',
                     notAvailable: 'Not available',
-                    note: 'These details come from your registration information. Editing will be available when the account API is ready.',
                 },
+
                 language: {
-                    title: 'Language and region',
-                    description: 'Choose the language you want to use in iRent.',
+                    title: 'Language preferences',
+                    description: 'Choose your preferred application language.',
                     label: 'Application language',
                     arabic: 'Arabic',
                     french: 'French',
                     english: 'English',
-                    note: 'Your selected language will be applied across the application and saved in your browser.',
+                    note: 'The application interface will change according to your selection.',
                 },
-                security: {
-                    title: 'Security',
-                    description: 'Password and account security settings will be available once the security API is integrated.',
-                    comingSoon: 'Coming soon',
+
+
+
+
+            security: {
+                    description: 'Manage your password and protect your account.',
+                    passwordTitle: 'Change password',
+                    currentPassword: 'Current password',
+                    currentPasswordError: 'The current password is incorrect.',
+                    newPassword: 'New password',
+                    confirmPassword: 'Confirm new password',
+                    updatePassword: 'Update password',
+                    updating: 'Updating...',
+                    passwordUpdated: 'Password updated successfully.',
+                    passwordMismatch: 'New passwords do not match.',
+                    newPasswordSameAsCurrent: 'The new password must be different from the current password.',
+                    passwordRequirements: 'Please follow all password requirements.',
+
+                    passwordStrength: {
+                        title: 'Password strength',
+                        weak: 'Weak',
+                        medium: 'Medium',
+                        strong: 'Strong',
+                        rules: [
+                            'At least 8 characters',
+                            'One lowercase letter',
+                            'One uppercase letter',
+                            'One number',
+                            'One special character',
+                            'Maximum 64 characters',
+                        ],
+                    },
+
+                    smsTitle: 'SMS two-factor authentication',
+                    smsDescription: 'Add your phone number to receive a verification code when signing in.',
+                    status: 'Status',
+                    enabled: 'Enabled',
+                    disabled: 'Disabled',
+                    phoneNumber: 'Phone number',
+                    phoneHint: 'Use international format. For Morocco: +2126XXXXXXXX',
+                    sendCode: 'Send verification code',
+                    sending: 'Sending...',
+                    codeSent: 'Verification code sent.',
+                    verificationCode: 'Verification code',
+                    verifyPhone: 'Verify phone number',
+                    phoneVerified: 'Your phone number is verified.',
+                    enable2fa: 'Enable two-factor authentication',
+                    disable2fa: 'Disable two-factor authentication',
+                    disable2faPassword: 'Enter your password to confirm disabling two-factor authentication.',
+                    smsEnabled: 'SMS two-factor authentication enabled.',
+                    smsDisabled: 'SMS two-factor authentication disabled.',
+                    invalidPhone: 'Enter a valid international phone number.',
+                    requestFailed: 'The request could not be completed. Please try again.',
+                    smsUnavailable: 'SMS two-factor authentication is temporarily unavailable. No SMS provider has been configured yet.',
+
+                    googleTitle: 'Connected accounts',
+                    googleDescription: 'Connect your Google account to use it when signing in.',
+                    googleConnected: 'Connected Google account:',
+                    googleDisconnectPassword: 'Enter your iRent password to disconnect Google.',
+                    googleDisconnect: 'Disconnect Google',
+                    googleNotConfigured: 'Google Authentication is not configured.',
+                    googleConnectSuccess: 'Google account connected successfully.',
+                    googleDisconnectSuccess: 'Google account disconnected.',
+                    googleAuthFailed: 'Google authentication failed.',
+                },
+
+
+
+                emailChange: {
+                    title: 'Change email address',
+                    description: 'You can change your email address after verifying the new one.',
+                    currentEmail: 'Current email',
+                    newEmail: 'New email address',
+                    currentPassword: 'Current password',
+                    currentPasswordRequired: 'Enter your current password.',
+                    currentPasswordError: 'The current password is incorrect.',
+                    emailAlreadyUsed: 'This email address is already in use.',
+                    invalidCode: 'The verification code is incorrect.',
+                    emailSameAsCurrent: 'The new email matches your current email. Enter a different email address.',
+                    sendCode: 'Check details and send code',
+                    sending: 'Sending...',
+                    codeSent: 'A verification code was sent to your new email.',
+                    verificationCode: 'Verification code',
+                    verifyAndSave: 'Verify and update email',
+                    verifying: 'Verifying...',
+                    success: 'Email address updated successfully.',
+                    cancel: 'Cancel',
+                    invalidEmail: 'Enter a valid email address.',
+                    tooManyRequests: 'Please wait before requesting a new code.',
+                    requestFailed: 'The request could not be completed. Please try again.',
                 },
             },
 
 
 
-
-
         auth: {
-
+            twoFactorDescription: 'We sent a verification code to:',
+            smsVerificationCode: 'SMS verification code',
+            verifyAndSignIn: 'Verify and sign in',
+            verifyingCode: 'Verifying...',
+            googleLoginFailed: 'Google login failed.',
+            googleAccountNotRegistered: 'This Google email is not registered in iRent. Please create an account first.',
+            googleAccountNotLinked: 'This Google account is not linked to iRent. Sign in with your iRent password, then link it in Settings.',
+            googleSignIn: 'Sign in with Google',
+            createAccount: 'Create an account',
+            verificationFailed: 'Code verification failed.',
+            invalidCode: 'Invalid verification code.',
+            contact: 'Email address',
+            or: 'OR',
 
             pleaseenteryouremail:  'Please enter your email',
             emailVerificationRequired: 'Please complete contact verification first.',
-            nameRequired: 'Please enter both your first and last name.',
+            nameRequired: 'Please complete your name information.',
 
             accountCreatedTitle: 'Account created!',
             registrationCompleteDescription: 'Your registration is complete.',
@@ -564,10 +838,27 @@ export const translations = {
             verificationCode: 'Verification Code',
             sendCode: 'Send Verification Code',
             sending: 'Sending...',
+            resendIn: 'Resend available in',
+            seconds: 'seconds',
+            tooManyCodeRequests: 'Please wait before requesting a new code.',
             verifyAndContinue: 'Verify & Continue',
             verifying: 'Verifying...',
             createPassword: 'Create Password',
             confirmPassword: 'Confirm Password',
+            passwordStrength: {
+                title: 'Password strength',
+                weak: 'Weak',
+                medium: 'Medium',
+                strong: 'Strong',
+                rules: [
+                    'At least 8 characters',
+                    'One lowercase letter',
+                    'One uppercase letter',
+                    'One number',
+                    'One special character',
+                    'Maximum 64 characters',
+                ],
+            },
             passwordMismatch: 'Passwords do not match.',
             passwordRequirements: 'Please meet all password requirements.',
             back: 'Back',
@@ -582,18 +873,25 @@ export const translations = {
             invalidSession: 'Invalid registration session.',
             sessionMissing: 'Registration session not found. Please register again.',
             contactRequired: 'Enter your email address or phone number.',
+            emailAlreadyRegistered: 'This email address is already registered. Use another email or sign in.',
             codeSent: 'Verification code sent!',
-            invalidCode: 'Invalid verification code.',
             verificationRequired: 'Please verify your contact information first.',
 
             dateOfBirth: 'Date of birth',
+            selectDay: 'Day',
+            selectMonth: 'Month',
+            selectYear: 'Year',
+            months: [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December',
+            ],
             invalidDateOfBirth: 'Please enter a valid date of birth.',
             showPassword: 'Show password',
             hidePassword: 'Hide password',
             signInTitle: 'Sign in',
             signInDescription: 'Enter your email .',
-            contact: 'Email or phone number',
-            contactPlaceholder: 'you@example.com',
+            
+            
             password: 'Password',
             signIn: 'Sign in',
             signingIn: 'Signing in...',
@@ -601,6 +899,27 @@ export const translations = {
             invalidCredentials: 'Invalid credentials.',
             missingUser: 'User information was not returned by the backend.',
             connectionError: 'Cannot connect to the backend.',
+            forgotPassword: 'Forgot password?',
+            resetPassword: 'Reset Password',
+            enterEmailForReset: 'Enter your email to reset your password',
+            sendResetCode: 'Send Reset Code',
+            sendingCode: 'Sending...',
+            enterVerificationCode: 'Enter the verification code sent to your email',
+            verificationCodeSent: 'Verification code sent to',
+            verifyCode: 'Verify Code',
+            codeExpires: 'Code expires in',
+            enterNewPassword: 'Enter your new password',
+            newPassword: 'New Password',
+            resettingPassword: 'Resetting password...',
+            passwordResetSuccess: 'Password reset successful!',
+            passwordResetSuccessMessage: 'Your password has been reset successfully. You can now sign in with your new password.',
+            close: 'Close',
+            cancel: 'Cancel',
+            tooManyRequests: 'Please wait before requesting another code.',
+            emailNotFound: 'Email not found in our system.',
+            codeExpired: 'Verification code has expired.',
+            tooManyAttempts: 'Too many incorrect attempts.',
+            failedToSend: 'Failed to send. Please try again.',
         },
         profile: {
             sidebar: {
@@ -645,12 +964,20 @@ export const translations = {
                 cancel: 'Cancel',
                 save: 'Save',
                 characters: 'characters',
-                previewOnly: 'Preview only. Permanent saving will be enabled when the profile API is available.',
+                previewOnly:  'Your changes will be saved to your profile when you click Save.',
                 empty: 'You have not added a description yet. Click Edit to introduce yourself.',
             },
             social: {
                 title: 'Social Media',
                 empty: 'No social media profiles have been added yet.',
+                    edit: 'Edit links',
+                    save: 'Save',
+                    saving: 'Saving...',
+                    cancel: 'Cancel',
+                    invalidLink: 'Please check your social media URLs.',
+                    saveSuccess: 'Social media links updated successfully.',
+                    saveError: 'Could not save social media links.',
+              
             },
             feedback: {
                 title: 'Feedback',
@@ -743,11 +1070,11 @@ export const translations = {
             privacyPolicy: 'Privacy Policy',
             address: 'Khouribga, Morocco',
         },
-        // home page
+        
         homePage: {
             ticker1: 'Discover your perfect home in Morocco',
             ticker2: 'Find the roommate that suits you',
-            // title: 'Find your home easily',
+          
             titleMain: 'Find your',
             titleAccent: 'home easily',
             subtitle: 'Discover the best listings and find the place that suits you',
@@ -1008,43 +1335,153 @@ export const translations = {
     },
     
     fr: {
+        
         settings: {
             title: 'Paramètres',
-            subtitle: 'Gérez les préférences de votre compte.',
+            description: 'Gérez les préférences et la sécurité de votre compte.',
+
+
+            
             account: {
                 title: 'Informations du compte',
                 name: 'Nom complet',
+                firstName: 'Prénom',
+                lastName: 'Nom',
+                edit: 'Modifier',
+                save: 'Enregistrer',
+                cancel: 'Annuler',
+                saving: 'Enregistrement...',
+                nameRequired: 'Saisissez un nom valide.',
                 email: 'Adresse e-mail',
                 dateOfBirth: 'Date de naissance',
+                note: 'Informations personnelles de votre compte.',
                 notAvailable: 'Non disponible',
-                note: 'Ces informations proviennent de votre inscription. Leur modification sera disponible lorsque l’API du compte sera prête.',
             },
+
             language: {
-                title: 'Langue et région',
-                description: 'Choisissez la langue que vous souhaitez utiliser sur iRent.',
+                title: 'Préférences linguistiques',
+                description: 'Choisissez votre langue préférée.',
                 label: 'Langue de l’application',
                 arabic: 'Arabe',
                 french: 'Français',
                 english: 'Anglais',
-                note: 'La langue choisie sera appliquée à toute l’application et enregistrée dans votre navigateur.',
+                note: 'L’interface changera selon votre sélection.',
             },
+
+
+
             security: {
                 title: 'Sécurité',
-                description: 'Les paramètres du mot de passe et de la sécurité seront disponibles après l’intégration de l’API.',
-                comingSoon: 'Bientôt disponible',
+                description: 'Gérez votre mot de passe et protégez votre compte.',
+
+                passwordTitle: 'Modifier le mot de passe',
+                currentPassword: 'Mot de passe actuel',
+                currentPasswordError: 'Le mot de passe actuel est incorrect.',
+                newPassword: 'Nouveau mot de passe',
+                confirmPassword: 'Confirmer le nouveau mot de passe',
+                updatePassword: 'Mettre à jour le mot de passe',
+                updating: 'Mise à jour...',
+                passwordUpdated: 'Mot de passe mis à jour avec succès.',
+                passwordMismatch: 'Les nouveaux mots de passe ne correspondent pas.',
+                newPasswordSameAsCurrent: 'Le nouveau mot de passe doit être différent du mot de passe actuel.',
+                passwordRequirements: 'Veuillez respecter toutes les exigences du mot de passe.',
+
+                passwordStrength: {
+                    title: 'Force du mot de passe',
+                    weak: 'Faible',
+                    medium: 'Moyenne',
+                    strong: 'Forte',
+                    rules: [
+                        'Au moins 8 caractères',
+                        'Une lettre minuscule',
+                        'Une lettre majuscule',
+                        'Un chiffre',
+                        'Un caractère spécial',
+                        '64 caractères maximum',
+                    ],
+                },
+                smsTitle: 'Authentification à deux facteurs par SMS',
+                smsDescription: 'Ajoutez votre numéro pour recevoir un code lors de la connexion.',
+                status: 'Statut',
+                enabled: 'Activée',
+                disabled: 'Désactivée',
+                phoneNumber: 'Numéro de téléphone',
+                phoneHint: 'Utilisez le format international. Pour le Maroc : +2126XXXXXXXX',
+                sendCode: 'Envoyer le code de vérification',
+                sending: 'Envoi en cours...',
+                codeSent: 'Code de vérification envoyé.',
+                verificationCode: 'Code de vérification',
+                verifyPhone: 'Vérifier le numéro',
+                phoneVerified: 'Votre numéro est vérifié.',
+                enable2fa: 'Activer l’authentification à deux facteurs',
+                disable2fa: 'Désactiver l’authentification à deux facteurs',
+                disable2faPassword: 'Saisissez votre mot de passe pour confirmer la désactivation.',
+                smsEnabled: 'Authentification SMS activée.',
+                smsDisabled: 'Authentification SMS désactivée.',
+                invalidPhone: 'Saisissez un numéro international valide.',
+                requestFailed: "La requête n'a pas pu aboutir. Veuillez réessayer.",
+                smsUnavailable: "L'authentification à deux facteurs par SMS est temporairement indisponible. Aucun fournisseur SMS n'a encore été configuré.",
+
+                googleTitle: 'Comptes connectés',
+                googleDescription: 'Connectez votre compte Google pour l’utiliser lors de la connexion.',
+                googleConnected: 'Compte Google connecté :',
+                googleDisconnectPassword: 'Saisissez votre mot de passe iRent pour déconnecter Google.',
+                googleDisconnect: 'Déconnecter Google',
+                googleNotConfigured: 'Google Authentication n’est pas configuré.',
+                googleConnectSuccess: 'Compte Google connecté avec succès.',
+                googleDisconnectSuccess: 'Compte Google déconnecté.',
+                googleAuthFailed: 'Échec de l’authentification Google.',
+            },
+
+            emailChange: {
+                title: 'Modifier l’adresse e-mail',
+                description: 'Vous pouvez modifier votre adresse e-mail après avoir vérifié la nouvelle adresse.',
+                currentEmail: 'Adresse e-mail actuelle',
+                newEmail: 'Nouvelle adresse e-mail',
+                currentPassword: 'Mot de passe actuel',
+                currentPasswordRequired: 'Saisissez votre mot de passe actuel.',
+                currentPasswordError: 'Le mot de passe actuel est incorrect.',
+                emailAlreadyUsed: 'Cette adresse e-mail est déjà utilisée.',
+                invalidCode: 'Le code de vérification est incorrect.',
+                emailSameAsCurrent: 'La nouvelle adresse e-mail est identique à l’adresse actuelle. Saisissez une autre adresse.',
+                sendCode: 'Vérifier les informations et envoyer le code',
+                sending: 'Envoi en cours...',
+                codeSent: 'Un code de vérification a été envoyé à votre nouvelle adresse.',
+                verificationCode: 'Code de vérification',
+                verifyAndSave: 'Vérifier et modifier l’adresse',
+                verifying: 'Vérification...',
+                success: 'Adresse e-mail mise à jour avec succès.',
+                cancel: 'Annuler',
+                invalidEmail: 'Saisissez une adresse e-mail valide.',
+                tooManyRequests: 'Veuillez patienter avant de demander un nouveau code.',
+                requestFailed: 'La requête n’a pas pu aboutir. Veuillez réessayer.',
             },
         },
 
+
         auth: {
 
-
+            twoFactorDescription: 'Nous avons envoyé un code de vérification à :',
+            smsVerificationCode: 'Code de vérification SMS',
+            verifyAndSignIn: 'Vérifier et se connecter',
+            verifyingCode: 'Vérification...',
+            googleLoginFailed: 'Échec de la connexion avec Google.',
+            googleAccountNotRegistered: "Cette adresse Google n'est pas enregistrée dans iRent. Veuillez créer un compte d'abord.",
+            googleAccountNotLinked: "Ce compte Google n'est pas lié à iRent. Connectez-vous avec votre mot de passe iRent, puis liez-le dans les paramètres.",
+            googleSignIn: 'Se connecter avec Google',
+            googleContinueWith: 'Continuer avec Google',
+            createAccount: 'Créer un compte',
+            verificationFailed: 'Échec de la vérification du code.',
+            invalidCode: 'Code de vérification invalide.',
+            contact: 'Adresse e-mail',
+            or: 'OU',
             pleaseenteryouremail: 'Veuillez entrer votre email.',
            
             emailVerificationRequired: "Veuillez d'abord vérifier vos coordonnées.",
-            nameRequired: 'Veuillez saisir votre prénom et votre nom.',
-          
-           
-            
+            nameRequired: 'Veuillez compléter vos informations de nom.',
+
+
+
             accountCreatedTitle: 'Compte créé !',
             registrationCompleteDescription: 'Votre inscription est terminée.',
             createAccountTitle: 'Créer votre compte',
@@ -1071,10 +1508,27 @@ export const translations = {
             verificationCode: 'Code de vérification',
             sendCode: 'Envoyer le code de vérification',
             sending: 'Envoi en cours...',
+            resendIn: 'Nouvel envoi disponible dans',
+            seconds: 'secondes',
+            tooManyCodeRequests: 'Veuillez patienter avant de demander un nouveau code.',
             verifyAndContinue: 'Vérifier et continuer',
             verifying: 'Vérification en cours...',
             createPassword: 'Créer un mot de passe',
             confirmPassword: 'Confirmer le mot de passe',
+            passwordStrength: {
+                title: 'Force du mot de passe',
+                weak: 'Faible',
+                medium: 'Moyenne',
+                strong: 'Forte',
+                rules: [
+                    'Au moins 8 caractères',
+                    'Une lettre minuscule',
+                    'Une lettre majuscule',
+                    'Un chiffre',
+                    'Un caractère spécial',
+                    '64 caractères maximum',
+                ],
+            },
             passwordMismatch: 'Les mots de passe ne correspondent pas.',
             passwordRequirements: 'Veuillez respecter toutes les exigences du mot de passe.',
             back: 'Retour',
@@ -1089,20 +1543,27 @@ export const translations = {
             invalidSession: "Session d'inscription invalide.",
             sessionMissing: "Session d'inscription introuvable. Veuillez recommencer.",
             contactRequired: 'Entrez votre adresse e-mail ou votre numéro de téléphone.',
+            emailAlreadyRegistered: 'Cette adresse e-mail est déjà utilisée. Utilisez une autre adresse ou connectez-vous.',
             codeSent: 'Code de vérification envoyé !',
-            invalidCode: 'Code de vérification incorrect.',
             verificationRequired: "Veuillez d'abord vérifier vos coordonnées.",
 
 
 
             dateOfBirth: 'Date de naissance',
+            selectDay: 'Jour',
+            selectMonth: 'Mois',
+            selectYear: 'Année',
+            months: [
+                'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+            ],
             invalidDateOfBirth: 'Veuillez saisir une date de naissance valide.',
             showPassword: 'Afficher le mot de passe',
             hidePassword: 'Masquer le mot de passe',
             signInTitle: 'Se connecter',
             signInDescription: 'Saisissez votre e-mail.',
-            contact: 'E-mail ou numéro de téléphone',
-            contactPlaceholder: 'vous@exemple.com',
+           
+            
             password: 'Mot de passe',
             signIn: 'Se connecter',
             signingIn: 'Connexion en cours...',
@@ -1110,6 +1571,27 @@ export const translations = {
             invalidCredentials: 'Identifiants incorrects.',
             missingUser: "Les informations de l'utilisateur n'ont pas été reçues.",
             connectionError: 'Impossible de se connecter au serveur.',
+            forgotPassword: 'Mot de passe oublié?',
+            resetPassword: 'Réinitialiser le mot de passe',
+            enterEmailForReset: 'Entrez votre email pour réinitialiser votre mot de passe',
+            sendResetCode: 'Envoyer le code de réinitialisation',
+            sendingCode: 'Envoi en cours...',
+            enterVerificationCode: 'Entrez le code de vérification envoyé à votre email',
+            verificationCodeSent: 'Code de vérification envoyé à',
+            verifyCode: 'Vérifier le code',
+            codeExpires: 'Le code expire dans',
+            enterNewPassword: 'Entrez votre nouveau mot de passe',
+            newPassword: 'Nouveau mot de passe',
+            resettingPassword: 'Réinitialisation du mot de passe...',
+            passwordResetSuccess: 'Mot de passe réinitialisé avec succès!',
+            passwordResetSuccessMessage: 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.',
+            close: 'Fermer',
+            cancel: 'Annuler',
+            tooManyRequests: 'Veuillez attendre avant de demander un nouveau code.',
+            emailNotFound: 'Email non trouvé dans notre système.',
+            codeExpired: 'Le code de vérification a expiré.',
+            tooManyAttempts: 'Trop de tentatives incorrectes.',
+            failedToSend: "Échec de l'envoi. Veuillez réessayer.",
         },
         profile: {
                 sidebar: {
@@ -1154,12 +1636,20 @@ export const translations = {
                     cancel: 'Annuler',
                     save: 'Enregistrer',
                     characters: 'caractères',
-                    previewOnly: "Aperçu uniquement. L'enregistrement permanent sera disponible lorsque l'API du profil sera prête.",
+                    previewOnly:  'Vos modifications seront enregistrées dans votre profil lorsque vous cliquez sur Enregistrer.',
                     empty: "Vous n'avez pas encore ajouté de description. Cliquez sur Modifier pour vous présenter.",
                 },
                 social: {
                     title: 'Réseaux sociaux',
                     empty: "Aucun profil de réseau social n'a encore été ajouté.",
+                        edit: 'Modifier les liens',
+                        save: 'Enregistrer',
+                        saving: 'Enregistrement...',
+                        cancel: 'Annuler',
+                        invalidLink: 'Veuillez vérifier vos liens de réseaux sociaux.',
+                        saveSuccess: 'Les liens ont été mis à jour avec succès.',
+                        saveError: "Impossible d'enregistrer les liens.",
+                    
                 },
                 feedback: {
                     title: 'Avis et commentaires',
@@ -1178,16 +1668,12 @@ export const translations = {
             menu: 'Menu', 
             closeMenu: 'Fermer le menu',
             brandSubtitle: 'Louez votre logement facilement',
-            en: 'Anglais',
-            fr: 'Français',
-            ar: 'Arabe',
             languages: {
                 en: 'Anglais',
                 fr: 'Français',
                 ar: 'Arabe',
+            },
             dashboard: 'Statistiques',
-
-        },
         },
         roommates: {
             joinRoom: 'Rejoindre une chambre',
@@ -1254,11 +1740,10 @@ export const translations = {
             privacyPolicy: 'Politique de confidentialité',
             address: 'Khouribga, Maroc',
         },
-        // home page
+  
         homePage: {
             ticker1: 'Découvrez votre logement idéal au Maroc',
             ticker2: 'Trouvez le colocataire qui vous correspond',
-            // title: 'Trouvez votre logement facilement',
             titleMain: 'Trouvez votre',
             titleAccent: 'logement facilement',
             subtitle: 'Découvrez les meilleures annonces et trouvez le logement qui vous convient',
@@ -1517,7 +2002,10 @@ export const translations = {
 
     },
 };
+
 export type ProfileTranslations = typeof translations.en.profile;
+export type SecurityTranslations = typeof translations.en.settings.security;
+export type AuthTranslations = typeof translations.en.auth;
 export type FriendsTranslations = typeof translations.en.friends;
 export type HandshakeTranslations = typeof translations.en.handshake;
 export type SettingsTranslations = typeof translations.en.settings;

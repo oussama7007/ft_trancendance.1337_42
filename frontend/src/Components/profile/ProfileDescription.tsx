@@ -10,26 +10,42 @@ import { Textarea } from '@/components/ui/textarea';
 
 interface ProfileDescriptionProps {
     description?: string;
-    onSave: (newDescription: string) => void;
+    onSave: (newDescription: string) => Promise<void>;
     t: ProfileTranslations['description'];
 }
 
 export function ProfileDescription({ description, onSave, t }: ProfileDescriptionProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [draft, setDraft] = useState(description ?? '');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
 
-   
+
     useEffect(() => {
         setDraft(description ?? '');
     }, [description]);
 
-    function handleSave() {
-        onSave(draft.trim());
-        setIsEditing(false);
+    async function handleSave() {
+        try {
+            setError('');
+            setSaving(true);
+            await onSave(draft.trim());
+            // Close only after successful save.
+            setIsEditing(false);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : 'Could not save description',
+            );
+        } finally {
+            setSaving(false);
+        }
     }
 
     function handleCancel() {
         setDraft(description ?? '');
+        setError('');
         setIsEditing(false);
     }
 
@@ -61,6 +77,7 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
                         rows={5}
                         placeholder={t.placeholder}
                         className="resize-y leading-6"
+                        disabled={saving}
                     />
 
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -74,6 +91,7 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
                                 variant="outline"
                                 size="sm"
                                 onClick={handleCancel}
+                                disabled={saving}
                             >
                                 <X size={15} />
                                 {t.cancel}
@@ -83,12 +101,19 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
                                 type="button"
                                 size="sm"
                                 onClick={handleSave}
+                                disabled={saving}
                             >
                                 <Save size={15} />
                                 {t.save}
                             </Button>
                         </div>
                     </div>
+
+                    {error && (
+                        <p role="alert" className="mt-2 text-xs text-red-600">
+                            {error}
+                        </p>
+                    )}
 
                     <p className="mt-3 text-xs leading-5 text-irent-muted">
                         {t.previewOnly}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Language, User } from '../types';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
@@ -9,19 +9,94 @@ import ReviewsSection from '../Components/reviews/ReviewsSection';
 import { FriendsMenu } from '../Components/friends/FriendsMenu';
 import { OwnerInterestRequests } from '../Components/home/OwnerInterestRequests';
 
-import { translations } from '../translations';
+
+
+import {
+    getMyProfile,
+    updateMyProfile,
+    uploadMyAvatar,
+    getAvatarUrl,
+} from '../services/profile';
+
+import { translations  } from '../translations';
 
 interface ProfilePageProps {
     user: User;
     lang: Language;
+    onAvatarChanged: (avatarUrl: string | null) => void;
 }
 
-export function ProfilePage({ user, lang }: ProfilePageProps) {
+export function ProfilePage({ user, lang, onAvatarChanged }: ProfilePageProps) {
+
     const navigate = useNavigate();
     const t = translations[lang].profile;
-    const [avatar, setAvatar] = useState(user.avatar);
-    const [description, setDescription] = useState(user.bio ?? '');
+    
+    const [profile, setProfile] = useState(user);
+    const [error, setError] = useState('');
 
+        useEffect(() => {
+            getMyProfile()
+                .then((updatedProfile) => {
+                    setProfile(updatedProfile);
+                    onAvatarChanged(updatedProfile.avatarUrl ?? null);
+                })
+                .catch((error: Error) => {
+                    setError(error.message);
+                });
+        }, [onAvatarChanged]);
+
+        async function handleAvatarChange(file: File) {
+            try {
+                setError('');
+
+                const updated = await uploadMyAvatar(file);
+
+                setProfile((previous) => ({
+                    ...previous,
+                    ...updated,
+                }));
+
+                onAvatarChanged(updated.avatarUrl ?? null);
+            } catch (error) {
+                setError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not upload image',
+                );
+            }
+        }
+
+            
+
+
+
+        async function handleSocialSave(links: {
+            linkedin: string | null;
+            instagram: string | null;
+            facebook: string | null;
+        }) {
+            const updated = await updateMyProfile(links);
+
+            setProfile((previous) => ({
+                ...previous,
+                ...updated,
+            }));
+        }
+
+
+
+async function handleDescriptionSave(description: string) {
+    setError('');
+
+    const updated = await updateMyProfile({
+        bio: description,
+    });
+
+    setProfile((previous) => ({
+        ...previous,
+        ...updated,
+    }));
+}
     const handleAcceptRequest = (conversationId?: number) => {
         if (conversationId) {
             navigate(`/chat?conversationId=${conversationId}`);
@@ -40,11 +115,20 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
                     <FriendsMenu lang={lang} />
                 </ProfileSidebar>
 
+                
+                {error && (
+                            <div
+                                role="alert"
+                                className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600"
+                            >
+                                {error}
+                            </div>
+                        )}
                 <div className="min-w-0">
                     <ProfileHeader
-                        user={user}
-                        avatar={avatar}
-                        onAvatarChange={setAvatar}
+                        user={profile}
+                        avatar={getAvatarUrl(profile.avatarUrl)}
+                        onAvatarChange={handleAvatarChange}
                         t={t.header}
                         avatarT={t.avatar}
                         lang={lang}
@@ -54,12 +138,14 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
                         <div className="flex min-w-0 flex-col gap-5">
                             
                             <ProfileDescription
-                                description={description}
-                                onSave={setDescription}
+                                description={profile.bio ?? ''}
+                                onSave={handleDescriptionSave}
                                 t={t.description}
                             />
-                            <SocialMediaCard user={user}
+                            <SocialMediaCard user={profile}
+                                lang={lang}
                                 t={t.social}
+                                onSave={handleSocialSave}
                             />
                         </div>
 

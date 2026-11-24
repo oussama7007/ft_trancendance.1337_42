@@ -4,6 +4,8 @@ import { Menu, X, ChevronDown, Globe, UserCircle } from 'lucide-react';
 import type {Language, User} from '../types';
 import {translations} from '../translations';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Avatar } from '@/components/ui/avatar';
+import { getAvatarUrl } from '../services/profile';
 import { useChat } from '../context/ChatContext';
 
 interface NavbarProps {
@@ -199,9 +201,12 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                     <div ref={userRef} className="relative hidden md:block">
                         <button type="button" onClick={() => setIsUserOpen ((prev) => !prev)}
                             className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-gray-100">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-(--color-primary) text-sm font-black text-white">
-                                {getUserInitial()}
-                            </div>
+                            <Avatar
+                                src={getAvatarUrl(currentUser.avatarUrl)}
+                                alt={currentUser.fullName}
+                                fallback={getUserInitial()}
+                                className="h-9 w-9 bg-(--color-primary) text-sm font-black text-white"
+                            />
 
                             <span className="max-w-28 truncate text-sm font-bold text-gray-700">
                                 {currentUser?.fullName}

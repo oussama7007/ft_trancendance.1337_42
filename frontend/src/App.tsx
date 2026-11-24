@@ -1,7 +1,7 @@
 
 import './index.css'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
     Routes,
     Route,
@@ -10,6 +10,9 @@ import {
     useLocation,
 } from 'react-router-dom'
 
+
+
+import { SettingsPage } from './Pages/SettingsPage';
 import { LegalPage } from './Pages/LegalPage'
 import { HomePage } from './Pages/HomePage'
 import { ListingsPage } from './Pages/ListingsPage'
@@ -23,7 +26,6 @@ import { Footer } from './Components/Footer'
 import Chat from './Components/chat/Chat'
 import { DashboardPage } from './Pages/DashboardPage'
 import { ChatProvider } from './context/ChatContext'
-
 
 import type { Language, Listing, User } from './types'
 import { translations } from './translations'
@@ -39,6 +41,11 @@ type BackendUser = {
     email: string;
     gender?: string;
     cin?: string;
+    bio?: string | null;
+    avatarUrl?: string | null;
+    linkedin?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
 };
 
 // Convert backend user data to the frontend User type.
@@ -52,7 +59,11 @@ function mapBackendUser(user: BackendUser): User {
         gender: user.gender,
         fullName: `${user.firstName} ${user.lastName}`,
         email: isEmail ? user.email : '',
-        
+        bio: user.bio,
+        avatarUrl: user.avatarUrl,
+        linkedin: user.linkedin,
+        instagram: user.instagram,
+        facebook: user.facebook,
         dateOfBirth: user.dateOfBirth,
         
     };
@@ -101,7 +112,6 @@ function App() {
     // Authentication state.
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authError, setAuthError] = useState('');
 
     // Restore the user's session when the application starts.
     useEffect(() => {
@@ -115,6 +125,7 @@ function App() {
                 });
 
                 if (response.status === 401) {
+                    // 401 is a normal result for a visitor who is not signed in.
                     if (isMounted) {
                         setCurrentUser(null);
                     }
@@ -131,11 +142,12 @@ function App() {
                     setCurrentUser(mapBackendUser(user));
                 }
             } catch (error) {
+                // The public pages can still work without a restored session.
+                // Keep the technical error in the browser console, not in the page.
                 console.error('Session restoration failed:', error);
 
                 if (isMounted) {
                     setCurrentUser(null);
-                    setAuthError('Could not verify your session.');
                 }
             } finally {
                 if (isMounted) {
@@ -144,7 +156,7 @@ function App() {
             }
         }
 
-        restoreSession();
+        void restoreSession();
 
         return () => {
             isMounted = false;
@@ -171,8 +183,6 @@ function App() {
 
     // Log out through the backend.
     const handleLogout = async () => {
-        setAuthError('');
-
         try {
             const response = await fetch(`${API_URL}/auth/logout`, {
                 method: 'POST',
@@ -187,15 +197,20 @@ function App() {
             navigate('/');
         } catch (error) {
             console.error('Logout failed:', error);
-            setAuthError('Could not log out. Please try again.');
         }
     };
+
+    const handleAvatarChanged = useCallback((avatarUrl: string | null) => {
+        setCurrentUser((previous) =>
+            previous ? { ...previous, avatarUrl } : previous,
+        );
+    }, []);
 
     // Wait until the backend session check finishes.
     if (isAuthLoading) {
         return (
             <main className="flex min-h-screen items-center justify-center">
-                <p>Checking your session...</p>
+                <p>Checking the server...</p>
             </main>
         );
     }
@@ -211,15 +226,6 @@ function App() {
                 currentUser={currentUser}
                 handleLogout={handleLogout}
             />
-
-            {authError && (
-                <p
-                    role="alert"
-                    className="p-3 text-center text-sm text-red-600"
-                >
-                    {authError}
-                </p>
-            )}
 
             <ScrollToTop />
 
@@ -252,6 +258,36 @@ function App() {
                     }
                 />
 
+               <Route
+                        path="/settings"
+                        element={
+                            currentUser
+                                ? (
+                                    <SettingsPage
+                                        user={currentUser}
+                                        lang={lang}
+                                        onEmailChanged={(newEmail: string) => {
+                                            setCurrentUser((previous) =>
+                                                previous ? { ...previous, email: newEmail } : previous,
+                                            );
+                                        }}
+                                        onUserUpdated={(updatedUser) => {
+                                            setCurrentUser((previous) =>
+                                                previous
+                                                    ? {
+                                                        ...previous,
+                                                        ...updatedUser,
+                                                        fullName: `${updatedUser.firstName ?? previous.firstName} ${updatedUser.lastName ?? previous.lastName}`,
+                                                    }
+                                                    : previous,
+                                            );
+                                        }}
+                                    />
+                                )
+                                : <Navigate to="/signin" replace />
+                        }
+                    />
+                            
                 {/* Existing placeholder pages */}
                 <Route
                     path="/chat"
@@ -266,7 +302,13 @@ function App() {
                     path="/profile"
                     element={
                         currentUser
-                            ? <ProfilePage user={currentUser} lang={lang}/>
+                            ? (
+                                <ProfilePage
+                                    user={currentUser}
+                                    lang={lang}
+                                    onAvatarChanged={handleAvatarChanged}
+                                />
+                            )
                             : <Navigate to="/signin" replace />
                     }
                 />
@@ -299,14 +341,17 @@ function App() {
                 <Route
                     path="/signup"
                     element={
-                        <SignUpPage
-                            lang={lang}
-                           
-                            onRegistrationSuccess={(user) => {
-                                setCurrentUser(mapBackendUser(user));
-                                navigate('/');
-                            }}
-                        />
+                        currentUser ? (
+                            <Navigate to="/" replace />
+                        ) : (
+                            <SignUpPage
+                                lang={lang}
+                                onRegistrationSuccess={(user) => {
+                                    setCurrentUser(mapBackendUser(user));
+                                    navigate('/');
+                                }}
+                            />
+                        )
                     }
                 />
 
