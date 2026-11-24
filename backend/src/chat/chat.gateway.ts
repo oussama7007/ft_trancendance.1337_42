@@ -23,25 +23,8 @@ interface JwtPayload {
   exp?: number;
 }
 
-export interface InterestAcceptedPayload {
-  requestId: number;
-  listingId: number;
-  ownerId: number;
-  tenantId: number;
-  conversationId: number;
-  status: string;
-}
-
-export interface InterestRequestCreatedPayload {
-  id: number;
-  tenantId: number;
-  tenantName?: string;
-  ownerId: number;
-  listingId: number;
-  listingTitle?: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
-  createdAt: string | Date;
-}
+export type InterestRequestView = Awaited<ReturnType<ChatService['getOwnerInterestRequests']>>[number];
+export type InterestEvent = 'created' | 'accepted' | 'declined';
 
 const userRoom = (userId: number) => `user_${userId}`;
 
@@ -139,31 +122,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(userRoom(readerId)).emit('conversationRead', { conversationId: conversation.id });
   }
 
-  notifyInterestRequestCreated(ownerId: number, payload: InterestRequestCreatedPayload) {
-    const normalizedOwnerId = Number(ownerId);
-    if (!Number.isSafeInteger(normalizedOwnerId) || normalizedOwnerId <= 0) return;
-
-    this.server.to(userRoom(normalizedOwnerId)).emit('newInterestRequest', {
-      ...payload,
-      id: Number(payload.id),
-      tenantId: Number(payload.tenantId),
-      ownerId: Number(payload.ownerId),
-      listingId: Number(payload.listingId),
-    });
+  emitIncomingInterest(ownerId: number, request: InterestRequestView, event: InterestEvent) {
+    this.server.to(userRoom(ownerId)).emit('incomingInterestRequest', { event, request });
   }
 
-  notifyInterestRequestAccepted(tenantId: number, payload: InterestAcceptedPayload) {
-    const normalizedTenantId = Number(tenantId);
-    if (!Number.isSafeInteger(normalizedTenantId) || normalizedTenantId <= 0) return;
-
-    this.server.to(userRoom(normalizedTenantId)).emit('interestRequestAccepted', {
-      ...payload,
-      requestId: Number(payload.requestId),
-      listingId: Number(payload.listingId),
-      ownerId: Number(payload.ownerId),
-      tenantId: Number(payload.tenantId),
-      conversationId: Number(payload.conversationId),
-    });
+  emitSentInterest(tenantId: number, request: InterestRequestView, event: InterestEvent) {
+    this.server.to(userRoom(tenantId)).emit('sentInterestRequest', { event, request });
   }
 
   @SubscribeMessage('typing')

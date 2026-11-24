@@ -6,7 +6,8 @@ import {translations} from '../translations';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Avatar } from '@/components/ui/avatar';
 import { getAvatarUrl } from '../services/profile';
-import { useChat } from '../context/ChatContext';
+import { useChat } from '../context/chatContextValue';
+import { NotificationsMenu } from './NotificationsMenu';
 
 interface NavbarProps {
 
@@ -196,6 +197,8 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                             </button>
                         </div>
                     )}
+
+                    {currentUser && <NotificationsMenu lang={lang} />}
 
                     {currentUser && (
                     <div ref={userRef} className="relative hidden md:block">

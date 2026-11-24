@@ -23,6 +23,7 @@ import type { Request, Response } from 'express';
 import { ChatService } from './chat.service.js';
 import type { UploadedChatFile } from './chat.service.js';
 import { ChatGateway } from './chat.gateway.js';
+import type { InterestEvent } from './chat.gateway.js';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { MAX_UPLOAD_SIZE } from './chat.constants.js';
 import {
@@ -157,33 +158,29 @@ export class ChatController {
     return this.chatService.toPublicMessage(message, userId);
   }
 
+  private async broadcastInterest(ownerId: number, tenantId: number, requestId: number, event: InterestEvent) {
+    const [ownerView, tenantView] = await Promise.all([
+      this.chatService.getOwnerInterestRequest(ownerId, requestId),
+      this.chatService.getSentInterestRequest(tenantId, requestId),
+    ]);
+    if (ownerView) this.chatGateway.emitIncomingInterest(ownerId, ownerView, event);
+    if (tenantView) this.chatGateway.emitSentInterest(tenantId, tenantView, event);
+    return { ownerView, tenantView };
+  }
+
   @Post('interest-requests')
   async sendInterestRequest(
     @Req() request: AuthenticatedRequest,
     @Body('listingId', ParseIntPipe) listingId: number,
   ) {
-    const { request: created, created: isNew } = await this.chatService.sendInterestRequest(
-      request.user.userId,
-      listingId,
-    );
+    const tenantId = request.user.userId;
+    const { request: saved, created } = await this.chatService.sendInterestRequest(tenantId, listingId);
 
-    if (isNew) {
-      const ownerRequests = await this.chatService.getOwnerInterestRequests(created.ownerId);
-      const enriched = ownerRequests.find((item) => item.id === created.id);
-
-      this.chatGateway.notifyInterestRequestCreated(created.ownerId, {
-        id: created.id,
-        tenantId: created.tenantId,
-        tenantName: enriched?.tenantName,
-        ownerId: created.ownerId,
-        listingId: created.listingId,
-        listingTitle: enriched?.listingTitle,
-        status: created.status,
-        createdAt: created.createdAt,
-      });
+    if (created) {
+      const { tenantView } = await this.broadcastInterest(saved.ownerId, tenantId, saved.id, 'created');
+      return tenantView;
     }
-
-    return created;
+    return this.chatService.getSentInterestRequest(tenantId, saved.id);
   }
 
   @Get('interest-requests/status/:listingId')
@@ -199,22 +196,30 @@ export class ChatController {
     return this.chatService.getOwnerInterestRequests(request.user.userId);
   }
 
+  @Get('interest-requests/sent')
+  getSentRequests(@Req() request: AuthenticatedRequest) {
+    return this.chatService.getSentInterestRequests(request.user.userId);
+  }
+
   @Patch('interest-requests/:id/accept')
   async acceptRequest(
     @Req() request: AuthenticatedRequest,
     @Param('id', ParseIntPipe) requestId: number,
   ) {
-    const result = await this.chatService.acceptInterestRequest(request.user.userId, requestId);
+    const ownerId = request.user.userId;
+    const { request: saved, conversation } = await this.chatService.acceptInterestRequest(ownerId, requestId);
+    const { ownerView } = await this.broadcastInterest(ownerId, saved.tenantId, saved.id, 'accepted');
+    return { request: ownerView, conversationId: conversation.id };
+  }
 
-    this.chatGateway.notifyInterestRequestAccepted(result.request.tenantId, {
-      requestId: result.request.id,
-      listingId: result.request.listingId,
-      ownerId: result.request.ownerId,
-      tenantId: result.request.tenantId,
-      conversationId: result.conversation.id,
-      status: result.request.status,
-    });
-
-    return result;
+  @Patch('interest-requests/:id/decline')
+  async declineRequest(
+    @Req() request: AuthenticatedRequest,
+    @Param('id', ParseIntPipe) requestId: number,
+  ) {
+    const ownerId = request.user.userId;
+    const { request: saved } = await this.chatService.declineInterestRequest(ownerId, requestId);
+    const { ownerView } = await this.broadcastInterest(ownerId, saved.tenantId, saved.id, 'declined');
+    return { request: ownerView };
   }
 }

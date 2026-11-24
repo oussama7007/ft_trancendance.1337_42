@@ -1,6 +1,8 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { io, type Socket } from "socket.io-client";
+import { ChatContext } from "./chatContextValue";
+import type { ChatContextValue, PermissionState } from "./chatContextValue";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Bell, MessageCircle, X } from "lucide-react";
 import { API_URL, chatService } from "../services/chatService";
@@ -8,29 +10,16 @@ import type { ApiMessage } from "../services/chatService";
 import { translations } from "../translations";
 import type { Language } from "../types";
 import { fmt, messagePreview } from "../Components/chat/chatUtils";
+import { interestService, listingTitleOf, OPEN_NOTIFICATIONS, upsertRequest } from "../services/interestService";
+import type { InterestRequest, InterestSocketEvent } from "../services/interestService";
 
-type PermissionState = NotificationPermission | "unsupported";
-
-interface ChatContextValue {
-  socket: Socket | null;
-  unreadTotal: number;
-  refreshUnread: () => void;
-  setActiveConversation: (conversationId: number | null) => void;
-  notificationPermission: PermissionState;
-  requestNotificationPermission: () => Promise<void>;
-}
-
-const ChatContext = createContext<ChatContextValue>({
-  socket: null,
-  unreadTotal: 0,
-  refreshUnread: () => undefined,
-  setActiveConversation: () => undefined,
-  notificationPermission: "unsupported",
-  requestNotificationPermission: async () => undefined,
-});
-
-export function useChat() {
-  return useContext(ChatContext);
+function readLastSeen(userId: number | undefined): number {
+  if (userId == null) return 0;
+  try {
+    return Number(localStorage.getItem(`notifications.lastSeen.${userId}`)) || 0;
+  } catch {
+    return 0;
+  }
 }
 
 interface Toast {
@@ -38,6 +27,7 @@ interface Toast {
   title: string;
   body: string;
   link: string;
+  kind: "message" | "interest";
 }
 
 const TOAST_DURATION_MS = 6000;
@@ -78,6 +68,11 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
   const [unreadTotal, setUnreadTotal] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<PermissionState>(getPermission);
+  const [incomingRequests, setIncomingRequests] = useState<InterestRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<InterestRequest[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [seen, setSeen] = useState<{ userId?: number; at: number }>(() => ({ userId: currentUserId, at: readLastSeen(currentUserId) }));
+  const lastSeen = seen.userId === currentUserId ? seen.at : readLastSeen(currentUserId);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,6 +90,11 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
       .getUnreadCount()
       .then(({ count }) => setUnreadTotal(Math.max(0, Number(count) || 0)))
       .catch(() => undefined);
+  }, []);
+
+  const refreshInterests = useCallback(() => {
+    interestService.getIncoming().then(setIncomingRequests).catch(() => undefined);
+    interestService.getSent().then(setSentRequests).catch(() => undefined);
   }, []);
 
   const pushToast = useCallback((toast: Omit<Toast, "id">) => {
@@ -121,12 +121,15 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
 
     const wsUrl = (import.meta.env.VITE_WS_URL || API_URL || "").replace(/\/api\/?$/, "");
     const newSocket = io(wsUrl, { withCredentials: true });
-    setSocket(newSocket);
+    newSocket.on("connect", () => setSocket(newSocket));
 
     return () => {
       newSocket.disconnect();
       setSocket(null);
       setUnreadTotal(0);
+      setIncomingRequests([]);
+      setSentRequests([]);
+      setNotificationsOpen(false);
     };
   }, [currentUserId]);
 
@@ -152,43 +155,94 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
       const body = messagePreview(message, t()).slice(0, 140);
       const link = `/chat?conversationId=${message.conversationId}`;
 
-      if (!onChatPage || document.visibilityState === "visible") pushToast({ title, body, link });
+      if (!onChatPage || document.visibilityState === "visible") pushToast({ title, body, link, kind: "message" });
       showBrowserNotification(title, body, link, `conversation-${message.conversationId}`);
       playPing();
     };
 
-    const handleNewInterest = (payload: { tenantName?: string; listingTitle?: string }) => {
-      const title = fmt(t().newInterest, { name: payload.tenantName || "…", listing: payload.listingTitle || "…" });
-      pushToast({ title, body: "", link: "/" });
-      showBrowserNotification(title, "", "/", "interest");
+    const handleIncomingInterest = ({ event, request }: InterestSocketEvent) => {
+      setIncomingRequests((previous) => upsertRequest(previous, request));
+      if (event !== "created") return;
+
+      const title = fmt(t().interests.newRequest, {
+        name: request.personName || t().interests.someone,
+        listing: listingTitleOf(request, langRef.current, t().interests.listing),
+      });
+      pushToast({ title, body: "", link: OPEN_NOTIFICATIONS, kind: "interest" });
+      showBrowserNotification(title, "", "/", `interest-${request.id}`);
       playPing();
     };
 
-    const handleInterestAccepted = (payload: { conversationId?: number }) => {
-      const link = payload.conversationId ? `/chat?conversationId=${payload.conversationId}` : "/chat";
-      pushToast({ title: t().interestAccepted, body: "", link });
-      showBrowserNotification(t().interestAccepted, "", link, "interest-accepted");
+    const handleSentInterest = ({ event, request }: InterestSocketEvent) => {
+      setSentRequests((previous) => upsertRequest(previous, request));
+      if (event === "created") return;
+
+      const template = event === "accepted" ? t().interests.requestAccepted : t().interests.requestDeclined;
+      const title = fmt(template, {
+        name: request.personName || t().interests.owner,
+        listing: listingTitleOf(request, langRef.current, t().interests.listing),
+      });
+      const link = event === "accepted" && request.conversationId
+        ? `/chat?conversationId=${request.conversationId}`
+        : OPEN_NOTIFICATIONS;
+      pushToast({ title, body: "", link, kind: "interest" });
+      showBrowserNotification(title, "", link === OPEN_NOTIFICATIONS ? "/" : link, `interest-${request.id}`);
       playPing();
     };
 
-    socket.on("connect", refreshUnread);
+    const handleConnect = () => {
+      refreshUnread();
+      refreshInterests();
+    };
+
+    socket.on("connect", handleConnect);
     socket.on("newMessage", handleNewMessage);
     socket.on("conversationRead", refreshUnread);
     socket.on("messageDeleted", refreshUnread);
-    socket.on("newInterestRequest", handleNewInterest);
-    socket.on("interestRequestAccepted", handleInterestAccepted);
+    socket.on("incomingInterestRequest", handleIncomingInterest);
+    socket.on("sentInterestRequest", handleSentInterest);
 
-    if (socket.connected) refreshUnread();
+    if (socket.connected) handleConnect();
 
     return () => {
-      socket.off("connect", refreshUnread);
+      socket.off("connect", handleConnect);
       socket.off("newMessage", handleNewMessage);
       socket.off("conversationRead", refreshUnread);
       socket.off("messageDeleted", refreshUnread);
-      socket.off("newInterestRequest", handleNewInterest);
-      socket.off("interestRequestAccepted", handleInterestAccepted);
+      socket.off("incomingInterestRequest", handleIncomingInterest);
+      socket.off("sentInterestRequest", handleSentInterest);
     };
-  }, [socket, refreshUnread, pushToast, showBrowserNotification]);
+  }, [socket, refreshUnread, refreshInterests, pushToast, showBrowserNotification]);
+
+  const acceptInterest = useCallback(async (requestId: number) => {
+    const { request, conversationId } = await interestService.accept(requestId);
+    if (request) setIncomingRequests((previous) => upsertRequest(previous, request));
+    return conversationId ?? null;
+  }, []);
+
+  const declineInterest = useCallback(async (requestId: number) => {
+    const { request } = await interestService.decline(requestId);
+    if (request) setIncomingRequests((previous) => upsertRequest(previous, request));
+    return true;
+  }, []);
+
+  const markNotificationsSeen = useCallback(() => {
+    const now = Date.now();
+    setSeen({ userId: currentUserId, at: now });
+    if (currentUserId == null) return;
+    try {
+      localStorage.setItem(`notifications.lastSeen.${currentUserId}`, String(now));
+    } catch {
+    }
+  }, [currentUserId]);
+
+  const notificationCount = useMemo(() => {
+    const pending = incomingRequests.filter((r) => r.status === "PENDING").length;
+    const answered = sentRequests.filter(
+      (r) => r.status !== "PENDING" && new Date(r.updatedAt).getTime() > lastSeen,
+    ).length;
+    return pending + answered;
+  }, [incomingRequests, sentRequests, lastSeen]);
 
   const setActiveConversation = useCallback((conversationId: number | null) => {
     activeConversationRef.current = conversationId;
@@ -211,8 +265,17 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
       setActiveConversation,
       notificationPermission,
       requestNotificationPermission,
+      incomingRequests,
+      sentRequests,
+      notificationCount,
+      acceptInterest,
+      declineInterest,
+      notificationsOpen,
+      setNotificationsOpen,
+      markNotificationsSeen,
     }),
-    [socket, unreadTotal, refreshUnread, setActiveConversation, notificationPermission, requestNotificationPermission],
+    [socket, unreadTotal, refreshUnread, setActiveConversation, notificationPermission, requestNotificationPermission,
+      incomingRequests, sentRequests, notificationCount, acceptInterest, declineInterest, notificationsOpen, markNotificationsSeen],
   );
 
   const tChat = (translations[lang] ?? translations.en).chat;
@@ -223,7 +286,7 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
 
       <div
         aria-live="polite"
-        className="pointer-events-none fixed bottom-4 end-4 z-[70] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2"
+        className="pointer-events-none fixed inset-x-3 top-[5.75rem] z-[70] flex flex-col gap-2 sm:inset-x-auto sm:bottom-4 sm:end-4 sm:top-auto sm:w-full sm:max-w-sm"
       >
         {toasts.map((toast) => (
           <div
@@ -231,13 +294,14 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
             className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-xl"
           >
             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)]">
-              {toast.link.startsWith("/chat") ? <MessageCircle size={18} /> : <Bell size={18} />}
+              {toast.kind === "message" ? <MessageCircle size={18} /> : <Bell size={18} />}
             </span>
             <button
               type="button"
               onClick={() => {
                 setToasts((previous) => previous.filter((item) => item.id !== toast.id));
-                navigate(toast.link);
+                if (toast.link === OPEN_NOTIFICATIONS) setNotificationsOpen(true);
+                else navigate(toast.link);
               }}
               className="min-w-0 flex-1 text-start"
             >

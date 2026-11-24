@@ -13,7 +13,7 @@ import { translations } from "../../translations";
 import { formatChatError } from "./chatErrorFormatter";
 import { fmt, formatLastSeen } from "./chatUtils";
 import ChatHandshake from "../handshakes/ChatHandshake";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../context/chatContextValue";
 
 interface Thread {
   messages: ApiMessage[];
@@ -85,7 +85,10 @@ function Chat({ lang }: ChatProps) {
         if (cancelled) return;
         setConversations(list);
         setError(null);
+        const requested = requestedId && list.some((c) => c.id === requestedId) ? requestedId : null;
+        if (requested) setShowList(false);
         setSelectedId((previousId) => {
+          if (requested) return requested;
           if (previousId !== null && list.some((c) => c.id === previousId)) return previousId;
           if (searchQuery.trim()) return previousId;
           return list[0]?.id ?? null;
@@ -101,17 +104,7 @@ function Chat({ lang }: ChatProps) {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [searchQuery, reloadKey]);
-
-  useEffect(() => {
-    if (!requestedId) return;
-    if (conversations.some((c) => c.id === requestedId)) {
-      setSelectedId(requestedId);
-      setShowList(false);
-    } else if (!isLoading && !searchQuery) {
-      setReloadKey((key) => key + 1);
-    }
-  }, [requestedId, conversations.length, isLoading]);
+  }, [searchQuery, reloadKey, requestedId]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
   const thread = selectedId !== null ? threads[selectedId] : undefined;
@@ -198,11 +191,7 @@ function Chat({ lang }: ChatProps) {
     });
   }, []);
 
-  const setTyping = useCallback((conversationId: number, isTyping: boolean) => {
-    const timers = typingTimers.current;
-    window.clearTimeout(timers.get(conversationId));
-    timers.delete(conversationId);
-
+  const updateTypingIds = useCallback((conversationId: number, isTyping: boolean) => {
     setTypingIds((previous) => {
       if (previous.has(conversationId) === isTyping) return previous;
       const next = new Set(previous);
@@ -210,11 +199,21 @@ function Chat({ lang }: ChatProps) {
       else next.delete(conversationId);
       return next;
     });
+  }, []);
+
+  const setTyping = useCallback((conversationId: number, isTyping: boolean) => {
+    const timers = typingTimers.current;
+    window.clearTimeout(timers.get(conversationId));
+    timers.delete(conversationId);
+    updateTypingIds(conversationId, isTyping);
 
     if (isTyping) {
-      timers.set(conversationId, window.setTimeout(() => setTyping(conversationId, false), TYPING_TIMEOUT_MS));
+      timers.set(conversationId, window.setTimeout(() => {
+        timers.delete(conversationId);
+        updateTypingIds(conversationId, false);
+      }, TYPING_TIMEOUT_MS));
     }
-  }, []);
+  }, [updateTypingIds]);
 
   useEffect(() => {
     const timers = typingTimers.current;

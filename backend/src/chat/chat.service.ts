@@ -552,7 +552,16 @@ export class ChatService implements OnModuleInit {
     const existing = await this.interestRequestRepository.findOne({
       where: { tenantId, listingId },
     });
-    if (existing) return { request: existing, created: false };
+
+    if (existing && existing.status !== InterestRequestStatus.REJECTED) {
+      return { request: existing, created: false };
+    }
+
+    if (existing) {
+      existing.status = InterestRequestStatus.PENDING;
+      const request = await this.interestRequestRepository.save(existing);
+      return { request, created: true };
+    }
 
     const request = await this.interestRequestRepository.save(
       this.interestRequestRepository.create({
@@ -566,73 +575,32 @@ export class ChatService implements OnModuleInit {
   }
 
   async getInterestStatus(tenantId: number, listingId: number) {
-    return this.interestRequestRepository.findOne({
+    const request = await this.interestRequestRepository.findOne({
       where: { tenantId, listingId },
     });
+    return request ? { status: request.status, conversationId: request.conversationId ?? null } : null;
   }
 
-  async getOwnerInterestRequests(ownerId: number) {
-    this.validateId(ownerId, 'ownerId');
+  getOwnerInterestRequests(ownerId: number) {
+    return this.loadInterestRequests('owner', ownerId);
+  }
 
-    const result = await this.interestRequestRepository
-      .createQueryBuilder('req')
-      .leftJoin(User, 'tenant', 'tenant.id = req.tenantId')
-      .leftJoin(Listing, 'listing', 'listing.id = req.listingId')
-      .select([
-        'req.id',
-        'req.tenantId',
-        'req.ownerId',
-        'req.listingId',
-        'req.status',
-        'req.conversationId',
-        'req.createdAt',
-        'tenant.firstName',
-        'tenant.lastName',
-        'listing.titleEn',
-        'listing.titleFr',
-        'listing.titleAr',
-      ])
-      .where('req.ownerId = :ownerId', { ownerId })
-      .orderBy('req.createdAt', 'DESC')
-      .getRawAndEntities();
+  getSentInterestRequests(tenantId: number) {
+    return this.loadInterestRequests('tenant', tenantId);
+  }
 
-    return result.entities.map((req, index) => {
-      const raw = result.raw[index];
+  async getOwnerInterestRequest(ownerId: number, requestId: number) {
+    const [request] = await this.loadInterestRequests('owner', ownerId, requestId);
+    return request;
+  }
 
-      const tenantName =
-        raw.tenant_firstName && raw.tenant_lastName
-          ? `${raw.tenant_firstName} ${raw.tenant_lastName}`
-          : raw.tenant_firstName ?? `Applicant #${req.tenantId}`;
-
-      const listingTitle =
-        raw.listing_titleEn ||
-        raw.listing_titleFr ||
-        raw.listing_titleAr ||
-        `Listing #${req.listingId}`;
-
-      return {
-        ...req,
-        tenantName,
-        listingTitle,
-        listingTitleEn: raw.listing_titleEn,
-        listingTitleFr: raw.listing_titleFr,
-        listingTitleAr: raw.listing_titleAr,
-      };
-    });
+  async getSentInterestRequest(tenantId: number, requestId: number) {
+    const [request] = await this.loadInterestRequests('tenant', tenantId, requestId);
+    return request;
   }
 
   async acceptInterestRequest(ownerId: number, requestId: number) {
-    this.validateId(ownerId, 'ownerId');
-    this.validateId(requestId, 'requestId');
-
-    const request = await this.interestRequestRepository.findOne({
-      where: { id: requestId, ownerId },
-    });
-
-    if (!request) {
-      throw new NotFoundException('Interest request not found');
-    }
-
+    const request = await this.findOwnerRequest(ownerId, requestId);
     const conversation = await this.findOrCreateConversation(ownerId, request.tenantId);
 
     request.status = InterestRequestStatus.ACCEPTED;
@@ -640,5 +608,77 @@ export class ChatService implements OnModuleInit {
     await this.interestRequestRepository.save(request);
 
     return { request, conversation };
+  }
+
+  async declineInterestRequest(ownerId: number, requestId: number) {
+    const request = await this.findOwnerRequest(ownerId, requestId);
+
+    if (request.status === InterestRequestStatus.ACCEPTED) {
+      throw new BadRequestException('This request was already accepted');
+    }
+
+    request.status = InterestRequestStatus.REJECTED;
+    await this.interestRequestRepository.save(request);
+    return { request };
+  }
+
+  private async findOwnerRequest(ownerId: number, requestId: number) {
+    this.validateId(ownerId, 'ownerId');
+    this.validateId(requestId, 'requestId');
+
+    const request = await this.interestRequestRepository.findOne({
+      where: { id: requestId, ownerId },
+    });
+    if (!request) throw new NotFoundException('Interest request not found');
+    return request;
+  }
+
+  private async loadInterestRequests(side: 'owner' | 'tenant', userId: number, requestId?: number) {
+    this.validateId(userId, 'userId');
+
+    const query = this.interestRequestRepository
+      .createQueryBuilder('req')
+      .leftJoin(User, 'other', side === 'owner' ? 'other.id = req.tenantId' : 'other.id = req.ownerId')
+      .leftJoin(Listing, 'listing', 'listing.id = req.listingId')
+      .select([
+        'req.id',
+        'req.listingId',
+        'req.status',
+        'req.conversationId',
+        'req.createdAt',
+        'req.updatedAt',
+        'other.firstName',
+        'other.lastName',
+        'other.avatarUrl',
+        'listing.titleEn',
+        'listing.titleFr',
+        'listing.titleAr',
+      ])
+      .where(side === 'owner' ? 'req.ownerId = :userId' : 'req.tenantId = :userId', { userId })
+      .orderBy('req.updatedAt', 'DESC')
+      .limit(100);
+
+    if (requestId) query.andWhere('req.id = :requestId', { requestId });
+
+    const result = await query.getRawAndEntities();
+
+    return result.entities.map((req, index) => {
+      const raw = result.raw[index];
+      return {
+        id: req.id,
+        listingId: req.listingId,
+        status: req.status,
+        conversationId: req.conversationId ?? null,
+        createdAt: req.createdAt,
+        updatedAt: req.updatedAt,
+        personName: fullNameOf(raw.other_firstName, raw.other_lastName) || null,
+        personAvatarUrl: safeAvatarUrl(raw.other_avatarUrl),
+        listingTitle: {
+          en: raw.listing_titleEn || raw.listing_titleFr || raw.listing_titleAr || null,
+          fr: raw.listing_titleFr || raw.listing_titleEn || raw.listing_titleAr || null,
+          ar: raw.listing_titleAr || raw.listing_titleFr || raw.listing_titleEn || null,
+        },
+      };
+    });
   }
 }
