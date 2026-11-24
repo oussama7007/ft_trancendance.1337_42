@@ -90,20 +90,35 @@ export function normalizeMimeType(mimeType: string | undefined): string {
   return aliases[base] ?? base;
 }
 
-const UNSAFE_NAME_CHARS = new RegExp('[\u0000-\u001f\u007f<>:"/\\|?*\u202a-\u202e\u2066-\u2069]', 'g');
-const NON_LATIN1 = new RegExp('[^\u0000-\u00ff]');
+const FORBIDDEN_NAME_CHARS = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+
+function isUnsafeNameChar(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return (
+    code < 0x20 ||
+    code === 0x7f ||
+    (code >= 0x202a && code <= 0x202e) ||
+    (code >= 0x2066 && code <= 0x2069) ||
+    FORBIDDEN_NAME_CHARS.has(char)
+  );
+}
+
+function hasNonLatin1(text: string): boolean {
+  return Array.from(text).some((char) => (char.codePointAt(0) ?? 0) > 0xff);
+}
 
 export function sanitizeFileName(name: string | undefined, fallbackExtension: string): string {
   let clean = name ?? '';
-  if (!NON_LATIN1.test(clean)) {
+  if (!hasNonLatin1(clean)) {
     try {
       clean = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.from(clean, 'latin1'));
     } catch {
+      clean = name ?? '';
     }
   }
-  clean = clean
-    .normalize('NFC')
-    .replace(UNSAFE_NAME_CHARS, '')
+  clean = Array.from(clean.normalize('NFC'))
+    .filter((char) => !isUnsafeNameChar(char))
+    .join('')
     .replace(/^\.+/, '')
     .trim()
     .slice(0, 120);
