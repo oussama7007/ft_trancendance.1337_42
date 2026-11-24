@@ -8,6 +8,7 @@ import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
 import ReviewsSection from '../Components/reviews/ReviewsSection';
 import { FriendsMenu } from '../Components/friends/FriendsMenu';
 import { OwnerInterestRequests } from '../Components/home/OwnerInterestRequests';
+import { fetchMyListings } from '../api/myListings';
 
 
 
@@ -33,6 +34,15 @@ export function ProfilePage({ user, lang, onAvatarChanged }: ProfilePageProps) {
     
     const [profile, setProfile] = useState(user);
     const [error, setError] = useState('');
+    const [hasListings, setHasListings] = useState(false);
+
+    useEffect(() => {
+        let ignore = false;
+        fetchMyListings()
+            .then((listings) => { if (!ignore) setHasListings(listings.length > 0); })
+            .catch(() => { if (!ignore) setHasListings(false); });
+        return () => { ignore = true; };
+    }, []);
 
         useEffect(() => {
             getMyProfile()
@@ -158,7 +168,9 @@ async function handleDescriptionSave(description: string) {
                             />
 
                             {/* TODO: Teammates can add future profile sections in this column. */}
-                            <OwnerInterestRequests lang={lang} onAcceptSuccess={handleAcceptRequest} />
+                            {hasListings && (
+                                <OwnerInterestRequests lang={lang} onAcceptSuccess={handleAcceptRequest} />
+                            )}
                         </div>
                     </div>
                 </div>
