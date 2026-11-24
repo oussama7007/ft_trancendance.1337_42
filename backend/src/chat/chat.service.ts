@@ -8,7 +8,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { randomUUID } from 'node:crypto';
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
@@ -167,11 +167,12 @@ export class ChatService implements OnModuleInit {
     const ids = rows.map((row) => Number(row.id));
 
     const lastIdRows: Array<{ id: number }> = await this.messageRepository.query(
-      `SELECT DISTINCT ON (conversation_id) id
-         FROM messages
-        WHERE conversation_id = ANY($1)
-        ORDER BY conversation_id, id DESC`,
-      [ids],
+      `SELECT DISTINCT ON (m.conversation_id) m.id
+         FROM messages m
+        WHERE m.conversation_id = ANY($1)
+          AND NOT EXISTS (SELECT 1 FROM hidden_messages h WHERE h.message_id = m.id AND h.user_id = $2)
+        ORDER BY m.conversation_id, m.id DESC`,
+      [ids, userId],
     );
     const lastMessages = lastIdRows.length
       ? await this.messageRepository.findBy({ id: In(lastIdRows.map((r) => Number(r.id))) })
@@ -179,14 +180,16 @@ export class ChatService implements OnModuleInit {
 
     const unreadRows: Array<{ conversation_id: number; count: number }> =
       await this.messageRepository.query(
-        `SELECT conversation_id, COUNT(*)::int AS count
-           FROM messages
-          WHERE conversation_id = ANY($1) AND sender_id <> $2
-            AND read_at IS NULL AND deleted_at IS NULL
-          GROUP BY conversation_id`,
+        `SELECT m.conversation_id, COUNT(*)::int AS count
+           FROM messages m
+          WHERE m.conversation_id = ANY($1) AND m.sender_id <> $2
+            AND m.read_at IS NULL AND m.deleted_at IS NULL
+            AND NOT EXISTS (SELECT 1 FROM hidden_messages h WHERE h.message_id = m.id AND h.user_id = $2)
+          GROUP BY m.conversation_id`,
         [ids, userId],
       );
 
+    const blocks = await this.getBlocksWith(userId, rows.map((row) => Number(row.peer_id)));
     const lastById = new Map(lastMessages.map((m) => [m.conversationId, m]));
     const unreadById = new Map(unreadRows.map((r) => [Number(r.conversation_id), Number(r.count)]));
 
@@ -194,6 +197,9 @@ export class ChatService implements OnModuleInit {
       const id = Number(row.id);
       const peerId = Number(row.peer_id);
       const last = lastById.get(id);
+      const blockedByMe = blocks.blockedByMe.has(peerId);
+      const blockedByPeer = blocks.blockedByPeer.has(peerId);
+      const hidePresence = blockedByMe || blockedByPeer;
 
       return {
         id,
@@ -201,11 +207,13 @@ export class ChatService implements OnModuleInit {
         peer: {
           name: fullNameOf(row.first_name, row.last_name) || null,
           avatarUrl: safeAvatarUrl(row.avatar_url),
-          online: this.presence.isOnline(peerId),
-          lastSeen: this.presence.getLastSeen(peerId),
+          online: hidePresence ? false : this.presence.isOnline(peerId),
+          lastSeen: hidePresence ? null : this.presence.getLastSeen(peerId),
         },
         lastMessage: last ? this.toPublicMessage(last, userId) : null,
         unreadCount: unreadById.get(id) ?? 0,
+        blockedByMe,
+        blockedByPeer,
       };
     });
   }
@@ -216,6 +224,8 @@ export class ChatService implements OnModuleInit {
 
     const user = await this.userRepository.findOne({ where: { id: peerId } });
     if (!user) throw new NotFoundException('User not found');
+    const block = await this.getBlockState(userId, peerId);
+    const hidePresence = block.blockedByMe || block.blockedByPeer;
 
     const [rating]: Array<{ count: number; average: number | null }> =
       await this.userRepository.query(
@@ -232,8 +242,10 @@ export class ChatService implements OnModuleInit {
       linkedin: user.linkedin ?? null,
       instagram: user.instagram ?? null,
       facebook: user.facebook ?? null,
-      online: this.presence.isOnline(peerId),
-      lastSeen: this.presence.getLastSeen(peerId),
+      online: hidePresence ? false : this.presence.isOnline(peerId),
+      lastSeen: hidePresence ? null : this.presence.getLastSeen(peerId),
+      blockedByMe: block.blockedByMe,
+      blockedByPeer: block.blockedByPeer,
       rating: {
         count: Number(rating?.count ?? 0),
         average: rating?.average != null ? Math.round(Number(rating.average) * 10) / 10 : null,
@@ -257,11 +269,14 @@ export class ChatService implements OnModuleInit {
     this.validateId(userId, 'userId');
     await this.findConversationForUser(conversationId, userId);
 
-    const page = await this.messageRepository.find({
-      where: before ? { conversationId, id: LessThan(before) } : { conversationId },
-      order: { id: 'DESC' },
-      take: limit + 1,
-    });
+    const query = this.messageRepository
+      .createQueryBuilder('m')
+      .where('m.conversationId = :conversationId', { conversationId })
+      .andWhere('NOT EXISTS (SELECT 1 FROM hidden_messages h WHERE h.message_id = m.id AND h.user_id = :userId)', { userId })
+      .orderBy('m.id', 'DESC')
+      .take(limit + 1);
+    if (before) query.andWhere('m.id < :before', { before });
+    const page = await query.getMany();
 
     const hasMore = page.length > limit;
     const messages = page.slice(0, limit).reverse().map((m) => this.toPublicMessage(m, userId));
@@ -279,6 +294,7 @@ export class ChatService implements OnModuleInit {
     }
 
     const conversation = await this.findConversationForUser(conversationId, senderId);
+    await this.assertNotBlocked(senderId, this.getPeerId(conversation, senderId));
 
     if (!this.textLimiter.tryConsume(senderId)) {
       throw chatError(HttpStatus.TOO_MANY_REQUESTS, 'RATE_LIMIT', 'You are sending messages too fast');
@@ -305,6 +321,7 @@ export class ChatService implements OnModuleInit {
     if (!file || !file.buffer?.length) throw new BadRequestException('A file is required');
 
     const conversation = await this.findConversationForUser(conversationId, senderId);
+    await this.assertNotBlocked(senderId, this.getPeerId(conversation, senderId));
 
     const mime = normalizeMimeType(file.mimetype);
     const allowed = ALLOWED_TYPES[mime];
@@ -440,10 +457,85 @@ export class ChatService implements OnModuleInit {
          FROM messages m
          JOIN conversations c ON c.id = m.conversation_id
         WHERE (c.participant_one_id = $1 OR c.participant_two_id = $1)
-          AND m.sender_id <> $1 AND m.read_at IS NULL AND m.deleted_at IS NULL`,
+          AND m.sender_id <> $1 AND m.read_at IS NULL AND m.deleted_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM hidden_messages h WHERE h.message_id = m.id AND h.user_id = $1)`,
       [userId],
     );
     return Number(row?.count ?? 0);
+  }
+
+  async hideMessage(messageId: number, userId: number) {
+    this.validateId(messageId, 'messageId');
+
+    const message = await this.messageRepository.findOne({ where: { id: messageId } });
+    if (!message) throw new NotFoundException('Message not found');
+    await this.findConversationForUser(message.conversationId, userId);
+
+    await this.messageRepository.query(
+      `INSERT INTO hidden_messages (message_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [messageId, userId],
+    );
+    return { conversationId: message.conversationId, messageId: message.id };
+  }
+
+  async getBlockState(userId: number, peerId: number) {
+    const rows: Array<{ blocker_id: number }> = await this.messageRepository.query(
+      `SELECT blocker_id FROM user_blocks
+        WHERE (blocker_id = $1 AND blocked_id = $2) OR (blocker_id = $2 AND blocked_id = $1)`,
+      [userId, peerId],
+    );
+    return {
+      blockedByMe: rows.some((row) => Number(row.blocker_id) === userId),
+      blockedByPeer: rows.some((row) => Number(row.blocker_id) === peerId),
+    };
+  }
+
+  async isBlockedBetween(userA: number, userB: number): Promise<boolean> {
+    const state = await this.getBlockState(userA, userB);
+    return state.blockedByMe || state.blockedByPeer;
+  }
+
+  async setBlocked(conversationId: number, userId: number, blocked: boolean) {
+    const conversation = await this.findConversationForUser(conversationId, userId);
+    const peerId = this.getPeerId(conversation, userId);
+
+    if (blocked) {
+      await this.messageRepository.query(
+        `INSERT INTO user_blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [userId, peerId],
+      );
+    } else {
+      await this.messageRepository.query(
+        `DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2`,
+        [userId, peerId],
+      );
+    }
+
+    const state = await this.getBlockState(userId, peerId);
+    return { conversation, peerId, ...state };
+  }
+
+  private async getBlocksWith(userId: number, peerIds: number[]) {
+    const blockedByMe = new Set<number>();
+    const blockedByPeer = new Set<number>();
+    if (peerIds.length === 0) return { blockedByMe, blockedByPeer };
+
+    const rows: Array<{ blocker_id: number; blocked_id: number }> = await this.messageRepository.query(
+      `SELECT blocker_id, blocked_id FROM user_blocks
+        WHERE (blocker_id = $1 AND blocked_id = ANY($2)) OR (blocked_id = $1 AND blocker_id = ANY($2))`,
+      [userId, peerIds],
+    );
+    for (const row of rows) {
+      if (Number(row.blocker_id) === userId) blockedByMe.add(Number(row.blocked_id));
+      else blockedByPeer.add(Number(row.blocker_id));
+    }
+    return { blockedByMe, blockedByPeer };
+  }
+
+  private async assertNotBlocked(senderId: number, peerId: number) {
+    if (await this.isBlockedBetween(senderId, peerId)) {
+      throw chatError(HttpStatus.FORBIDDEN, 'BLOCKED', 'You can not send messages in this conversation');
+    }
   }
 
   async verifyConversationAccess(conversationId: number, userId: number): Promise<Conversation> {
@@ -547,6 +639,9 @@ export class ChatService implements OnModuleInit {
     const ownerId = listing.ownerId;
     if (tenantId === ownerId) {
       throw new BadRequestException('You cannot send an interest request to yourself');
+    }
+    if (await this.isBlockedBetween(tenantId, ownerId)) {
+      throw chatError(HttpStatus.FORBIDDEN, 'BLOCKED', 'You can not contact this owner');
     }
 
     const existing = await this.interestRequestRepository.findOne({

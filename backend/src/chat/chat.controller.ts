@@ -149,6 +149,32 @@ export class ChatController {
     });
   }
 
+  @Post('messages/:id/hide')
+  @HttpCode(HttpStatus.OK)
+  async hideMessage(@Param('id', ParseIntPipe) messageId: number, @Req() request: AuthenticatedRequest) {
+    const userId = request.user.userId;
+    const result = await this.chatService.hideMessage(messageId, userId);
+    this.chatGateway.emitMessageHidden(userId, result.conversationId, result.messageId);
+    return result;
+  }
+
+  @Post('conversations/:id/block')
+  @HttpCode(HttpStatus.OK)
+  blockPeer(@Param('id', ParseIntPipe) conversationId: number, @Req() request: AuthenticatedRequest) {
+    return this.changeBlock(conversationId, request.user.userId, true);
+  }
+
+  @Delete('conversations/:id/block')
+  unblockPeer(@Param('id', ParseIntPipe) conversationId: number, @Req() request: AuthenticatedRequest) {
+    return this.changeBlock(conversationId, request.user.userId, false);
+  }
+
+  private async changeBlock(conversationId: number, userId: number, blocked: boolean) {
+    const state = await this.chatService.setBlocked(conversationId, userId, blocked);
+    this.chatGateway.emitBlockChanged(state.conversation, userId, state.peerId, state.blockedByMe, state.blockedByPeer);
+    return { conversationId, blockedByMe: state.blockedByMe, blockedByPeer: state.blockedByPeer };
+  }
+
   @Delete('messages/:id')
   async deleteMessage(@Param('id', ParseIntPipe) messageId: number, @Req() request: AuthenticatedRequest) {
     const userId = request.user.userId;

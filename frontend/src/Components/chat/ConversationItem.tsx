@@ -63,6 +63,9 @@ function ConversationItem({ conversation, isSelected, isTyping, lang, t, onClick
               {youPrefix}<bdi>{preview}</bdi>
             </p>
           )}
+          {conversation.blockedByMe && (
+            <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600">{t.blocked}</span>
+          )}
           {unread > 0 && (
             <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)] px-1.5 text-[11px] font-bold text-white">
               {unread > 99 ? "99+" : unread}

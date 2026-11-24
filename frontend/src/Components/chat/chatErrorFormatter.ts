@@ -56,6 +56,8 @@ export function formatChatError(
     switch (err.code) {
       case "QUOTA":
         return errorStrings.quota;
+      case "BLOCKED":
+        return errorStrings.blocked;
       case "RATE_LIMIT":
         return errorStrings.rateLimit;
       case "FILE_TYPE":

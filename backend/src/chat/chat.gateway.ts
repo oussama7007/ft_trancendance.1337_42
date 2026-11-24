@@ -94,6 +94,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const lastSeen = online ? null : this.presence.getLastSeen(userId);
 
     for (const { conversationId, peerId } of contacts) {
+      if (await this.chatService.isBlockedBetween(userId, peerId)) continue;
       this.server.to(userRoom(peerId)).emit('presence', { conversationId, online, lastSeen });
     }
   }
@@ -113,6 +114,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .to(userRoom(viewerId))
         .emit('messageDeleted', this.chatService.toPublicMessage(message, viewerId));
     }
+  }
+
+  emitMessageHidden(userId: number, conversationId: number, messageId: number) {
+    this.server.to(userRoom(userId)).emit('messageHidden', { conversationId, messageId });
+  }
+
+  emitBlockChanged(conversation: Conversation, userId: number, peerId: number, blockedByMe: boolean, blockedByPeer: boolean) {
+    const blocked = blockedByMe || blockedByPeer;
+    this.server.to(userRoom(userId)).emit('blockChanged', {
+      conversationId: conversation.id,
+      blockedByMe,
+      blockedByPeer,
+    });
+    this.server.to(userRoom(peerId)).emit('blockChanged', {
+      conversationId: conversation.id,
+      blockedByMe: blockedByPeer,
+      blockedByPeer: blockedByMe,
+    });
+
+    const presenceFor = (otherId: number) => ({
+      conversationId: conversation.id,
+      online: blocked ? false : this.presence.isOnline(otherId),
+      lastSeen: blocked ? null : this.presence.getLastSeen(otherId),
+    });
+    this.server.to(userRoom(userId)).emit('presence', presenceFor(peerId));
+    this.server.to(userRoom(peerId)).emit('presence', presenceFor(userId));
   }
 
   emitMessagesRead(conversation: Conversation, readerId: number) {
@@ -145,6 +172,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const conversation = await this.chatService.verifyConversationAccess(conversationId, userId);
       const peerId = this.chatService.getPeerId(conversation, userId);
+      if (await this.chatService.isBlockedBetween(userId, peerId)) return;
       this.server.to(userRoom(peerId)).emit('typing', {
         conversationId,
         isTyping: data?.isTyping === true,

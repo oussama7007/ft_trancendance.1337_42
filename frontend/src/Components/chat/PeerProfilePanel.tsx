@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Star, X } from "lucide-react";
+import { Ban, Star, X } from "lucide-react";
 import { chatService, resolveMediaUrl } from "../../services/chatService";
 import type { PeerProfile } from "../../services/chatService";
 import { translations } from "../../translations";
@@ -12,6 +12,8 @@ interface PeerProfilePanelProps {
   conversationId: number;
   lang: Language;
   online: boolean;
+  blockedByMe: boolean;
+  onRequestBlock: (blocked: boolean) => void;
   onClose: () => void;
 }
 
@@ -25,7 +27,7 @@ function safeLink(url: string | null): string | null {
   }
 }
 
-export default function PeerProfilePanel({ conversationId, lang, online, onClose }: PeerProfilePanelProps) {
+export default function PeerProfilePanel({ conversationId, lang, online, blockedByMe, onRequestBlock, onClose }: PeerProfilePanelProps) {
   const t = translations[lang].chat;
   const [profile, setProfile] = useState<PeerProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +157,19 @@ export default function PeerProfilePanel({ conversationId, lang, online, onClose
                   .format(new Date(profile.conversationSince)),
               })}
             </p>
+
+            <button
+              type="button"
+              onClick={() => onRequestBlock(!blockedByMe)}
+              className={`flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold transition ${
+                blockedByMe
+                  ? "border border-[var(--color-border)] text-[var(--color-text)] hover:bg-[var(--color-background)]"
+                  : "border border-red-200 text-red-600 hover:bg-red-50"
+              }`}
+            >
+              <Ban size={16} />
+              {blockedByMe ? t.unblock : t.block}
+            </button>
           </div>
         )}
       </aside>

@@ -28,12 +28,12 @@ export default function MessageBubble({ message, lang, t, onDelete, onMediaLoad 
 
   return (
     <div className={`group flex w-full min-w-0 items-center gap-1 ${isMine ? "justify-end" : "justify-start"}`}>
-      {isMine && !message.deleted && (
+      {isMine && (
         <button
           type="button"
           onClick={() => onDelete(message)}
-          aria-label={t.deleteMessage}
-          title={t.deleteMessage}
+          aria-label={t.deleteTitle}
+          title={t.deleteTitle}
           className="shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] opacity-0 transition hover:bg-[var(--color-border)] hover:text-red-600 focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
         >
           <Trash2 size={14} />
@@ -109,6 +109,17 @@ export default function MessageBubble({ message, lang, t, onDelete, onMediaLoad 
           </div>
         )}
       </div>
+      {!isMine && (
+        <button
+          type="button"
+          onClick={() => onDelete(message)}
+          aria-label={t.deleteTitle}
+          title={t.deleteTitle}
+          className="shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] opacity-0 transition hover:bg-[var(--color-border)] hover:text-red-600 focus:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60"
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
     </div>
   );
 }

@@ -14,6 +14,8 @@ import { formatChatError } from "./chatErrorFormatter";
 import { fmt, formatLastSeen } from "./chatUtils";
 import ChatHandshake from "../handshakes/ChatHandshake";
 import { useChat } from "../../context/chatContextValue";
+import ConfirmDialog from "./ConfirmDialog";
+import type { ConfirmAction } from "./ConfirmDialog";
 
 interface Thread {
   messages: ApiMessage[];
@@ -47,17 +49,20 @@ function Chat({ lang }: ChatProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [dialog, setDialog] = useState<{ title: string; description?: string; actions: ConfirmAction[] } | null>(null);
 
   const [searchParams] = useSearchParams();
   const requestedId = Number(searchParams.get("conversationId")) || null;
 
   const selectedIdRef = useRef<number | null>(null);
   const conversationsRef = useRef<ApiConversation[]>([]);
+  const threadsRef = useRef<Record<number, Thread>>({});
   const typingTimers = useRef(new Map<number, number>());
   const langRef = useRef(lang);
 
   useEffect(() => { langRef.current = lang; }, [lang]);
   useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { threadsRef.current = threads; }, [threads]);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -191,6 +196,24 @@ function Chat({ lang }: ChatProps) {
     });
   }, []);
 
+  const removeMessage = useCallback((conversationId: number, messageId: number) => {
+    const current = threadsRef.current[conversationId];
+    setThreads((previous) => {
+      const thread = previous[conversationId];
+      if (!thread) return previous;
+      return { ...previous, [conversationId]: { ...thread, messages: thread.messages.filter((m) => m.id !== messageId) } };
+    });
+
+    const target = conversationsRef.current.find((c) => c.id === conversationId);
+    if (target?.lastMessage?.id !== messageId) return;
+    if (!current) {
+      setReloadKey((key) => key + 1);
+      return;
+    }
+    const newLast = current.messages.filter((m) => m.id !== messageId).at(-1) ?? null;
+    setConversations((previous) => previous.map((c) => (c.id === conversationId ? { ...c, lastMessage: newLast } : c)));
+  }, []);
+
   const updateTypingIds = useCallback((conversationId: number, isTyping: boolean) => {
     setTypingIds((previous) => {
       if (previous.has(conversationId) === isTyping) return previous;
@@ -237,6 +260,16 @@ function Chat({ lang }: ChatProps) {
 
     const handleDeleted = (message: ApiMessage) => addMessage(message);
 
+    const handleHidden = ({ conversationId, messageId }: { conversationId: number; messageId: number }) =>
+      removeMessage(Number(conversationId), Number(messageId));
+
+    const handleBlockChanged = ({ conversationId, blockedByMe, blockedByPeer }: { conversationId: number; blockedByMe: boolean; blockedByPeer: boolean }) => {
+      setConversations((previous) =>
+        previous.map((c) => (c.id === Number(conversationId) ? { ...c, blockedByMe, blockedByPeer } : c)),
+      );
+      if (blockedByMe || blockedByPeer) setTyping(Number(conversationId), false);
+    };
+
     const handleRead = ({ conversationId, readAt }: { conversationId: number; readAt: string }) => {
       setThreads((previous) => {
         const current = previous[conversationId];
@@ -278,6 +311,8 @@ function Chat({ lang }: ChatProps) {
 
     socket.on("newMessage", handleNewMessage);
     socket.on("messageDeleted", handleDeleted);
+    socket.on("messageHidden", handleHidden);
+    socket.on("blockChanged", handleBlockChanged);
     socket.on("messagesRead", handleRead);
     socket.on("conversationRead", handleConversationRead);
     socket.on("presence", handlePresence);
@@ -287,13 +322,15 @@ function Chat({ lang }: ChatProps) {
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messageDeleted", handleDeleted);
+      socket.off("messageHidden", handleHidden);
+      socket.off("blockChanged", handleBlockChanged);
       socket.off("messagesRead", handleRead);
       socket.off("conversationRead", handleConversationRead);
       socket.off("presence", handlePresence);
       socket.off("typing", handleTyping);
       socket.io.off("reconnect", handleReconnect);
     };
-  }, [socket, addMessage, markRead, setTyping]);
+  }, [socket, addMessage, markRead, setTyping, removeMessage]);
 
   async function handleSendText(content: string): Promise<boolean> {
     if (!selected) return false;
@@ -319,13 +356,66 @@ function Chat({ lang }: ChatProps) {
     }
   }
 
-  async function handleDelete(message: ApiMessage) {
-    if (!window.confirm(t.chat.confirmDelete)) return;
+  async function runAction(action: () => Promise<void>) {
+    setDialog(null);
     try {
-      addMessage(await chatService.deleteMessage(message.id));
+      await action();
     } catch (err) {
       setError(formatChatError(err, lang, t.chat.sendError));
     }
+  }
+
+  function handleDelete(message: ApiMessage) {
+    const actions: ConfirmAction[] = [];
+    if (message.isMine && !message.deleted) {
+      actions.push({
+        label: t.chat.deleteForEveryone,
+        tone: "danger",
+        onSelect: () => void runAction(async () => addMessage(await chatService.deleteMessage(message.id))),
+      });
+    }
+    actions.push({
+      label: t.chat.deleteForMe,
+      tone: actions.length ? "neutral" : "danger",
+      onSelect: () => void runAction(async () => {
+        await chatService.hideMessage(message.id);
+        removeMessage(message.conversationId, message.id);
+      }),
+    });
+    setDialog({ title: t.chat.deleteTitle, description: t.chat.deleteForMeHint, actions });
+  }
+
+  function applyBlockState(conversationId: number, blockedByMe: boolean, blockedByPeer: boolean) {
+    setConversations((previous) =>
+      previous.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              blockedByMe,
+              blockedByPeer,
+              peer: blockedByMe || blockedByPeer ? { ...c.peer, online: false, lastSeen: null } : c.peer,
+            }
+          : c,
+      ),
+    );
+  }
+
+  function requestBlock(blocked: boolean) {
+    if (!selected) return;
+    const conversationId = selected.id;
+    const name = selected.peer.name ?? t.chat.conversation;
+    setDialog({
+      title: fmt(blocked ? t.chat.blockTitle : t.chat.unblockTitle, { name }),
+      description: blocked ? fmt(t.chat.blockText, { name }) : t.chat.unblockText,
+      actions: [{
+        label: blocked ? t.chat.block : t.chat.unblock,
+        tone: blocked ? "danger" : "primary",
+        onSelect: () => void runAction(async () => {
+          const state = await chatService.setBlocked(conversationId, blocked);
+          applyBlockState(conversationId, state.blockedByMe, state.blockedByPeer);
+        }),
+      }],
+    });
   }
 
   const handleTypingSignal = useCallback((isTyping: boolean) => {
@@ -471,14 +561,33 @@ function Chat({ lang }: ChatProps) {
               </div>
 
               <div className="min-w-0 shrink-0">
-                <MessageInput
-                  key={selected.id}
-                  lang={lang}
-                  onSendText={handleSendText}
-                  onSendAttachment={handleSendAttachment}
-                  onTyping={handleTypingSignal}
-                  onError={setError}
-                />
+                {selected.blockedByMe || selected.blockedByPeer ? (
+                  <div className="flex flex-wrap items-center justify-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-center text-sm text-[var(--color-muted)] pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <span>
+                      {selected.blockedByMe
+                        ? fmt(t.chat.youBlocked, { name: selected.peer.name ?? t.chat.conversation })
+                        : t.chat.blockedByPeer}
+                    </span>
+                    {selected.blockedByMe && (
+                      <button
+                        type="button"
+                        onClick={() => requestBlock(false)}
+                        className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-bold text-[var(--color-accent-dark)] transition hover:bg-[var(--color-accent-soft)]"
+                      >
+                        {t.chat.unblock}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <MessageInput
+                    key={selected.id}
+                    lang={lang}
+                    onSendText={handleSendText}
+                    onSendAttachment={handleSendAttachment}
+                    onTyping={handleTypingSignal}
+                    onError={setError}
+                  />
+                )}
               </div>
 
               {profileOpen && (
@@ -486,6 +595,8 @@ function Chat({ lang }: ChatProps) {
                   conversationId={selected.id}
                   lang={lang}
                   online={selected.peer.online}
+                  blockedByMe={selected.blockedByMe}
+                  onRequestBlock={requestBlock}
                   onClose={() => setProfileOpen(false)}
                 />
               )}
@@ -497,6 +608,15 @@ function Chat({ lang }: ChatProps) {
           )}
         </div>
       </div>
+      {dialog && (
+        <ConfirmDialog
+          title={dialog.title}
+          description={dialog.description}
+          actions={dialog.actions}
+          cancelLabel={t.chat.cancel}
+          onCancel={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }

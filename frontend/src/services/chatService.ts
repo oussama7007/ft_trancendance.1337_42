@@ -90,6 +90,8 @@ export interface ApiConversation {
   peer: ApiPeer;
   lastMessage: ApiMessage | null;
   unreadCount: number;
+  blockedByMe: boolean;
+  blockedByPeer: boolean;
 }
 
 export interface PeerProfile {
@@ -103,6 +105,8 @@ export interface PeerProfile {
   facebook: string | null;
   online: boolean;
   lastSeen: string | null;
+  blockedByMe: boolean;
+  blockedByPeer: boolean;
   rating: { count: number; average: number | null };
   conversationSince: string;
 }
@@ -200,6 +204,17 @@ export const chatService = {
 
   getPeer(conversationId: number) {
     return request<PeerProfile>(`/chat/conversations/${conversationId}/peer`);
+  },
+
+  hideMessage(messageId: number) {
+    return request<{ conversationId: number; messageId: number }>(`/chat/messages/${messageId}/hide`, { method: "POST" });
+  },
+
+  setBlocked(conversationId: number, blocked: boolean) {
+    return request<{ conversationId: number; blockedByMe: boolean; blockedByPeer: boolean }>(
+      `/chat/conversations/${conversationId}/block`,
+      { method: blocked ? "POST" : "DELETE" },
+    );
   },
 
   deleteMessage(messageId: number) {
