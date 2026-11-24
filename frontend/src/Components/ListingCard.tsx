@@ -2,6 +2,7 @@ import { MapPin, ArrowRight, BedDouble, User } from "lucide-react";
 import type React from "react";
 import type { Language, Listing } from "../types";
 import { translations } from '../translations';
+import { ImageSlider, getListingImages } from './ImageSlider';
 
 interface ListingCardProps {
     item: Listing;
@@ -27,19 +28,18 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 isMine ? 'border-2 border-(--color-accent) ring-4 ring-(--color-accent-soft)' : 'border border-gray-100'
             }`}
         >
-            {/* Image */}
+            {/* Image slider */}
             <div className="h-56 overflow-hidden relative bg-gray-100">
-                {item.imageUrl ? (
-                    <img
-                        src={item.imageUrl}
-                        alt={item.title[lang]}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <MapPin className="w-10 h-10 text-amber-600" />
-                    </div>
-                )}
+                <ImageSlider
+                    images={getListingImages(item)}
+                    alt={item.title[lang]}
+                    imageClassName="group-hover:scale-105 transition duration-500"
+                    fallback={
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <MapPin className="w-10 h-10 text-amber-600" />
+                        </div>
+                    }
+                />
 
                 {/* Your listing */}
                 {isMine && (
@@ -58,7 +58,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
             {/* Content */}
             <div className="p-5 flex flex-col justify-between flex-1">
                 <div>
-                    <h3 className="text-xs md:text-sm font-black text-gray-900 mb-1">
+                    <h3 className="text-xs md:text-sm font-black text-gray-900 mb-1 break-words line-clamp-2">
                         {item.title[lang]}
                     </h3>
 

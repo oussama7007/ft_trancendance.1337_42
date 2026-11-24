@@ -12,6 +12,7 @@ import {
 import { io, type Socket } from 'socket.io-client';
 
 import type { Language, Listing } from '../../types';
+import { ImageSlider, getListingImages } from '../ImageSlider';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -219,17 +220,16 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
         {/* Image */}
         <div className="relative h-64 bg-gray-100 overflow-hidden">
-          {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
-              alt={propertyTitle}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Home className="w-16 h-16 text-gray-300" />
-            </div>
-          )}
+          <ImageSlider
+            key={item.id}
+            images={getListingImages(item)}
+            alt={propertyTitle}
+            fallback={
+              <div className="w-full h-full flex items-center justify-center">
+                <Home className="w-16 h-16 text-gray-300" />
+              </div>
+            }
+          />
 
           {/* Price */}
           <div className="absolute bottom-4 start-4 bg-white rounded-xl px-4 py-2.5 shadow-lg">
@@ -246,7 +246,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
         {/* Content */}
         <div className="p-5">
           {/* Title */}
-          <h3 className="text-xl font-black text-(--color-primary)">
+          <h3 className="text-xl font-black text-(--color-primary) break-words">
             {propertyTitle}
           </h3>
 
