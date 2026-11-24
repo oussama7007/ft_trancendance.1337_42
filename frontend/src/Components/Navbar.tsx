@@ -81,14 +81,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             path: '/listings',
             label: t.navbar.listings,
         },
-        {
-            path: '/chat',
-            label: t.navbar.chat,
-        },
-        {
-            path: '/profile',
-            label: t.navbar.profile,
-        },
+        // Chat and profile only make sense for a logged-in user.
+        ...(currentUser
+            ? [
+                {
+                    path: '/chat',
+                    label: t.navbar.chat,
+                },
+                {
+                    path: '/profile',
+                    label: t.navbar.profile,
+                },
+            ]
+            : []),
     ];
 
 const languages: Language[] = ['en', 'fr', 'ar'];
