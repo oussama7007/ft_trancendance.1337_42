@@ -285,7 +285,7 @@ function MessageInput({ lang, onSendText, onSendAttachment, onTyping, onError }:
 
   if (recording) {
     return (
-      <div className="flex w-full min-w-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4">
+      <div className="flex w-full min-w-0 items-center gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface)] p-2 sm:gap-3 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button type="button" onClick={() => finishRecording(false)} aria-label={t.cancelRecording} title={t.cancelRecording}
           className={`${iconButton} hover:text-red-600`}>
           <Trash2 size={20} />
@@ -331,7 +331,7 @@ function MessageInput({ lang, onSendText, onSendAttachment, onTyping, onError }:
       )}
 
       <form
-        className="flex w-full min-w-0 max-w-full items-end gap-2 p-3 sm:p-4"
+        className="flex w-full min-w-0 max-w-full items-end gap-1.5 p-2 sm:gap-2 sm:p-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-[max(1rem,env(safe-area-inset-bottom))]"
         onSubmit={(event) => {
           event.preventDefault();
           void handleSend();
@@ -383,7 +383,7 @@ function MessageInput({ lang, onSendText, onSendAttachment, onTyping, onError }:
             title={sending ? t.uploading : t.send}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-accent)] text-white transition hover:bg-[var(--color-accent-dark)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="rtl:-scale-x-100" />}
+            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className={lang === "ar" ? "-scale-x-100" : undefined} />}
           </button>
         ) : (
           <button

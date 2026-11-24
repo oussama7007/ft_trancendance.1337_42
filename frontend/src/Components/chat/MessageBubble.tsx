@@ -40,7 +40,7 @@ export default function MessageBubble({ message, lang, t, onDelete, onMediaLoad 
         </button>
       )}
 
-      <div className={`min-w-0 max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-6 sm:max-w-[70%] ${bubbleColors}`}>
+      <div className={`min-w-0 max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-6 sm:max-w-[75%] lg:max-w-[65%] 2xl:max-w-[55%] ${bubbleColors}`}>
         {message.deleted && (
           <p className={`flex items-center gap-1.5 italic ${mutedText}`}>
             <Ban size={14} aria-hidden="true" /> {t.deletedMessage}

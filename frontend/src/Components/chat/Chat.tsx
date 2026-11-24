@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, BellRing, MessageSquareOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, BellRing, MessageSquareOff } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
@@ -341,7 +341,7 @@ function Chat({ lang }: ChatProps) {
 
   if (isLoading && conversations.length === 0) {
     return (
-      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[320px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
         <p>{t.chat.loadingConversations}</p>
       </div>
     );
@@ -349,7 +349,7 @@ function Chat({ lang }: ChatProps) {
 
   if (conversations.length === 0 && !searchQuery.trim()) {
     return (
-      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[320px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
         <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] shadow-sm">
           <MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
         </div>
@@ -372,9 +372,9 @@ function Chat({ lang }: ChatProps) {
         : t.chat.offline;
 
   return (
-    <div className="flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] min-h-[420px] w-full flex-col overflow-hidden bg-[var(--color-surface)]">
+    <div className="flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] min-h-[320px] w-full flex-col overflow-hidden bg-[var(--color-surface)]">
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-        <div className={`${showList ? "flex" : "hidden"} h-full min-h-0 w-full min-w-0 shrink-0 flex-col md:flex md:w-80 lg:w-96`}>
+        <div className={`${showList ? "flex" : "hidden"} h-full min-h-0 w-full min-w-0 shrink-0 flex-col lg:flex lg:w-80 xl:w-96`}>
           <ConversationList
             conversations={conversations}
             selectedConversationId={selectedId}
@@ -386,17 +386,17 @@ function Chat({ lang }: ChatProps) {
           />
         </div>
 
-        <div className={`${showList ? "hidden" : "flex"} h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)] md:flex`}>
+        <div className={`${showList ? "hidden" : "flex"} h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)] lg:flex`}>
           {selected ? (
             <>
-              <div className="flex min-w-0 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 shadow-sm sm:px-6">
+              <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 shadow-sm sm:gap-3 sm:px-4 sm:py-3 lg:px-6">
                 <button
                   type="button"
                   onClick={() => setShowList(true)}
                   aria-label={t.chat.back}
-                  className="shrink-0 rounded-lg bg-[var(--color-background)] p-2 text-[var(--color-text)] transition hover:bg-[var(--color-border)] md:hidden"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-text)] transition hover:bg-[var(--color-border)] lg:hidden"
                 >
-                  <ArrowLeft size={18} className="rtl:rotate-180" />
+                  {lang === "ar" ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
                 </button>
 
                 <button
@@ -404,7 +404,7 @@ function Chat({ lang }: ChatProps) {
                   onClick={() => setProfileOpen(true)}
                   aria-label={t.chat.viewProfile}
                   title={t.chat.viewProfile}
-                  className="flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1 text-start transition hover:bg-[var(--color-background)]"
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-xl p-1 text-start transition hover:bg-[var(--color-background)] sm:gap-3"
                 >
                   <ChatAvatar
                     name={peerName}
@@ -415,7 +415,7 @@ function Chat({ lang }: ChatProps) {
                     offlineLabel={t.chat.offline}
                   />
                   <span className="min-w-0">
-                    <span className="block truncate text-start text-lg font-bold text-[var(--color-text)]"><bdi>{peerName}</bdi></span>
+                    <span className="block truncate text-start text-base font-bold text-[var(--color-text)] sm:text-lg"><bdi>{peerName}</bdi></span>
                     <span className={`block truncate text-xs ${isPeerTyping ? "italic text-[var(--color-accent-dark)]" : "text-[var(--color-muted)]"}`}>
                       {statusText}
                     </span>
@@ -434,11 +434,13 @@ function Chat({ lang }: ChatProps) {
                   </button>
                 )}
 
-                <ChatHandshake conversationId={selected.id} lang={lang} />
+                <div className="shrink-0 max-sm:[&_button]:px-2.5 max-sm:[&_button]:text-[0px]">
+                  <ChatHandshake conversationId={selected.id} lang={lang} />
+                </div>
               </div>
 
               {error && (
-                <div className="m-4 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700" role="alert">
+                <div className="m-2 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 sm:m-4 sm:p-4" role="alert">
                   <p className="min-w-0 break-words text-sm">{error}</p>
                   <button
                     type="button"

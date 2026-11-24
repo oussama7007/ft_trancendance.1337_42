@@ -31,7 +31,7 @@ function ConversationList({
   }
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col border-e border-[var(--color-border)] bg-[var(--color-surface)]">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col border-[var(--color-border)] bg-[var(--color-surface)] lg:border-e">
       <div className="min-w-0 shrink-0 border-b border-[var(--color-border)] p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="truncate font-bold text-[var(--color-text)]">{t.title}</h2>
