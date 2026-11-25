@@ -1,16 +1,33 @@
-import type { Conversation } from "./Chat";
+import type { ApiConversation } from "../../services/chatService";
+import type { ChatTranslations } from "../../translations";
+import type { Language } from "../../types";
+import ChatAvatar from "./ChatAvatar";
+import { formatTime, getLocale, messagePreview } from "./chatUtils";
 
 interface ConversationItemProps {
-  conversation: Conversation;
+  conversation: ApiConversation;
   isSelected: boolean;
+  isTyping: boolean;
+  lang: Language;
+  t: ChatTranslations;
   onClick: () => void;
 }
 
-function ConversationItem({
-  conversation,
-  isSelected,
-  onClick,
-}: ConversationItemProps) {
+function shortDate(value: string | undefined, lang: Language): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  if (date.toDateString() === new Date().toDateString()) return formatTime(date, lang);
+  return new Intl.DateTimeFormat(getLocale(lang), { day: "numeric", month: "short" }).format(date);
+}
+
+function ConversationItem({ conversation, isSelected, isTyping, lang, t, onClick }: ConversationItemProps) {
+  const name = conversation.peer.name ?? t.conversation;
+  const last = conversation.lastMessage;
+  const unread = conversation.unreadCount;
+  const youPrefix = last?.isMine && !last.deleted ? `${t.you}: ` : "";
+  const preview = last ? messagePreview(last, t) : "";
+
   return (
     <button
       type="button"
@@ -22,32 +39,39 @@ function ConversationItem({
           : "hover:bg-[var(--color-background)]"
       }`}
     >
-      {/* Avatar and online status */}
-      <div className="relative shrink-0">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-200 font-semibold text-gray-600">
-          {conversation.name.charAt(0).toUpperCase()}
-        </div>
+      <ChatAvatar
+        name={name}
+        avatarUrl={conversation.peer.avatarUrl}
+        online={conversation.peer.online}
+        onlineLabel={t.online}
+        offlineLabel={t.offline}
+      />
 
-        <span
-          title={conversation.isOnline ? "Online" : "Offline"}
-          aria-label={conversation.isOnline ? "Online" : "Offline"}
-          className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white ${
-            conversation.isOnline ? "bg-green-500" : "bg-gray-400"
-          }`}
-        />
-      </div>
-
-      {/* Conversation information */}
       <div className="min-w-0 flex-1">
-        <div className="flex items-center">
-          <h3 className="truncate font-semibold text-[var(--color-text)]">
-            {conversation.name}
-          </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="min-w-0 flex-1 truncate text-start font-semibold text-[var(--color-text)]"><bdi>{name}</bdi></h3>
+          <span className={`shrink-0 text-[11px] ${unread > 0 ? "font-bold text-[var(--color-accent-dark)]" : "text-[var(--color-muted)]"}`}>
+            {shortDate(last?.createdAt ?? conversation.updatedAt, lang)}
+          </span>
         </div>
 
-        <p className="mt-1 truncate text-sm text-[var(--color-muted)]">
-          {conversation.lastMessage}
-        </p>
+        <div className="mt-1 flex items-center gap-2">
+          {isTyping ? (
+            <p className="min-w-0 flex-1 truncate text-sm italic text-[var(--color-accent-dark)]">{t.typing}</p>
+          ) : (
+            <p className={`min-w-0 flex-1 truncate text-start text-sm ${unread > 0 ? "font-semibold text-[var(--color-text)]" : "text-[var(--color-muted)]"}`}>
+              {youPrefix}<bdi>{preview}</bdi>
+            </p>
+          )}
+          {conversation.blockedByMe && (
+            <span className="shrink-0 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600">{t.blocked}</span>
+          )}
+          {unread > 0 && (
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)] px-1.5 text-[11px] font-bold text-white">
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   );

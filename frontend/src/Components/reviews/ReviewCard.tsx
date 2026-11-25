@@ -25,7 +25,7 @@ export default function ReviewCard({ review, lang }: { review: Review; lang: Lan
       <div className="min-w-0 flex-1">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span dir="auto" className="text-lg font-bold text-[#1F2328] sm:text-xl">{review.reviewer.name}</span>
+            <span className="text-lg font-bold text-[#1F2328] sm:text-xl"><bdi>{review.reviewer.name}</bdi></span>
             <span className="rounded-full bg-[#FDEDE5] px-3 py-0.5 text-[13px] font-bold text-[#C2562A]">
               {review.role === 'owner' ? t.owner : t.roommate}
             </span>

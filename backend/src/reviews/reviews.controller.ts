@@ -7,8 +7,10 @@ import
     ParseIntPipe,
     Post,
     Query,
+    UseGuards,
 } from '@nestjs/common';
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 import { CurrentUserId } from '../handshake/decorators/current-user-id.decorator.js';
 import { CreateReviewDto } from './dto/create-review.dto.js';
 import { ReviewsQueryDto } from './dto/reviews-query.dto.js';
@@ -32,6 +34,7 @@ export class ReviewsController
 
     // can the current user review this profile
     @Get('can-review')
+    @UseGuards(JwtAuthGuard)
     canReview(
         @Param('userId', ParseIntPipe) userId: number,
         @CurrentUserId() reviewerId: number
@@ -42,6 +45,7 @@ export class ReviewsController
 
     // saves a review
     @Post()
+    @UseGuards(JwtAuthGuard)
     create(
         @Param('userId', ParseIntPipe) userId: number,
         @CurrentUserId() reviewerId: number,
