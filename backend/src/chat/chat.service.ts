@@ -67,12 +67,12 @@ function chatError(status: HttpStatus, code: string, message: string): HttpExcep
   return new HttpException({ statusCode: status, code, message }, status);
 }
 
-function safeAvatarUrl(url: string | null | undefined): string | null {
+export function safeAvatarUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   return /^https?:\/\//i.test(url) || url.startsWith('/') ? url : null;
 }
 
-function fullNameOf(firstName?: string | null, lastName?: string | null): string {
+export function fullNameOf(firstName?: string | null, lastName?: string | null): string {
   return [firstName, lastName].filter(Boolean).join(' ').trim();
 }
 
@@ -536,6 +536,16 @@ export class ChatService implements OnModuleInit {
     if (await this.isBlockedBetween(senderId, peerId)) {
       throw chatError(HttpStatus.FORBIDDEN, 'BLOCKED', 'You can not send messages in this conversation');
     }
+  }
+
+  async getInterestCounterparts(userId: number): Promise<number[]> {
+    const rows: Array<{ other_id: number }> = await this.messageRepository.query(
+      `SELECT DISTINCT CASE WHEN "tenantId" = $1 THEN "ownerId" ELSE "tenantId" END AS other_id
+         FROM interest_requests
+        WHERE "tenantId" = $1 OR "ownerId" = $1`,
+      [userId],
+    );
+    return rows.map((row) => Number(row.other_id));
   }
 
   async verifyConversationAccess(conversationId: number, userId: number): Promise<Conversation> {

@@ -201,6 +201,7 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
     socket.on("messageDeleted", refreshUnread);
     socket.on("incomingInterestRequest", handleIncomingInterest);
     socket.on("sentInterestRequest", handleSentInterest);
+    socket.on("interestPeopleChanged", refreshInterests);
 
     if (socket.connected) handleConnect();
 
@@ -211,6 +212,7 @@ export function ChatProvider({ currentUserId, lang, children }: ChatProviderProp
       socket.off("messageDeleted", refreshUnread);
       socket.off("incomingInterestRequest", handleIncomingInterest);
       socket.off("sentInterestRequest", handleSentInterest);
+      socket.off("interestPeopleChanged", refreshInterests);
     };
   }, [socket, refreshUnread, refreshInterests, pushToast, showBrowserNotification]);
 

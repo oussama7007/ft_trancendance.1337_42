@@ -260,6 +260,12 @@ function Chat({ lang }: ChatProps) {
 
     const handleDeleted = (message: ApiMessage) => addMessage(message);
 
+    const handlePeerUpdated = ({ conversationId, name, avatarUrl }: { conversationId: number; name: string | null; avatarUrl: string | null }) => {
+      setConversations((previous) =>
+        previous.map((c) => (c.id === Number(conversationId) ? { ...c, peer: { ...c.peer, name, avatarUrl } } : c)),
+      );
+    };
+
     const handleHidden = ({ conversationId, messageId }: { conversationId: number; messageId: number }) =>
       removeMessage(Number(conversationId), Number(messageId));
 
@@ -312,6 +318,7 @@ function Chat({ lang }: ChatProps) {
     socket.on("newMessage", handleNewMessage);
     socket.on("messageDeleted", handleDeleted);
     socket.on("messageHidden", handleHidden);
+    socket.on("peerUpdated", handlePeerUpdated);
     socket.on("blockChanged", handleBlockChanged);
     socket.on("messagesRead", handleRead);
     socket.on("conversationRead", handleConversationRead);
@@ -323,6 +330,7 @@ function Chat({ lang }: ChatProps) {
       socket.off("newMessage", handleNewMessage);
       socket.off("messageDeleted", handleDeleted);
       socket.off("messageHidden", handleHidden);
+      socket.off("peerUpdated", handlePeerUpdated);
       socket.off("blockChanged", handleBlockChanged);
       socket.off("messagesRead", handleRead);
       socket.off("conversationRead", handleConversationRead);
@@ -592,6 +600,7 @@ function Chat({ lang }: ChatProps) {
 
               {profileOpen && (
                 <PeerProfilePanel
+                  key={`${selected.id}-${selected.peer.name ?? ""}-${selected.peer.avatarUrl ?? ""}`}
                   conversationId={selected.id}
                   lang={lang}
                   online={selected.peer.online}

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
-import { ChatService } from './chat.service.js';
+import { ChatService, fullNameOf, safeAvatarUrl } from './chat.service.js';
 import { PresenceService } from './presence.service.js';
 import { RateLimiter } from './rate-limiter.js';
 import { TYPING_RATE_LIMIT } from './chat.constants.js';
@@ -113,6 +113,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server
         .to(userRoom(viewerId))
         .emit('messageDeleted', this.chatService.toPublicMessage(message, viewerId));
+    }
+  }
+
+  async broadcastProfile(
+    userId: number,
+    profile: { firstName: string | null; lastName: string | null; avatarUrl: string | null },
+  ) {
+    const name = fullNameOf(profile.firstName, profile.lastName) || null;
+    const avatarUrl = safeAvatarUrl(profile.avatarUrl);
+
+    const contacts = await this.chatService.getContacts(userId);
+    for (const { conversationId, peerId } of contacts) {
+      if (await this.chatService.isBlockedBetween(userId, peerId)) continue;
+      this.server.to(userRoom(peerId)).emit('peerUpdated', { conversationId, name, avatarUrl });
+    }
+
+    const counterparts = await this.chatService.getInterestCounterparts(userId);
+    for (const otherId of new Set(counterparts)) {
+      this.server.to(userRoom(otherId)).emit('interestPeopleChanged');
     }
   }
 

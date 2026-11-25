@@ -18,9 +18,9 @@ const SIZES = {
 };
 
 export default function ChatAvatar({ name, avatarUrl, online, size = "md", onlineLabel, offlineLabel }: ChatAvatarProps) {
-  const [broken, setBroken] = useState(false);
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
   const src = resolveMediaUrl(avatarUrl);
-  const showImage = Boolean(src) && !broken;
+  const showImage = Boolean(src) && brokenSrc !== src;
 
   return (
     <div className="relative shrink-0">
@@ -28,7 +28,7 @@ export default function ChatAvatar({ name, avatarUrl, online, size = "md", onlin
         <img
           src={src!}
           alt={name ?? ""}
-          onError={() => setBroken(true)}
+          onError={() => setBrokenSrc(src)}
           referrerPolicy="no-referrer"
           className={`${SIZES[size]} rounded-full object-cover`}
         />
