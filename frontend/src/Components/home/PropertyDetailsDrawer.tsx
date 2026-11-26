@@ -14,6 +14,7 @@ import type { Language, Listing } from '../../types';
 import { ImageSlider, getListingImages } from '../ImageSlider';
 import { useChat } from '../../context/chatContextValue';
 import { translations } from '../../translations';
+import { recordListingView } from '../../api/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -100,6 +101,14 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
       cancelled = true;
     };
   }, [item, isMine]);
+
+  // Count one view each time a listing's details are opened (not the owner's own).
+  const viewedListingId = item?.id;
+  useEffect(() => {
+    if (viewedListingId !== undefined && !isMine) {
+      void recordListingView(viewedListingId);
+    }
+  }, [viewedListingId, isMine]);
 
   if (!item) {
     return null;

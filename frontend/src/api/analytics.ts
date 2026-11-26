@@ -57,3 +57,21 @@ export async function fetchAnalytics(
     return response.json();
 }
 
+// Tell the backend that someone opened a listing's details.
+// Signed-in users send their cookie; visitors send none and are counted
+// with a null viewer. The backend ignores the owner and repeated views.
+export async function recordListingView(listingId: number): Promise<void> {
+    if (USE_MOCK) {
+        return;
+    }
+
+    try {
+        await fetch(`${API_URL}/listings/${listingId}/view`, {
+            method: 'POST',
+            credentials: 'include',
+        });
+    } catch {
+        // A lost view must never break the page.
+    }
+}
+
