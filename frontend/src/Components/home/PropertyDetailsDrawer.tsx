@@ -242,17 +242,20 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
           {/* Description */}
           {description && (
-            <div className="mt-5">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-start gap-3 mt-5">
+              <div className="w-10 h-10 rounded-xl bg-(--color-accent-soft) flex items-center justify-center shrink-0">
                 <FileText className="w-4 h-4 text-(--color-accent)" />
+              </div>
+
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold text-gray-400">
                   {descriptionLabel}
                 </p>
-              </div>
 
-              <p className="text-sm leading-6 text-gray-600 whitespace-pre-line break-words">
-                {description}
-              </p>
+                <p className="text-xs font-semibold leading-5 text-gray-500 whitespace-pre-line break-words">
+                  {description}
+                </p>
+              </div>
             </div>
           )}
 
