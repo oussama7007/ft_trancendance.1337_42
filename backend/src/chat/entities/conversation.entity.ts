@@ -6,10 +6,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  Check,
 } from 'typeorm';
 import { Message } from './message.entity.js';
 
 @Entity('conversations')
+@Check('CHK_conversation_different_participants', `"participant_one_id" <> "participant_two_id"`)
 export class Conversation {
   @PrimaryGeneratedColumn()
   id!: number;

@@ -7,14 +7,18 @@ import { ChatService } from './chat.service.js';
 import { SharedJwtModule } from '../auth/jwt.module.js';
 import { InterestRequest } from './entities/interest-request.entity.js';
 import { ChatGateway } from './chat.gateway.js';
+import { PresenceService } from './presence.service.js';
+import { ProfileSyncSubscriber } from './profile-sync.subscriber.js';
+import { User } from '../auth/user.entity.js';
+import { Listing } from '../listings/listing.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Conversation, Message, InterestRequest]),
+    TypeOrmModule.forFeature([Conversation, Message, InterestRequest, User, Listing]),
     SharedJwtModule,
   ],
   controllers: [ChatController],
-  providers: [ChatService, ChatGateway],
+  providers: [ChatService, ChatGateway, PresenceService, ProfileSyncSubscriber],
   exports: [ChatService],
 })
 export class ChatModule {}
