@@ -492,6 +492,7 @@ const filteredMarkers = mapMarkers.filter(
         yourListingLabel={currentLang.yourListing}
         priceLabel={currentLang.price}
         perMonthLabel={currentLang.perMonth}
+        descriptionLabel={currentLang.descriptionLabel}
         closeLabel={currentLang.close}
 
         onClose={() => setActiveDetailItem(null)}

@@ -384,6 +384,7 @@ export const translations = {
             featured: 'عروض مميزة',
 
             detailsTitle: 'تفاصيل السكن',
+            descriptionLabel: 'الوصف',
             details: 'التفاصيل',
             contactBtn: 'تواصل مع المالك',
 
@@ -1147,6 +1148,7 @@ export const translations = {
             available: 'Available',
 
             detailsTitle: 'Property Details',
+            descriptionLabel: 'Description',
             details: 'Details',
             contactBtn: 'Contact Owner',
 
@@ -1849,6 +1851,7 @@ export const translations = {
             available: 'Disponible',
 
             detailsTitle: 'Détails du logement',
+            descriptionLabel: 'Description',
             details: 'Détails',
             contactBtn: 'Contacter le propriétaire',
 

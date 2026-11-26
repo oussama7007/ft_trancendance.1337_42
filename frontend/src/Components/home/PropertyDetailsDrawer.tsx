@@ -8,6 +8,7 @@ import {
   Clock,
   CheckCircle2,
   User,
+  FileText,
 } from 'lucide-react';
 import type { Language, Listing } from '../../types';
 import { ImageSlider, getListingImages } from '../ImageSlider';
@@ -28,6 +29,7 @@ interface PropertyDetailsDrawerProps {
   yourListingLabel: string;
   priceLabel: string;
   perMonthLabel: string;
+  descriptionLabel: string;
   closeLabel: string;
 
   onClose: () => void;
@@ -44,6 +46,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
   yourListingLabel,
   priceLabel,
   perMonthLabel,
+  descriptionLabel,
   contactLabel,
   closeLabel,
   onClose,
@@ -104,6 +107,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
   const propertyTitle = item.title[lang];
   const city = item.city[lang];
+  const description = item.description?.[lang]?.trim();
 
   const handleContactClick = async () => {
     if (requestStatus === 'ACCEPTED') {
@@ -233,6 +237,22 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
                   {city}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {description && (
+            <div className="mt-5">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-4 h-4 text-(--color-accent)" />
+                <p className="text-[11px] font-bold text-gray-400">
+                  {descriptionLabel}
+                </p>
+              </div>
+
+              <p className="text-sm leading-6 text-gray-600 whitespace-pre-line break-words">
+                {description}
+              </p>
             </div>
           )}
 
