@@ -35,7 +35,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       MAIL_USER: ${MAIL_USER}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      PUBLIC_API_URL: https://localhost:8443/api
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
     volumes:
       - ./backend:/app
       - /app/node_modules
