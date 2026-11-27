@@ -42,7 +42,7 @@ export class AuthController {
 ) {
     response.cookie('access_token', accessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
@@ -86,7 +86,7 @@ linkGoogle(
 
           response.cookie('access_token', result.accessToken, {
               httpOnly: true,
-              secure: process.env.NODE_ENV === 'production',
+              secure: true,
               sameSite: 'lax',
               maxAge: 7 * 24 * 60 * 60 * 1000,
               path: '/',
@@ -124,7 +124,7 @@ async login(
   logout(@Res({ passthrough: true }) response: Response) {
       response.clearCookie('access_token', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: true,
           sameSite: 'lax',
           path: '/',
       });
