@@ -8,10 +8,13 @@ import {
   Clock,
   CheckCircle2,
   User,
+  FileText,
 } from 'lucide-react';
 import type { Language, Listing } from '../../types';
+import { ImageSlider, getListingImages } from '../ImageSlider';
 import { useChat } from '../../context/chatContextValue';
 import { translations } from '../../translations';
+import { recordListingView } from '../../api/analytics';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -27,6 +30,7 @@ interface PropertyDetailsDrawerProps {
   yourListingLabel: string;
   priceLabel: string;
   perMonthLabel: string;
+  descriptionLabel: string;
   closeLabel: string;
 
   onClose: () => void;
@@ -43,6 +47,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
   yourListingLabel,
   priceLabel,
   perMonthLabel,
+  descriptionLabel,
   contactLabel,
   closeLabel,
   onClose,
@@ -97,12 +102,23 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
     };
   }, [item, isMine]);
 
+  // Count one view each time a signed-in user opens someone else's listing.
+  // Visitors are skipped: the endpoint needs a session and would answer 401.
+  const viewedListingId = item?.id;
+  const isSignedIn = currentUserId !== undefined;
+  useEffect(() => {
+    if (viewedListingId !== undefined && isSignedIn && !isMine) {
+      void recordListingView(viewedListingId);
+    }
+  }, [viewedListingId, isSignedIn, isMine]);
+
   if (!item) {
     return null;
   }
 
   const propertyTitle = item.title[lang];
   const city = item.city[lang];
+  const description = item.description?.[lang]?.trim();
 
   const handleContactClick = async () => {
     if (requestStatus === 'ACCEPTED') {
@@ -186,17 +202,18 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
         {/* Image */}
         <div className="relative h-64 bg-gray-100 overflow-hidden">
-          {item.imageUrl ? (
-            <img
-              src={item.imageUrl}
-              alt={propertyTitle}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Home className="w-16 h-16 text-gray-300" />
-            </div>
-          )}
+          <ImageSlider
+            key={item.id}
+            images={getListingImages(item)}
+            alt={propertyTitle}
+            previousLabel={translations[lang].homePage.previousImage}
+            nextLabel={translations[lang].homePage.nextImage}
+            fallback={
+              <div className="w-full h-full flex items-center justify-center">
+                <Home className="w-16 h-16 text-gray-300" />
+              </div>
+            }
+          />
 
           {/* Price */}
           <div className="absolute bottom-4 start-4 bg-white rounded-xl px-4 py-2.5 shadow-lg">
@@ -213,7 +230,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
         {/* Content */}
         <div className="p-5">
           {/* Title */}
-          <h3 className="text-xl font-black text-(--color-primary)">
+          <h3 className="text-xl font-black text-(--color-primary) break-words">
             {propertyTitle}
           </h3>
 
@@ -231,6 +248,25 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
                 <p className="text-xs font-semibold text-gray-500">
                   {city}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          {description && (
+            <div className="flex items-start gap-3 mt-5">
+              <div className="w-10 h-10 rounded-xl bg-(--color-accent-soft) flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4 text-(--color-accent)" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold text-gray-400">
+                  {descriptionLabel}
+                </p>
+
+                <p className="text-xs font-semibold leading-5 text-gray-500 whitespace-pre-line break-words">
+                  {description}
                 </p>
               </div>
             </div>

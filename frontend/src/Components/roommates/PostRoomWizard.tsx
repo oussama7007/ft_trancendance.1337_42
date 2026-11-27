@@ -58,7 +58,7 @@ export const PostRoomWizard: React.FC<PostRoomWizardProps> = ({ lang, onClose, o
   };
 
   return (
-    <ModalShell title={t.postRoom} onClose={onClose}>
+    <ModalShell title={t.postRoom} closeLabel={translations[lang].homePage.close} onClose={onClose}>
       {step === 'listing' && (
         <ChooseListingStep
           lang={lang}
@@ -83,7 +83,7 @@ export const PostRoomWizard: React.FC<PostRoomWizardProps> = ({ lang, onClose, o
           <img src={listing.imageUrl} alt="" className="w-full h-40 rounded-2xl object-cover mb-3" />
           <p className="font-black text-gray-900 mb-1">{listing.title[lang]}</p>
           <p className="text-sm text-gray-500 mb-3">{listing.city[lang]}</p>
-          <p className="text-sm text-gray-700">{t.monthlyShare}: {details.monthlyShare} DH</p>
+          <p className="text-sm text-gray-700">{t.monthlyShare}: {details.monthlyShare} {translations[lang].homePage.currency}</p>
           <p className="text-sm text-gray-700">{t.peopleWanted}: {details.peopleWanted}</p>
           <p className="text-sm text-gray-700 mb-4">{t.whoCanJoin}: {genderLabels[details.genderPreference]}</p>
 

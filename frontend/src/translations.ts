@@ -384,6 +384,7 @@ export const translations = {
             featured: 'عروض مميزة',
 
             detailsTitle: 'تفاصيل السكن',
+            descriptionLabel: 'الوصف',
             details: 'التفاصيل',
             contactBtn: 'تواصل مع المالك',
 
@@ -399,6 +400,8 @@ export const translations = {
             perMonth: '/ الشهر',      
             currency: 'درهم',
             close: 'إغلاق',
+            previousImage: 'الصورة السابقة',
+            nextImage: 'الصورة التالية',
             bedrooms:'غرف النوم',
             sorting: {
                 newest: 'الأحدث',
@@ -687,7 +690,6 @@ export const translations = {
                     kpi: {
                         views: 'المشاهدات',
                         contacts: 'الاتصالات',
-                        searches: 'عمليات البحث',
                         activeListings: 'الإعلانات النشطة',
                     },
                     vsPrevious: 'مقارنة بالفترة السابقة',
@@ -1147,6 +1149,7 @@ export const translations = {
             available: 'Available',
 
             detailsTitle: 'Property Details',
+            descriptionLabel: 'Description',
             details: 'Details',
             contactBtn: 'Contact Owner',
 
@@ -1162,6 +1165,8 @@ export const translations = {
             perMonth: '/ month',
             currency: 'DH',
             close: 'Close',
+            previousImage: 'Previous image',
+            nextImage: 'Next image',
             bedrooms: 'Bedrooms',
             sorting: {
                 newest: 'Newest',
@@ -1388,7 +1393,6 @@ export const translations = {
             kpi: {
                 views: 'Views',
                 contacts: 'Contacts',
-                searches: 'Searches',
                 activeListings: 'Active listings',
             },
             vsPrevious: 'vs previous period',
@@ -1849,6 +1853,7 @@ export const translations = {
             available: 'Disponible',
 
             detailsTitle: 'Détails du logement',
+            descriptionLabel: 'Description',
             details: 'Détails',
             contactBtn: 'Contacter le propriétaire',
 
@@ -1864,6 +1869,8 @@ export const translations = {
             perMonth: '/ mois',
             currency: 'DH',
             close: 'Fermer',
+            previousImage: 'Image précédente',
+            nextImage: 'Image suivante',
             bedrooms: 'Chambres',
             sorting: {
                 newest: 'Plus récentes',
@@ -2090,7 +2097,6 @@ export const translations = {
             kpi: {
                 views: 'Vues',
                 contacts: 'Contacts',
-                searches: 'Recherches',
                 activeListings: 'Annonces actives',
             },
             vsPrevious: 'vs période précédente',

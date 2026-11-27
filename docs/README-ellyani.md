@@ -104,7 +104,7 @@ The framework and ORM modules are shared with the team. The languages, RTL, map 
 - **My part:** the frontend of the dashboard. The backend (recording the activity and the `GET /analytics` API) is done by another team member.
 - **What it shows:**
   - a period selector: last 7, 30 or 90 days;
-  - four numbers: views, contacts, searches and active listings, each with the change against the previous period (green for up, red for down);
+  - three numbers: views, contacts and active listings, each with the change against the previous period (green for up, red for down);
   - a chart of the views day by day;
   - a table of the most viewed listings.
 - **How:**
@@ -118,8 +118,8 @@ The framework and ORM modules are shared with the team. The languages, RTL, map 
 
 ```json
 {
-  "summary":  { "views": 2460, "contacts": 180, "searches": 690, "activeListings": 14 },
-  "previous": { "views": 2190, "contacts": 150, "searches": 750, "activeListings": 12 },
+  "summary":  { "views": 2460, "contacts": 180, "activeListings": 14 },
+  "previous": { "views": 2190, "contacts": 150, "activeListings": 12 },
   "daily": [ { "date": "2026-10-20", "views": 77 } ],
   "topListings": [
     {
