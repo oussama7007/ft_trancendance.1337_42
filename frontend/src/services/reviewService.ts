@@ -33,7 +33,7 @@ export interface CanReview
 // sends the request and throws if it fails
 async function request(url: string, options?: RequestInit): Promise<Response>
 {
-  const response = await fetch(`${API_URL}${url}`, options);
+  const response = await fetch(`${API_URL}${url}`, { ...options, credentials: 'include' });
 
   if (!response.ok)
     throw new Error(`Request failed with status ${response.status}`);
@@ -41,7 +41,6 @@ async function request(url: string, options?: RequestInit): Promise<Response>
   return response;
 }
 
-// TODO: remove reviewerId when login is ready
 export const reviewService =
 {
   // reviews of a profile
@@ -52,16 +51,16 @@ export const reviewService =
   },
 
   // can i review this profile
-  async canReview(userId: number, reviewerId: number): Promise<CanReview>
+  async canReview(userId: number, _reviewerId?: number): Promise<CanReview>
   {
-    const response = await request(`/users/${userId}/reviews/can-review?userId=${reviewerId}`);
+    const response = await request(`/users/${userId}/reviews/can-review`);
     return response.json() as Promise<CanReview>;
   },
 
   // saves my review
-  async create(userId: number, reviewerId: number, rating: number, comment: string): Promise<void>
+  async create(userId: number, _reviewerId: number | undefined, rating: number, comment: string): Promise<void>
   {
-    await request(`/users/${userId}/reviews?userId=${reviewerId}`,
+    await request(`/users/${userId}/reviews`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

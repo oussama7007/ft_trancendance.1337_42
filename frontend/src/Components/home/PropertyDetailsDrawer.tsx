@@ -9,20 +9,11 @@ import {
   CheckCircle2,
   User,
 } from 'lucide-react';
-import { io, type Socket } from 'socket.io-client';
-
 import type { Language, Listing } from '../../types';
+import { useChat } from '../../context/chatContextValue';
+import { translations } from '../../translations';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-
-interface InterestAcceptedEvent {
-  requestId: number;
-  listingId: number;
-  ownerId: number;
-  tenantId: number;
-  conversationId: number;
-  status: string;
-}
 
 interface PropertyDetailsDrawerProps {
   item: Listing | null;
@@ -59,8 +50,13 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 }) => {
   const isMine = item !== null && item.ownerId === currentUserId;
 
-  const [requestStatus, setRequestStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED'>('NONE');
-  const [conversationId, setConversationId] = useState<number | undefined>(undefined);
+  const tInterests = translations[lang].chat.interests;
+  const { sentRequests } = useChat();
+  const [storedStatus, setRequestStatus] = useState<'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'>('NONE');
+  const [storedConversationId, setConversationId] = useState<number | undefined>(undefined);
+  const liveRequest = item && !isMine ? sentRequests.find((request) => request.listingId === item.id) : undefined;
+  const requestStatus = liveRequest?.status ?? storedStatus;
+  const conversationId = liveRequest?.conversationId ?? storedConversationId;
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -101,32 +97,6 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
     };
   }, [item, isMine]);
 
-  useEffect(() => {
-    if (!item || isMine || currentUserId == null) return;
-
-    const wsUrl = (import.meta.env.VITE_WS_URL || API_URL || '').replace(/\/api\/?$/, '');
-    const socket: Socket = io(wsUrl, {
-      withCredentials: true,
-    });
-
-    const handleInterestAccepted = (payload: InterestAcceptedEvent) => {
-      if (Number(payload.listingId) !== Number(item.id)) return;
-      if (Number(payload.tenantId) !== Number(currentUserId)) return;
-
-      setRequestStatus('ACCEPTED');
-      if (typeof payload.conversationId === 'number' && Number(payload.conversationId) > 0) {
-        setConversationId(Number(payload.conversationId));
-      }
-    };
-
-    socket.on('interestRequestAccepted', handleInterestAccepted);
-
-    return () => {
-      socket.off('interestRequestAccepted', handleInterestAccepted);
-      socket.disconnect();
-    };
-  }, [item, isMine, currentUserId]);
-
   if (!item) {
     return null;
   }
@@ -148,8 +118,6 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
 
     setLoading(true);
     try {
-      const ownerId = item.ownerId || 1;
-
       const res = await fetch(`${API_URL}/chat/interest-requests`, {
         method: 'POST',
         credentials: 'include',
@@ -158,7 +126,6 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
         },
         body: JSON.stringify({
           listingId: item.id,
-          ownerId,
         }),
       });
 
@@ -320,12 +287,17 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
               {requestStatus === 'PENDING' ? (
                 <>
                   <Clock className="w-4 h-4 animate-pulse" />
-                  Pending request to the owner
+                  {tInterests.pendingOwner}
                 </>
               ) : requestStatus === 'ACCEPTED' ? (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  Chat Unlocked - Open Chat
+                  {tInterests.chatUnlocked}
+                </>
+              ) : requestStatus === 'REJECTED' ? (
+                <>
+                  <MessageCircle className="w-4 h-4" />
+                  {tInterests.askAgain}
                 </>
               ) : (
                 <>

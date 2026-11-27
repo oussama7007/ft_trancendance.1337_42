@@ -5,6 +5,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { join } from 'node:path';
 import { UPLOADS_FOLDER } from './listings/upload-options.js';
+import { getAllowedOrigins } from './allowed-origins.js';
 
 
 async function bootstrap() {
@@ -16,8 +17,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   
-  app.enableCors({ origin: 'https://localhost:8443', credentials: true,
-   });
+  app.enableCors({ origin: getAllowedOrigins(), credentials: true });
 
   await app.listen(process.env.PORT ?? 3000);
 }
