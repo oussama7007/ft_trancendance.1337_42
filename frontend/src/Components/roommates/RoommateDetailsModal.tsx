@@ -30,7 +30,7 @@ export const RoommateDetailsModal: React.FC<RoommateDetailsModalProps> = ({ lang
   ];
 
   return (
-    <ModalShell title={listing.title[lang]} onClose={onClose}>
+    <ModalShell title={listing.title[lang]} closeLabel={translations[lang].homePage.close} onClose={onClose}>
       <div className="flex gap-2 overflow-x-auto mb-4">
         {(listing.images ?? []).map((image) => (
           <img key={image} src={image} alt={listing.title[lang]} className="h-40 rounded-2xl object-cover" />
@@ -45,7 +45,7 @@ export const RoommateDetailsModal: React.FC<RoommateDetailsModalProps> = ({ lang
       </p>
 
       <p className="text-2xl font-black text-(--color-accent) mb-4">
-        {room.monthlyShare} DH <span className="text-sm font-bold text-gray-500">{t.perPersonMonth}</span>
+        {room.monthlyShare} {translations[lang].homePage.currency} <span className="text-sm font-bold text-gray-500">{t.perPersonMonth}</span>
       </p>
 
       <p className="text-sm text-gray-700 mb-4">{listing.description[lang]}</p>

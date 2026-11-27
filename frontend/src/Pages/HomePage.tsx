@@ -339,10 +339,11 @@ const filteredMarkers = mapMarkers.filter(
     setActiveDetailItem(listing)
   };
 
-  const handlContactListing = (listing: Listing) => {
-    onSelectListing(listing);
-    setActiveDetailItem(null);
-  }
+	const handlContactListing = (listing: Listing, conversationId?: number) => {
+		onSelectListing(listing);
+		setActiveDetailItem(null);
+		navigate(conversationId ? `/chat?conversationId=${conversationId}` : '/chat');
+	};
 
     return(
       <div dir={isRTL ? 'rtl' : 'ltr'} className='min-h-screen font-sans bg-(--color-background) relative'>
@@ -491,6 +492,7 @@ const filteredMarkers = mapMarkers.filter(
         yourListingLabel={currentLang.yourListing}
         priceLabel={currentLang.price}
         perMonthLabel={currentLang.perMonth}
+        descriptionLabel={currentLang.descriptionLabel}
         closeLabel={currentLang.close}
 
         onClose={() => setActiveDetailItem(null)}

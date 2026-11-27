@@ -1,286 +1,445 @@
-import { useEffect, useState } from "react";
-import { MessageSquareOff } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, BellRing, MessageSquareOff } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import ConversationList from "./ConversationList";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
+import ChatAvatar from "./ChatAvatar";
+import PeerProfilePanel from "./PeerProfilePanel";
 import type { Language } from "../../types";
 import { chatService } from "../../services/chatService";
-import type { ApiMessage } from "../../services/chatService";
+import type { ApiConversation, ApiMessage } from "../../services/chatService";
 import { translations } from "../../translations";
-import { io, Socket } from "socket.io-client";
-import { useSearchParams } from "react-router-dom";
+import { formatChatError } from "./chatErrorFormatter";
+import { fmt, formatLastSeen } from "./chatUtils";
+import ChatHandshake from "../handshakes/ChatHandshake";
+import { useChat } from "../../context/chatContextValue";
+import ConfirmDialog from "./ConfirmDialog";
+import type { ConfirmAction } from "./ConfirmDialog";
 
-let socket: Socket;
-
-export interface ChatMessage {
-  id: number;
-  senderId: number;
-  content: string;
-  createdAt: string;
-}
-
-export interface Conversation {
-  id: number;
-  name: string;
-  otherUserId: number;
-  lastMessage: string;
-  messages: ChatMessage[];
-  isOnline: boolean;
+interface Thread {
+  messages: ApiMessage[];
+  hasMore: boolean;
+  loadingOlder: boolean;
 }
 
 interface ChatProps {
   lang: Language;
-  currentUserId?: number;
 }
 
-function toChatMessage(message: ApiMessage): ChatMessage {
-  return {
-    id: message.id,
-    senderId: message.senderId,
-    content: message.content,
-    createdAt: message.createdAt,
-  };
+const TYPING_TIMEOUT_MS = 5000;
+
+function mergeMessages(current: ApiMessage[], incoming: ApiMessage[]): ApiMessage[] {
+  const byId = new Map(current.map((message) => [message.id, message]));
+  for (const message of incoming) byId.set(message.id, message);
+  return Array.from(byId.values()).sort((a, b) => a.id - b.id);
 }
 
-function Chat({ lang, currentUserId }: ChatProps) {
+function Chat({ lang }: ChatProps) {
   const t = translations[lang] ?? translations.en;
+  const { socket, refreshUnread, setActiveConversation, notificationPermission, requestNotificationPermission } = useChat();
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
-  const [showConversationList, setShowConversationList] = useState(true);
+  const [conversations, setConversations] = useState<ApiConversation[]>([]);
+  const [threads, setThreads] = useState<Record<number, Thread>>({});
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [showList, setShowList] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [typingIds, setTypingIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [dialog, setDialog] = useState<{ title: string; description?: string; actions: ConfirmAction[] } | null>(null);
+
   const [searchParams] = useSearchParams();
-  const requestedConversationId = Number(searchParams.get("conversationId"));
-  const [onlineUserIds, setOnlineUserIds] = useState<number[]>([]);
+  const requestedId = Number(searchParams.get("conversationId")) || null;
+
+  const selectedIdRef = useRef<number | null>(null);
+  const conversationsRef = useRef<ApiConversation[]>([]);
+  const threadsRef = useRef<Record<number, Thread>>({});
+  const typingTimers = useRef(new Map<number, number>());
+  const langRef = useRef(lang);
+
+  useEffect(() => { langRef.current = lang; }, [lang]);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { threadsRef.current = threads; }, [threads]);
 
   useEffect(() => {
-    socket = io(import.meta.env.VITE_API_URL, {
-      withCredentials: true,
-    });
+    selectedIdRef.current = selectedId;
+    setActiveConversation(selectedId);
+  }, [selectedId, setActiveConversation]);
 
-    socket.on("onlineUsers", (userIds: number[]) => {
-      setOnlineUserIds(userIds);
-    });
+  useEffect(() => () => setActiveConversation(null), [setActiveConversation]);
 
-    socket.on("userOnline", ({ userId }: { userId: number }) => {
-      setOnlineUserIds((previous) =>
-        previous.includes(userId) ? previous : [...previous, userId],
-      );
-    });
+  const isOnScreen = (conversationId: number) =>
+    selectedIdRef.current === conversationId && document.visibilityState === "visible";
 
-    socket.on("userOffline", ({ userId }: { userId: number }) => {
-      setOnlineUserIds((previous) =>
-        previous.filter((id) => id !== userId),
-      );
-    });
-
-    socket.on("newMessage", (apiMessage: ApiMessage) => {
-      const newMsg = toChatMessage(apiMessage);
-
-      setConversations((previous) =>
-        previous.map((conv) => {
-          if (conv.id !== apiMessage.conversationId) return conv;
-
-          if (conv.messages.some((msg) => msg.id === newMsg.id)) {
-            return conv;
-          }
-
-          return {
-            ...conv,
-            messages: [...conv.messages, newMsg],
-            lastMessage: newMsg.content,
-          };
-        }),
-      );
-    });
-
-    return () => {
-      socket.removeAllListeners();
-      socket.disconnect();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedConversationId || !socket) return;
-
-    const joinConversation = () => {
-      socket.emit("joinConversation", {
-        conversationId: selectedConversationId,
-      });
-    };
-
-    if (socket.connected) {
-      joinConversation();
-    }
-
-    socket.on("connect", joinConversation);
-
-    return () => {
-      socket.off("connect", joinConversation);
-    };
-  }, [selectedConversationId]);
+  const markRead = useCallback((conversationId: number) => {
+    setConversations((previous) =>
+      previous.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)),
+    );
+    chatService.markAsRead(conversationId).then(refreshUnread).catch(() => undefined);
+  }, [refreshUnread]);
 
   useEffect(() => {
     let cancelled = false;
 
-    if (currentUserId == null) {
-      setConversations([]);
-      setSelectedConversationId(null);
-      setError(null);
-      setIsLoading(false);
-
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const timer = setTimeout(async () => {
-      setIsLoading(true);
-      setError(null);
-
+    const timer = window.setTimeout(async () => {
       try {
-        const apiConversations = await chatService.getConversations(currentUserId, searchQuery);
-
-        const loadedConversations = await Promise.all(
-          apiConversations.map(async (conversation) => {
-            const apiMessages = await chatService.getMessages(
-              conversation.id,
-              currentUserId,
-            );
-
-            const messages = apiMessages.map(toChatMessage);
-
-            const otherUserId =
-              conversation.participantOneId === currentUserId
-                ? conversation.participantTwoId
-                : conversation.participantOneId;
-
-            const participantName =
-              conversation.participantOneId === currentUserId
-                ? (conversation as any).participantTwoName ?? `User ${otherUserId}`
-                : (conversation as any).participantOneName ?? `User ${otherUserId}`;
-
-            return {
-              id: conversation.id,
-              name: participantName, otherUserId,
-              lastMessage: messages.at(-1)?.content ?? "",
-              messages,
-              isOnline: onlineUserIds.includes(otherUserId),
-            };
-          }),
-        );
-
+        const list = await chatService.getConversations(searchQuery);
         if (cancelled) return;
-
-        setConversations(loadedConversations);
-
-        setSelectedConversationId((previousId) => {
-          if (
-            requestedConversationId &&
-            loadedConversations.some((c) => c.id === requestedConversationId)
-          ) {
-            return requestedConversationId;
-          }
-
-          if (
-            previousId !== null &&
-            loadedConversations.some(
-              (conversation) => conversation.id === previousId,
-            )
-          ) {
-            return previousId;
-          }
-
-          return loadedConversations[0]?.id ?? null;
+        setConversations(list);
+        setError(null);
+        const requested = requestedId && list.some((c) => c.id === requestedId) ? requestedId : null;
+        if (requested) setShowList(false);
+        setSelectedId((previousId) => {
+          if (requested) return requested;
+          if (previousId !== null && list.some((c) => c.id === previousId)) return previousId;
+          if (searchQuery.trim()) return previousId;
+          return list[0]?.id ?? null;
         });
       } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : t.chat.loadError,
-          );
-        }
+        if (!cancelled) setError(formatChatError(err, langRef.current, translations[langRef.current].chat.loadError));
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        if (!cancelled) setIsLoading(false);
       }
-    }, 300);
+    }, searchQuery ? 300 : 0);
 
     return () => {
       cancelled = true;
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     };
-  }, [reloadKey, currentUserId, searchQuery, requestedConversationId, t.chat.loadError]);
+  }, [searchQuery, reloadKey, requestedId]);
+
+  const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  const thread = selectedId !== null ? threads[selectedId] : undefined;
 
   useEffect(() => {
-    setConversations((previous) =>
-      previous.map((conversation) => ({
-        ...conversation,
-        isOnline: onlineUserIds.includes(conversation.otherUserId),
-      })),
-    );
-  }, [onlineUserIds]);
+    if (selectedId === null) return;
+    let cancelled = false;
 
-  const selectedConversation = conversations.find(
-    (conversation) => conversation.id === selectedConversationId,
-  );
-
-  async function handleSendMessage(text: string) {
-    const content = text.trim();
-
-    if (!content || !selectedConversation || currentUserId == null) {
-      return;
-    }
-
-    setError(null);
-
-    try {
-      const savedMessage = await chatService.sendMessage(
-        selectedConversation.id,
-        currentUserId,
-        content,
-      );
-
-      const message = toChatMessage(savedMessage);
-
-      socket.emit("sendMessage", {
-        id: savedMessage.id,
-        conversationId: savedMessage.conversationId,
+    chatService
+      .getMessages(selectedId)
+      .then((page) => {
+        if (cancelled) return;
+        setThreads((previous) => ({
+          ...previous,
+          [selectedId]: {
+            messages: mergeMessages(previous[selectedId]?.messages ?? [], page.messages),
+            hasMore: previous[selectedId]?.hasMore ?? page.hasMore,
+            loadingOlder: false,
+          },
+        }));
+        const conversation = conversationsRef.current.find((c) => c.id === selectedId);
+        if (conversation?.unreadCount && document.visibilityState === "visible") markRead(selectedId);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(formatChatError(err, langRef.current, translations[langRef.current].chat.loadError));
       });
 
-      setConversations((previousConversations) =>
-        previousConversations.map((conversation) =>
-          conversation.id === selectedConversation.id
-            ? {
-              ...conversation,
-              messages: [...conversation.messages, message],
-              lastMessage: message.content,
-            }
-            : conversation,
-        ),
-      );
+    return () => { cancelled = true; };
+  }, [selectedId, reloadKey, markRead]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      const id = selectedIdRef.current;
+      if (document.visibilityState !== "visible" || id === null) return;
+      if (conversationsRef.current.find((c) => c.id === id)?.unreadCount) markRead(id);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [markRead]);
+
+  async function loadOlder() {
+    if (selectedId === null || !thread || thread.loadingOlder || !thread.hasMore) return;
+    const conversationId = selectedId;
+    const before = thread.messages[0]?.id;
+
+    setThreads((previous) => ({ ...previous, [conversationId]: { ...previous[conversationId], loadingOlder: true } }));
+    try {
+      const page = await chatService.getMessages(conversationId, before);
+      setThreads((previous) => ({
+        ...previous,
+        [conversationId]: {
+          messages: mergeMessages(previous[conversationId]?.messages ?? [], page.messages),
+          hasMore: page.hasMore,
+          loadingOlder: false,
+        },
+      }));
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t.chat.sendError,
-      );
+      setThreads((previous) => ({ ...previous, [conversationId]: { ...previous[conversationId], loadingOlder: false } }));
+      setError(formatChatError(err, lang, t.chat.loadError));
     }
   }
 
-  function handleSelectConversation(conversation: Conversation) {
-    setSelectedConversationId(conversation.id);
-    setShowConversationList(false);
+  const addMessage = useCallback((message: ApiMessage) => {
+    const id = message.conversationId;
+
+    setThreads((previous) =>
+      previous[id]
+        ? { ...previous, [id]: { ...previous[id], messages: mergeMessages(previous[id].messages, [message]) } }
+        : previous,
+    );
+
+    setConversations((previous) => {
+      const existing = previous.find((c) => c.id === id);
+      if (!existing) return previous;
+      const isNewer = !existing.lastMessage || message.id >= existing.lastMessage.id;
+      const countsAsUnread = !message.isMine && !isOnScreen(id) && isNewer && !message.deleted;
+      const updated: ApiConversation = {
+        ...existing,
+        lastMessage: isNewer ? message : existing.lastMessage,
+        updatedAt: isNewer ? message.createdAt : existing.updatedAt,
+        unreadCount: countsAsUnread ? existing.unreadCount + 1 : existing.unreadCount,
+      };
+      return [updated, ...previous.filter((c) => c.id !== id)];
+    });
+  }, []);
+
+  const removeMessage = useCallback((conversationId: number, messageId: number) => {
+    const current = threadsRef.current[conversationId];
+    setThreads((previous) => {
+      const thread = previous[conversationId];
+      if (!thread) return previous;
+      return { ...previous, [conversationId]: { ...thread, messages: thread.messages.filter((m) => m.id !== messageId) } };
+    });
+
+    const target = conversationsRef.current.find((c) => c.id === conversationId);
+    if (target?.lastMessage?.id !== messageId) return;
+    if (!current) {
+      setReloadKey((key) => key + 1);
+      return;
+    }
+    const newLast = current.messages.filter((m) => m.id !== messageId).at(-1) ?? null;
+    setConversations((previous) => previous.map((c) => (c.id === conversationId ? { ...c, lastMessage: newLast } : c)));
+  }, []);
+
+  const updateTypingIds = useCallback((conversationId: number, isTyping: boolean) => {
+    setTypingIds((previous) => {
+      if (previous.has(conversationId) === isTyping) return previous;
+      const next = new Set(previous);
+      if (isTyping) next.add(conversationId);
+      else next.delete(conversationId);
+      return next;
+    });
+  }, []);
+
+  const setTyping = useCallback((conversationId: number, isTyping: boolean) => {
+    const timers = typingTimers.current;
+    window.clearTimeout(timers.get(conversationId));
+    timers.delete(conversationId);
+    updateTypingIds(conversationId, isTyping);
+
+    if (isTyping) {
+      timers.set(conversationId, window.setTimeout(() => {
+        timers.delete(conversationId);
+        updateTypingIds(conversationId, false);
+      }, TYPING_TIMEOUT_MS));
+    }
+  }, [updateTypingIds]);
+
+  useEffect(() => {
+    const timers = typingTimers.current;
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewMessage = (message: ApiMessage) => {
+      if (!conversationsRef.current.some((c) => c.id === message.conversationId)) {
+        setReloadKey((key) => key + 1);
+        return;
+      }
+      addMessage(message);
+      if (!message.isMine) {
+        setTyping(message.conversationId, false);
+        if (isOnScreen(message.conversationId)) markRead(message.conversationId);
+      }
+    };
+
+    const handleDeleted = (message: ApiMessage) => addMessage(message);
+
+    const handlePeerUpdated = ({ conversationId, name, avatarUrl }: { conversationId: number; name: string | null; avatarUrl: string | null }) => {
+      setConversations((previous) =>
+        previous.map((c) => (c.id === Number(conversationId) ? { ...c, peer: { ...c.peer, name, avatarUrl } } : c)),
+      );
+    };
+
+    const handleHidden = ({ conversationId, messageId }: { conversationId: number; messageId: number }) =>
+      removeMessage(Number(conversationId), Number(messageId));
+
+    const handleBlockChanged = ({ conversationId, blockedByMe, blockedByPeer }: { conversationId: number; blockedByMe: boolean; blockedByPeer: boolean }) => {
+      setConversations((previous) =>
+        previous.map((c) => (c.id === Number(conversationId) ? { ...c, blockedByMe, blockedByPeer } : c)),
+      );
+      if (blockedByMe || blockedByPeer) setTyping(Number(conversationId), false);
+    };
+
+    const handleRead = ({ conversationId, readAt }: { conversationId: number; readAt: string }) => {
+      setThreads((previous) => {
+        const current = previous[conversationId];
+        if (!current) return previous;
+        return {
+          ...previous,
+          [conversationId]: {
+            ...current,
+            messages: current.messages.map((m) => (m.isMine && !m.readAt ? { ...m, readAt } : m)),
+          },
+        };
+      });
+      setConversations((previous) =>
+        previous.map((c) =>
+          c.id === conversationId && c.lastMessage?.isMine && !c.lastMessage.readAt
+            ? { ...c, lastMessage: { ...c.lastMessage, readAt } }
+            : c,
+        ),
+      );
+    };
+
+    const handleConversationRead = ({ conversationId }: { conversationId: number }) => {
+      setConversations((previous) => previous.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c)));
+    };
+
+    const handlePresence = ({ conversationId, online, lastSeen }: { conversationId: number; online: boolean; lastSeen: string | null }) => {
+      setConversations((previous) =>
+        previous.map((c) =>
+          c.id === conversationId ? { ...c, peer: { ...c.peer, online, lastSeen: lastSeen ?? c.peer.lastSeen } } : c,
+        ),
+      );
+      if (!online) setTyping(conversationId, false);
+    };
+
+    const handleTyping = ({ conversationId, isTyping }: { conversationId: number; isTyping: boolean }) =>
+      setTyping(Number(conversationId), Boolean(isTyping));
+
+    const handleReconnect = () => setReloadKey((key) => key + 1);
+
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messageDeleted", handleDeleted);
+    socket.on("messageHidden", handleHidden);
+    socket.on("peerUpdated", handlePeerUpdated);
+    socket.on("blockChanged", handleBlockChanged);
+    socket.on("messagesRead", handleRead);
+    socket.on("conversationRead", handleConversationRead);
+    socket.on("presence", handlePresence);
+    socket.on("typing", handleTyping);
+    socket.io.on("reconnect", handleReconnect);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messageDeleted", handleDeleted);
+      socket.off("messageHidden", handleHidden);
+      socket.off("peerUpdated", handlePeerUpdated);
+      socket.off("blockChanged", handleBlockChanged);
+      socket.off("messagesRead", handleRead);
+      socket.off("conversationRead", handleConversationRead);
+      socket.off("presence", handlePresence);
+      socket.off("typing", handleTyping);
+      socket.io.off("reconnect", handleReconnect);
+    };
+  }, [socket, addMessage, markRead, setTyping, removeMessage]);
+
+  async function handleSendText(content: string): Promise<boolean> {
+    if (!selected) return false;
+    setError(null);
+    try {
+      addMessage(await chatService.sendMessage(selected.id, content));
+      return true;
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+      return false;
+    }
+  }
+
+  async function handleSendAttachment(file: Blob, fileName: string, caption: string, duration?: number): Promise<boolean> {
+    if (!selected) return false;
+    setError(null);
+    try {
+      addMessage(await chatService.sendAttachment(selected.id, file, fileName, caption, duration));
+      return true;
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+      return false;
+    }
+  }
+
+  async function runAction(action: () => Promise<void>) {
+    setDialog(null);
+    try {
+      await action();
+    } catch (err) {
+      setError(formatChatError(err, lang, t.chat.sendError));
+    }
+  }
+
+  function handleDelete(message: ApiMessage) {
+    const actions: ConfirmAction[] = [];
+    if (message.isMine && !message.deleted) {
+      actions.push({
+        label: t.chat.deleteForEveryone,
+        tone: "danger",
+        onSelect: () => void runAction(async () => addMessage(await chatService.deleteMessage(message.id))),
+      });
+    }
+    actions.push({
+      label: t.chat.deleteForMe,
+      tone: actions.length ? "neutral" : "danger",
+      onSelect: () => void runAction(async () => {
+        await chatService.hideMessage(message.id);
+        removeMessage(message.conversationId, message.id);
+      }),
+    });
+    setDialog({ title: t.chat.deleteTitle, description: t.chat.deleteForMeHint, actions });
+  }
+
+  function applyBlockState(conversationId: number, blockedByMe: boolean, blockedByPeer: boolean) {
+    setConversations((previous) =>
+      previous.map((c) =>
+        c.id === conversationId
+          ? {
+              ...c,
+              blockedByMe,
+              blockedByPeer,
+              peer: blockedByMe || blockedByPeer ? { ...c.peer, online: false, lastSeen: null } : c.peer,
+            }
+          : c,
+      ),
+    );
+  }
+
+  function requestBlock(blocked: boolean) {
+    if (!selected) return;
+    const conversationId = selected.id;
+    const name = selected.peer.name ?? t.chat.conversation;
+    setDialog({
+      title: fmt(blocked ? t.chat.blockTitle : t.chat.unblockTitle, { name }),
+      description: blocked ? fmt(t.chat.blockText, { name }) : t.chat.unblockText,
+      actions: [{
+        label: blocked ? t.chat.block : t.chat.unblock,
+        tone: blocked ? "danger" : "primary",
+        onSelect: () => void runAction(async () => {
+          const state = await chatService.setBlocked(conversationId, blocked);
+          applyBlockState(conversationId, state.blockedByMe, state.blockedByPeer);
+        }),
+      }],
+    });
+  }
+
+  const handleTypingSignal = useCallback((isTyping: boolean) => {
+    const id = selectedIdRef.current;
+    if (id !== null) socket?.emit("typing", { conversationId: id, isTyping });
+  }, [socket]);
+
+  function handleSelectConversation(conversation: ApiConversation) {
+    setSelectedId(conversation.id);
+    setShowList(false);
+    setProfileOpen(false);
   }
 
   if (isLoading && conversations.length === 0) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[320px] w-full items-center justify-center bg-[var(--color-surface)] text-[var(--color-muted)]">
         <p>{t.chat.loadingConversations}</p>
       </div>
     );
@@ -288,87 +447,185 @@ function Chat({ lang, currentUserId }: ChatProps) {
 
   if (conversations.length === 0 && !searchQuery.trim()) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] mb-6 text-[var(--color-accent)] shadow-sm">
+      <div className="flex h-[calc(100dvh-5.5rem)] min-h-[320px] w-full flex-col items-center justify-center bg-[var(--color-surface)] p-8 text-center">
+        <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-accent-soft)] text-[var(--color-accent)] shadow-sm">
           <MessageSquareOff className="h-12 w-12 stroke-[1.5]" />
         </div>
-
-        <h2 className="text-2xl font-bold text-[var(--color-text)] mb-2">
-          {t.chat.noConversationsTitle}
-        </h2>
-
-        <p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">
-          {t.chat.noConversationsDesc}
-        </p>
+        <h2 className="mb-2 text-2xl font-bold text-[var(--color-text)]">{t.chat.noConversationsTitle}</h2>
+        <p className="max-w-md text-sm leading-relaxed text-[var(--color-muted)]">{t.chat.noConversationsDesc}</p>
+        {error && <p role="alert" className="mt-4 text-sm text-red-600">{error}</p>}
       </div>
     );
   }
 
+  const peerName = selected?.peer.name ?? t.chat.conversation;
+  const isPeerTyping = selected ? typingIds.has(selected.id) : false;
+  const lastSeen = selected && !selected.peer.online ? formatLastSeen(selected.peer.lastSeen, lang) : null;
+  const statusText = isPeerTyping
+    ? t.chat.typing
+    : selected?.peer.online
+      ? t.chat.online
+      : lastSeen
+        ? fmt(t.chat.lastSeen, { time: lastSeen })
+        : t.chat.offline;
+
   return (
-    <div className="flex flex-col h-screen w-full bg-[var(--color-surface)]">
-      <div className="flex flex-1 overflow-hidden">
-        {showConversationList && (
+    <div className="flex h-[calc(100dvh-5.5rem)] max-h-[calc(100dvh-5.5rem)] min-h-[320px] w-full flex-col overflow-hidden bg-[var(--color-surface)]">
+      <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+        <div className={`${showList ? "flex" : "hidden"} h-full min-h-0 w-full min-w-0 shrink-0 flex-col lg:flex lg:w-80 xl:w-96`}>
           <ConversationList
             conversations={conversations}
-            selectedConversation={selectedConversation ?? conversations[0]}
+            selectedConversationId={selectedId}
+            typingConversationIds={typingIds}
             onSelectConversation={handleSelectConversation}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             lang={lang}
           />
-        )}
+        </div>
 
-        <div className="flex flex-1 flex-col bg-[var(--color-background)] h-full overflow-hidden">
-          {selectedConversation ? (
+        <div className={`${showList ? "hidden" : "flex"} h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--color-background)] lg:flex`}>
+          {selected ? (
             <>
-              <div className="flex items-center gap-4 px-6 py-4 bg-[var(--color-surface)] border-b border-[var(--color-border)] shadow-sm">
-                {!showConversationList && (
+              <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-2 shadow-sm sm:gap-3 sm:px-4 sm:py-3 lg:px-6">
+                <button
+                  type="button"
+                  onClick={() => setShowList(true)}
+                  aria-label={t.chat.back}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-background)] text-[var(--color-text)] transition hover:bg-[var(--color-border)] lg:hidden"
+                >
+                  {lang === "ar" ? <ArrowRight size={20} /> : <ArrowLeft size={20} />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(true)}
+                  aria-label={t.chat.viewProfile}
+                  title={t.chat.viewProfile}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-xl p-1 text-start transition hover:bg-[var(--color-background)] sm:gap-3"
+                >
+                  <ChatAvatar
+                    name={peerName}
+                    avatarUrl={selected.peer.avatarUrl}
+                    online={selected.peer.online}
+                    size="sm"
+                    onlineLabel={t.chat.online}
+                    offlineLabel={t.chat.offline}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-start text-base font-bold text-[var(--color-text)] sm:text-lg"><bdi>{peerName}</bdi></span>
+                    <span className={`block truncate text-xs ${isPeerTyping ? "italic text-[var(--color-accent-dark)]" : "text-[var(--color-muted)]"}`}>
+                      {statusText}
+                    </span>
+                  </span>
+                </button>
+
+                {notificationPermission === "default" && (
                   <button
                     type="button"
-                    onClick={() => setShowConversationList(true)}
-                    aria-label="Back to conversations"
-                    className="p-2 rounded-lg bg-[var(--color-background)] hover:bg-[var(--color-border)] text-[var(--color-text)] transition"
+                    onClick={() => void requestNotificationPermission()}
+                    aria-label={t.chat.enableNotifications}
+                    title={t.chat.enableNotifications}
+                    className="shrink-0 rounded-lg p-2 text-[var(--color-muted)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-accent)]"
                   >
-                    ←
+                    <BellRing size={18} />
                   </button>
                 )}
 
-                <div>
-                  <h2 className="font-bold text-lg text-[var(--color-text)]">{selectedConversation.name}</h2>
-                  <p className="text-xs text-[var(--color-muted)]">
-                    {selectedConversation.isOnline ? t.chat.online : t.chat.offline}
-                  </p>
+                <div className="shrink-0 max-sm:[&_button]:px-2.5 max-sm:[&_button]:text-[0px]">
+                  <ChatHandshake conversationId={selected.id} lang={lang} />
                 </div>
               </div>
 
               {error && (
-                <div className="m-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-red-700" role="alert">
-                  <p className="text-sm">{error}</p>
+                <div className="m-2 flex shrink-0 items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 sm:m-4 sm:p-4" role="alert">
+                  <p className="min-w-0 break-words text-sm">{error}</p>
                   <button
                     type="button"
-                    onClick={() => setReloadKey((key) => key + 1)}
-                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs font-semibold hover:bg-red-700 transition"
+                    onClick={() => setError(null)}
+                    aria-label={t.chat.dismiss}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
                   >
-                    {t.chat.retry}
+                    ✕
                   </button>
                 </div>
               )}
 
-              <MessageList
-                messages={selectedConversation.messages}
-                currentUserId={currentUserId ?? -1}
-                lang={lang}
-              />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {thread ? (
+                  <MessageList
+                    messages={thread.messages}
+                    lang={lang}
+                    conversationId={selected.id}
+                    hasMore={thread.hasMore}
+                    loadingOlder={thread.loadingOlder}
+                    isTyping={isPeerTyping}
+                    onLoadOlder={() => void loadOlder()}
+                    onDelete={(message) => void handleDelete(message)}
+                  />
+                ) : (
+                  <div className="flex flex-1 items-center justify-center text-sm text-[var(--color-muted)]">…</div>
+                )}
+              </div>
 
-              <MessageInput onSend={handleSendMessage} lang={lang} />
+              <div className="min-w-0 shrink-0">
+                {selected.blockedByMe || selected.blockedByPeer ? (
+                  <div className="flex flex-wrap items-center justify-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-4 text-center text-sm text-[var(--color-muted)] pb-[max(1rem,env(safe-area-inset-bottom))]">
+                    <span>
+                      {selected.blockedByMe
+                        ? fmt(t.chat.youBlocked, { name: selected.peer.name ?? t.chat.conversation })
+                        : t.chat.blockedByPeer}
+                    </span>
+                    {selected.blockedByMe && (
+                      <button
+                        type="button"
+                        onClick={() => requestBlock(false)}
+                        className="rounded-xl border border-[var(--color-border)] px-4 py-2 text-sm font-bold text-[var(--color-accent-dark)] transition hover:bg-[var(--color-accent-soft)]"
+                      >
+                        {t.chat.unblock}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <MessageInput
+                    key={selected.id}
+                    lang={lang}
+                    onSendText={handleSendText}
+                    onSendAttachment={handleSendAttachment}
+                    onTyping={handleTypingSignal}
+                    onError={setError}
+                  />
+                )}
+              </div>
+
+              {profileOpen && (
+                <PeerProfilePanel
+                  key={`${selected.id}-${selected.peer.name ?? ""}-${selected.peer.avatarUrl ?? ""}`}
+                  conversationId={selected.id}
+                  lang={lang}
+                  online={selected.peer.online}
+                  blockedByMe={selected.blockedByMe}
+                  onRequestBlock={requestBlock}
+                  onClose={() => setProfileOpen(false)}
+                />
+              )}
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-[var(--color-muted)] p-6">
+            <div className="flex min-w-0 flex-1 flex-col items-center justify-center p-6 text-[var(--color-muted)]">
               <p>{t.chat.selectToStart}</p>
             </div>
           )}
         </div>
       </div>
+      {dialog && (
+        <ConfirmDialog
+          title={dialog.title}
+          description={dialog.description}
+          actions={dialog.actions}
+          cancelLabel={t.chat.cancel}
+          onCancel={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }

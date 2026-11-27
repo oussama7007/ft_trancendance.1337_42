@@ -1,31 +1,41 @@
 import { passwordRules } from "@/utils/password";
 
+interface PasswordStrengthLabels {
+    title: string;
+    weak: string;
+    medium: string;
+    strong: string;
+    rules: readonly string[];
+}
+
 interface PasswordStrengthProps {
     password: string;
+    labels?: PasswordStrengthLabels;
 }
 
 export function PasswordStrength({
     password,
+    labels,
 }: PasswordStrengthProps) {
     const passedRules = passwordRules.filter(
         (rule) => rule.test(password)
     ).length;
 
-    let strength = "Weak";
+    let strength = labels?.weak ?? 'Weak';
 
     if (passedRules >= 4) {
-        strength = "Medium";
+        strength = labels?.medium ?? 'Medium';
     }
 
     if (passedRules === passwordRules.length) {
-        strength = "Strong";
+         strength = labels?.strong ?? 'Strong';
     }
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-3 text-start">
             <div className="flex justify-between text-sm">
                 <span className="text-irent-muted">
-                    Password strength
+                    {labels?.title ?? 'Password strength'}
                 </span>
 
                 <span className="font-semibold">
@@ -47,7 +57,7 @@ export function PasswordStrength({
             </div>
 
             <ul className="space-y-1">
-                {passwordRules.map((rule) => {
+                {passwordRules.map((rule, index) => {
                     const passed = rule.test(password);
 
                     return (
@@ -59,11 +69,11 @@ export function PasswordStrength({
                                     : "text-irent-muted"
                             }`}
                         >
-                            <span className="mr-2">
+                            <span className="me-2">
                                 {passed ? "✓" : "○"}
                             </span>
 
-                            {rule.label}
+                            {labels?.rules[index] ?? rule.label}
                         </li>
                     );
                 })}

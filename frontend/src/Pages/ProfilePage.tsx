@@ -1,26 +1,112 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Language, User } from '../types';
 import { ProfileSidebar } from '../Components/profile/ProfileSidebar';
 import { ProfileHeader } from '../Components/profile/ProfileHeader';
 import { ProfileDescription } from '../Components/profile/ProfileDescription';
 import { SocialMediaCard } from '../Components/profile/SocialMediaCard';
-import { FeedbackSection } from '../Components/profile/FeedbackSection';
+import ReviewsSection from '../Components/reviews/ReviewsSection';
+import { FriendsMenu } from '../Components/friends/FriendsMenu';
 import { OwnerInterestRequests } from '../Components/home/OwnerInterestRequests';
+import { fetchMyListings } from '../api/myListings';
 
-import { translations } from '../translations';
+
+
+import {
+    getMyProfile,
+    updateMyProfile,
+    uploadMyAvatar,
+    getAvatarUrl,
+} from '../services/profile';
+
+import { translations  } from '../translations';
 
 interface ProfilePageProps {
     user: User;
     lang: Language;
+    onAvatarChanged: (avatarUrl: string | null) => void;
 }
 
-export function ProfilePage({ user, lang }: ProfilePageProps) {
+export function ProfilePage({ user, lang, onAvatarChanged }: ProfilePageProps) {
+
     const navigate = useNavigate();
     const t = translations[lang].profile;
-    const [avatar, setAvatar] = useState(user.avatar);
-    const [description, setDescription] = useState(user.bio ?? '');
+    
+    const [profile, setProfile] = useState(user);
+    const [error, setError] = useState('');
+    const [hasListings, setHasListings] = useState(false);
 
+    useEffect(() => {
+        let ignore = false;
+        fetchMyListings()
+            .then((listings) => { if (!ignore) setHasListings(listings.length > 0); })
+            .catch(() => { if (!ignore) setHasListings(false); });
+        return () => { ignore = true; };
+    }, []);
+
+        useEffect(() => {
+            getMyProfile()
+                .then((updatedProfile) => {
+                    setProfile(updatedProfile);
+                    onAvatarChanged(updatedProfile.avatarUrl ?? null);
+                })
+                .catch((error: Error) => {
+                    setError(error.message);
+                });
+        }, [onAvatarChanged]);
+
+        async function handleAvatarChange(file: File) {
+            try {
+                setError('');
+
+                const updated = await uploadMyAvatar(file);
+
+                setProfile((previous) => ({
+                    ...previous,
+                    ...updated,
+                }));
+
+                onAvatarChanged(updated.avatarUrl ?? null);
+            } catch (error) {
+                setError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Could not upload image',
+                );
+            }
+        }
+
+            
+
+
+
+        async function handleSocialSave(links: {
+            linkedin: string | null;
+            instagram: string | null;
+            facebook: string | null;
+        }) {
+            const updated = await updateMyProfile(links);
+
+            setProfile((previous) => ({
+                ...previous,
+                ...updated,
+            }));
+        }
+
+
+
+async function handleDescriptionSave(description: string) {
+    setError('');
+
+    const updated = await updateMyProfile({
+        bio: description,
+    });
+
+    setProfile((previous) => ({
+        ...previous,
+        ...updated,
+    }));
+}
     const handleAcceptRequest = (conversationId?: number) => {
         if (conversationId) {
             navigate(`/chat?conversationId=${conversationId}`);
@@ -35,13 +121,24 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
             className="min-h-[65vh] bg-(--color-background) px-3 py-5 sm:px-5 lg:px-8 lg:py-7">
             <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-4 md:grid-cols-[72px_minmax(0,1fr)] md:gap-5 lg:gap-6">
-                <ProfileSidebar t={t.sidebar} />
+                <ProfileSidebar t={t.sidebar}>
+                    <FriendsMenu lang={lang} />
+                </ProfileSidebar>
 
+                
+                {error && (
+                            <div
+                                role="alert"
+                                className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600"
+                            >
+                                {error}
+                            </div>
+                        )}
                 <div className="min-w-0">
                     <ProfileHeader
-                        user={user}
-                        avatar={avatar}
-                        onAvatarChange={setAvatar}
+                        user={profile}
+                        avatar={getAvatarUrl(profile.avatarUrl)}
+                        onAvatarChange={handleAvatarChange}
                         t={t.header}
                         avatarT={t.avatar}
                         lang={lang}
@@ -51,31 +148,29 @@ export function ProfilePage({ user, lang }: ProfilePageProps) {
                         <div className="flex min-w-0 flex-col gap-5">
                             
                             <ProfileDescription
-                                description={description}
-                                onSave={setDescription}
+                                description={profile.bio ?? ''}
+                                onSave={handleDescriptionSave}
                                 t={t.description}
                             />
-                            <SocialMediaCard user={user}
+                            <SocialMediaCard user={profile}
+                                lang={lang}
                                 t={t.social}
+                                onSave={handleSocialSave}
                             />
                         </div>
 
                         <div className="flex min-w-0 flex-col gap-5">
-                        {/* ===================================================
-                        TODO [FEEDBACK TEAMMATE]:
-                        Integrate the Feedback component here.
-
-                        This teammate is responsible for:
-                        - Displaying tenant feedback.
-                        - Displaying reviews and ratings.
-                        - Feedback interactions.
-
-                        Do not implement feedback functionality in ProfilePage.
-                        =================================================== */}
-                            <FeedbackSection t={t.feedback}/>
+                            <ReviewsSection
+                                profileUserId={user.id}
+                                profileName={user.firstName}
+                                currentUserId={user.id}
+                                lang={lang}
+                            />
 
                             {/* TODO: Teammates can add future profile sections in this column. */}
-                            <OwnerInterestRequests onAcceptSuccess={handleAcceptRequest} />
+                            {hasListings && (
+                                <OwnerInterestRequests lang={lang} onAcceptSuccess={handleAcceptRequest} />
+                            )}
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Language, Listing, PriceRange, SearchFilters } from '../types';
 import { filtersFromParams,pageFromParams, queryToParams, sortFromParams, SORT_OPTIONS,  type SortValue,} from '../utils/searchFilters';
 import { translations } from '../translations';
@@ -32,6 +32,7 @@ interface ListingsPageProps {
 }
 
 export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId }) => {
+    const navigate = useNavigate();
     const t = translations[lang].homePage;
 
     const SORT_LABELS: Record<SortValue, string> = {
@@ -87,7 +88,6 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId 
                 );
                 setListings(data);
                 setMeta(meta);
-                // console.log('Pagination meta:', meta);
             } catch (error) {
                 if (controller.signal.aborted) return;
                 console.error(error);
@@ -102,6 +102,11 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId 
             controller.abort();
         };
     }, [city, propertyType, priceRange,sortBy, sortOrder, page]);
+
+    const handleContactListing = (_listing: Listing, conversationId?: number) => {
+        setActiveDetailItem(null);
+        navigate(conversationId ? `/chat?conversationId=${conversationId}` : '/chat');
+    };
 
     return (
         <main
@@ -265,12 +270,10 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId 
                 yourListingLabel={t.yourListing}
                 priceLabel={t.price}
                 perMonthLabel={t.perMonth}
+                descriptionLabel={t.descriptionLabel}
                 closeLabel={t.close}
                 onClose={() => setActiveDetailItem(null)}
-                onContact={(listing) => {
-                    console.log('Contact:', listing);
-                    setActiveDetailItem(null);
-                }}
+                onContact={handleContactListing}
             />
 
         </main>

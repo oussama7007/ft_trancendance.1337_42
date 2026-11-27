@@ -1,9 +1,11 @@
+import type { Language } from '../types';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 export type ReviewRole = 'owner' | 'roommate';
 export type ReviewTab = 'all' | ReviewRole;
 
-// These types mirror the DTOs in the backend (review-response.dto.ts).
+// same types as the backend dto
 export interface Review
 {
   id: number;
@@ -11,7 +13,7 @@ export interface Review
   comment: string;
   role: ReviewRole;
   reviewer: { id: number; name: string };
-  listingTitle: string;
+  listingTitle: Record<Language, string>;
   createdAt: string;
 }
 
@@ -28,10 +30,10 @@ export interface CanReview
   role: ReviewRole | null;
 }
 
-// Sends the request and throws if the server says no.
+// sends the request and throws if it fails
 async function request(url: string, options?: RequestInit): Promise<Response>
 {
-  const response = await fetch(`${API_URL}${url}`, options);
+  const response = await fetch(`${API_URL}${url}`, { ...options, credentials: 'include' });
 
   if (!response.ok)
     throw new Error(`Request failed with status ${response.status}`);
@@ -39,27 +41,26 @@ async function request(url: string, options?: RequestInit): Promise<Response>
   return response;
 }
 
-// TODO(auth): `reviewerId` goes in the query string only until login exists.
 export const reviewService =
 {
-  // The reviews of one profile, for the open tab.
+  // reviews of a profile
   async getByUser(userId: number, tab: ReviewTab): Promise<ReviewsResult>
   {
     const response = await request(`/users/${userId}/reviews?role=${tab}`);
     return response.json() as Promise<ReviewsResult>;
   },
 
-  // Asks if I can leave a review on this profile.
-  async canReview(userId: number, reviewerId: number): Promise<CanReview>
+  // can i review this profile
+  async canReview(userId: number, _reviewerId?: number): Promise<CanReview>
   {
-    const response = await request(`/users/${userId}/reviews/can-review?userId=${reviewerId}`);
+    const response = await request(`/users/${userId}/reviews/can-review`);
     return response.json() as Promise<CanReview>;
   },
 
-  // Saves my review of this profile.
-  async create(userId: number, reviewerId: number, rating: number, comment: string): Promise<void>
+  // saves my review
+  async create(userId: number, _reviewerId: number | undefined, rating: number, comment: string): Promise<void>
   {
-    await request(`/users/${userId}/reviews?userId=${reviewerId}`,
+    await request(`/users/${userId}/reviews`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

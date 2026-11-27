@@ -7,6 +7,7 @@ import {
     UserRound,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import type { ReactNode } from 'react';
 
 
 
@@ -14,34 +15,21 @@ import type { ProfileTranslations } from '../../translations';
 
 interface ProfileSidebarProps {
     t: ProfileTranslations['sidebar'];
+    children?: ReactNode;
 }
 
-// Pages that already exist in the application.
 const navigationItems = [
-    // TODO [DASHBOARD TEAMMATE]:
-    // Replace this destination with the Dashboard route when implemented.
     { key: 'dashboard', path: '/dashboard', icon: LayoutDashboard },
-
-    // PROFILE: Implemented by the Profile developer.
+    { key: 'settings', path: '/settings', icon: Settings },
     { key: 'profile', path: '/profile', icon: UserRound },
-
-    // TODO [CHAT TEAMMATE]:
-    // Integrate the Chat / Messages page here.
     { key: 'messages', path: '/chat', icon: MessageCircle },
-] as const ;
-
-// Future pages. Keep their icons visible until implementation.
-const futureItems = [
-    // TODO [FAVORITES TEAMMATE]:
-    // Implement the user's favorite properties and connect the route.
-    { key: 'favorites', icon: Heart },
-
-    // TODO [SETTINGS TEAMMATE]:
-    // Implement the user's account settings and connect the route.
-    { key: 'settings', icon: Settings },
 ] as const;
 
-export function ProfileSidebar({t} : ProfileSidebarProps) {
+const futureItems = [
+    { key: 'favorites', icon: Heart },
+] as const;
+
+export function ProfileSidebar({t, children} : ProfileSidebarProps) {
     return (
         <aside className="h-fit rounded-2xl border border-(--color-border) bg-(--color-surface) p-2 shadow-sm">
             <nav
@@ -71,6 +59,8 @@ export function ProfileSidebar({t} : ProfileSidebarProps) {
                         </NavLink>
                     );
                 })}
+
+                {children}
 
                 <div className="mx-2 hidden h-px bg-(--color-border) md:block" />
 

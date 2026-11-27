@@ -25,11 +25,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'Data we collect',
                     paragraphs: [
-                        'Account data: first name, last name, date of birth, gender, an optional national ID number (CIN) and your contact (email or phone number).',
-                        'Password: we never store your password. We only store a salted hash (bcrypt) that cannot be reversed.',
-                        'Listing data: the title, description, city, district, price, number of bedrooms, photo link and the name you enter when you publish a listing. Listings are public.',
-                        'Technical data: your language choice is stored in your browser (localStorage). We do not use advertising or analytics cookies.',
-                    ],
+                        'Account data: first name, last name, date of birth, gender and email address. If you enable SMS two-factor authentication, we also store your phone number and whether it is verified. If you link a Google account, we store its Google account identifier and verified email address.',                    ],
                 },
                 {
                     heading: 'How we use your data',
@@ -158,11 +154,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'Données collectées',
                     paragraphs: [
-                        "Données du compte : prénom, nom, date de naissance, sexe, numéro de CIN (facultatif) et votre contact (e-mail ou numéro de téléphone).",
-                        "Mot de passe : nous ne le conservons jamais. Nous stockons uniquement une empreinte salée (bcrypt) impossible à inverser.",
-                        "Données des annonces : titre, description, ville, quartier, prix, nombre de chambres, lien de la photo et nom saisi lors de la publication. Les annonces sont publiques.",
-                        "Données techniques : votre choix de langue est enregistré dans votre navigateur (localStorage). Nous n'utilisons ni cookies publicitaires ni cookies d'analyse.",
-                    ],
+                        "Données du compte : prénom, nom, date de naissance, genre et adresse e-mail. Si vous activez l'authentification à deux facteurs par SMS, nous enregistrons aussi votre numéro de téléphone et son statut de vérification. Si vous associez un compte Google, nous conservons son identifiant Google et son adresse e-mail vérifiée.",                    ],
                 },
                 {
                     heading: 'Utilisation des données',
@@ -291,11 +283,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'البيانات التي نجمعها',
                     paragraphs: [
-                        'بيانات الحساب: الاسم الشخصي والعائلي، وتاريخ الازدياد، والجنس، ورقم البطاقة الوطنية (CIN) اختياريا، ووسيلة التواصل (البريد الإلكتروني أو رقم الهاتف).',
-                        'كلمة المرور: لا نحتفظ بها أبدا. نخزن فقط بصمة مشفرة بملح (bcrypt) لا يمكن عكسها.',
-                        'بيانات العروض: العنوان والوصف والمدينة والحي والثمن وعدد الغرف ورابط الصورة والاسم الذي تدخله عند نشر العرض. العروض عمومية.',
-                        'بيانات تقنية: يُحفظ اختيارك للغة في متصفحك (localStorage). لا نستعمل ملفات تعريف الارتباط الإعلانية أو التحليلية.',
-                    ],
+                    'بيانات الحساب: الاسم الشخصي، اسم العائلة، تاريخ الميلاد، الجنس والبريد الإلكتروني. عند تفعيل المصادقة الثنائية عبر SMS، نخزن رقم هاتفك وحالة التحقق منه. وعند ربط حساب Google، نخزن معرّف حساب Google والبريد الإلكتروني الموثق المرتبط به.',                    ],
                 },
                 {
                     heading: 'كيف نستعمل بياناتك',

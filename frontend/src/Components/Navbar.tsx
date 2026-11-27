@@ -4,6 +4,10 @@ import { Menu, X, ChevronDown, Globe, UserCircle } from 'lucide-react';
 import type {Language, User} from '../types';
 import {translations} from '../translations';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Avatar } from '@/components/ui/avatar';
+import { getAvatarUrl } from '../services/profile';
+import { useChat } from '../context/chatContextValue';
+import { NotificationsMenu } from './NotificationsMenu';
 
 interface NavbarProps {
 
@@ -22,6 +26,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     handleLogout,
 }) => {
     const t = translations[lang];
+    const { unreadTotal } = useChat();
+
+    const renderLabel = (path: string, label: string) => (
+        <span className="inline-flex items-center gap-2">
+            {label}
+            {path === '/chat' && currentUser && unreadTotal > 0 && (
+                <span aria-label={`${unreadTotal}`} className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold leading-none text-white">
+                    {unreadTotal > 99 ? '99+' : unreadTotal}
+                </span>
+            )}
+        </span>
+    );
 
     const [isLanguageOpen, setIsLanguageOpen] = useState(false);
     const [isUserOpen, setIsUserOpen] = useState(false);
@@ -79,14 +95,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             path: '/listings',
             label: t.navbar.listings,
         },
-        {
-            path: '/chat',
-            label: t.navbar.chat,
-        },
-        {
-            path: '/profile',
-            label: t.navbar.profile,
-        },
+        // Chat and profile only make sense for a logged-in user.
+        ...(currentUser
+            ? [
+                {
+                    path: '/chat',
+                    label: t.navbar.chat,
+                },
+                {
+                    path: '/profile',
+                    label: t.navbar.profile,
+                },
+            ]
+            : []),
     ];
 
 const languages: Language[] = ['en', 'fr', 'ar'];
@@ -102,8 +123,8 @@ const languages: Language[] = ['en', 'fr', 'ar'];
         >
             <div className="mx-auto flex h-20 max-w-[1600px] items-center justify-between px-4 md:px-8">
 
-                <button type="button" onClick={ () => goToPage('/')} className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-(--color-accent) shadow-md">
+                <button type="button" onClick={ () => goToPage('/')} className="flex shrink-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-(--color-accent) shadow-md">
                         <span className="text-lg font-black text-white">iR</span>
                     </div>
                     <div className="hidden text-start sm:block">
@@ -111,24 +132,24 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                             iRent
                         </div>
 
-                        <div className="text-[9px] font-bold uppercase tracking-[0.15em] text-(--color-accent)">
+                        <div className="whitespace-nowrap text-[9px] font-bold uppercase tracking-[0.15em] text-(--color-accent)">
                             {t.navbar.brandSubtitle}
                         </div>
                     </div>
                 </button>
 
-                <div className="hidden items-center gap-2 md:flex">
+                <div className="hidden items-center gap-1 lg:flex xl:gap-2">
                     {navItems.map((item) => (
                         <NavLink key={item.path} to={item.path} end={item.path === '/'}
                              className={({ isActive }) =>
-                                `rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+                                `whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-bold transition-all duration-200 xl:px-4 ${
                                     isActive
                                         ? 'bg-(--color-accent) text-white shadow-md'
                                         : 'text-gray-600 hover:bg-gray-100 hover:text-(--color-accent)'
                                 }`
                             }
                                             >
-                            {item.label}
+                            {renderLabel(item.path, item.label)}
 
                         </NavLink>
                     ))}
@@ -136,13 +157,13 @@ const languages: Language[] = ['en', 'fr', 'ar'];
 
                 <div className="flex items-center gap-2">
 
-                    <div ref={languageRef} className="relative hidden md:block">
+                    <div ref={languageRef} className="relative hidden lg:block">
                         <button type="button" onClick={() => setIsLanguageOpen((prev) => !prev)}
                             aria-label={t.navbar.language}
                             className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-100"
                             >
                             <Globe size={18} className="text-sky-500"/>
-                            <span>
+                            <span className="hidden xl:inline">
                                 {t.navbar.languages[lang]}
                             </span>
 
@@ -169,7 +190,7 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                     </div>
 
                     {!currentUser && (
-                        <div className="hidden items-center gap-2 md:flex">
+                        <div className="hidden items-center gap-1 lg:flex xl:gap-2">
                             <button type="button" onClick={() => goToPage('/signin')}
                                 className="rounded-xl px-4 py-2.5 text-sm font-bold text-(--color-accent) transition hover:bg-gray-100">
                                 {t.navbar.signIn}
@@ -182,15 +203,20 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                         </div>
                     )}
 
+                    {currentUser && <NotificationsMenu lang={lang} />}
+
                     {currentUser && (
-                    <div ref={userRef} className="relative hidden md:block">
+                    <div ref={userRef} className="relative hidden lg:block">
                         <button type="button" onClick={() => setIsUserOpen ((prev) => !prev)}
                             className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition hover:bg-gray-100">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-(--color-primary) text-sm font-black text-white">
-                                {getUserInitial()}
-                            </div>
+                            <Avatar
+                                src={getAvatarUrl(currentUser.avatarUrl)}
+                                alt={currentUser.fullName}
+                                fallback={getUserInitial()}
+                                className="h-9 w-9 bg-(--color-primary) text-sm font-black text-white"
+                            />
 
-                            <span className="max-w-28 truncate text-sm font-bold text-gray-700">
+                            <span className="hidden max-w-28 truncate text-sm font-bold text-gray-700 xl:inline">
                                 {currentUser?.fullName}
                             </span>
 
@@ -217,14 +243,14 @@ const languages: Language[] = ['en', 'fr', 'ar'];
 
                     <button type="button" onClick={() => setIsMobileMenuOpen((prev) => !prev)}
                         aria-label={isMobileMenuOpen ? t.navbar.closeMenu : t.navbar.menu}
-                        className="rounded-xl p-2.5 text-(--color-accent) transition hover:bg-gray-100 md:hidden">
+                        className="rounded-xl p-2.5 text-(--color-accent) transition hover:bg-gray-100 lg:hidden">
                         {isMobileMenuOpen ? (<X size={24}/>) : (<Menu size={24}/>)}
                     </button>
                 </div>
             </div>
 
             {isMobileMenuOpen && (
-                <div className="border-t border-gray-100 bg-white px-4 py-4 md:hidden">
+                <div className="border-t border-gray-100 bg-white px-4 py-4 sm:px-8 lg:hidden">
                     <div className="flex flex-col gap-2">
                     {navItems.map((item) => (
                         <NavLink
@@ -240,7 +266,7 @@ const languages: Language[] = ['en', 'fr', 'ar'];
                                 }`
                             }
                         >
-                            {item.label}
+                            {renderLabel(item.path, item.label)}
                         </NavLink>
                     ))}
                     <div className="my-2 h-px bg-gray-100" />

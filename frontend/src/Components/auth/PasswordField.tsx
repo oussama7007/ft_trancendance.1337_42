@@ -15,6 +15,7 @@ interface PasswordFieldProps {
     minLength?: number;
     showPasswordText?: string;
     hidePasswordText?: string;
+    textDirection?: 'rtl' | 'ltr';
 }
 
 export function PasswordField({
@@ -26,25 +27,30 @@ export function PasswordField({
     minLength,
     showPasswordText = "Show password",
     hidePasswordText = "Hide password",
+    textDirection = 'ltr',
 }: PasswordFieldProps) {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
         <div className="space-y-2">
-            <Label htmlFor={id}>{label}</Label>
+            <Label htmlFor={id} className="text-start">
+                {label}
+            </Label>
 
-            <div className="relative" dir="ltr">
+            <div className="relative" dir={textDirection}>
                 <Input
                     id={id}
                     type={showPassword ? "text" : "password"}
-                    dir="ltr"
+                    dir={textDirection}
                     value={value}
                     onChange={(event) => onChange(event.target.value)}
                     minLength={minLength}
                     maxLength={64}
                     autoComplete={autoComplete}
                     required
-                    className="pe-12"
+                    className={textDirection === 'rtl'
+                        ? 'pe-12 text-right'
+                        : 'pe-12 text-left'}
                 />
 
                 <Button
