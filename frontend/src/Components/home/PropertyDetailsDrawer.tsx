@@ -102,13 +102,15 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
     };
   }, [item, isMine]);
 
-  // Count one view each time a listing's details are opened (not the owner's own).
+  // Count one view each time a signed-in user opens someone else's listing.
+  // Visitors are skipped: the endpoint needs a session and would answer 401.
   const viewedListingId = item?.id;
+  const isSignedIn = currentUserId !== undefined;
   useEffect(() => {
-    if (viewedListingId !== undefined && !isMine) {
+    if (viewedListingId !== undefined && isSignedIn && !isMine) {
       void recordListingView(viewedListingId);
     }
-  }, [viewedListingId, isMine]);
+  }, [viewedListingId, isSignedIn, isMine]);
 
   if (!item) {
     return null;

@@ -4,7 +4,7 @@ import type { AnalyticsData, AnalyticsRange } from '../types/analytics';
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const RANGE_DAYS: Record<AnalyticsRange, number> = { '7d': 7, '30d': 30, '90d': 90 };
 
@@ -24,8 +24,8 @@ const buildMock = (range: AnalyticsRange): AnalyticsData => {
     const days = RANGE_DAYS[range];
 
     return {
-        summary: { views: days * 82, contacts: days * 6, searches: days * 23, activeListings: 14 },
-        previous: { views: days * 73, contacts: days * 5, searches: days * 25, activeListings: 12 },
+        summary: { views: days * 82, contacts: days * 6, activeListings: 14 },
+        previous: { views: days * 73, contacts: days * 5, activeListings: 12 },
         daily: buildDaily(days),
         topListings: [
             { id: 1, title: { ar: 'شقة قرب الترامواي', fr: 'Appartement près du tram', en: 'Apartment near the tram' }, city: { ar: 'الرباط', fr: 'Rabat', en: 'Rabat' }, views: 412 },
@@ -58,15 +58,15 @@ export async function fetchAnalytics(
 }
 
 // Tell the backend that someone opened a listing's details.
-// Signed-in users send their cookie; visitors send none and are counted
-// with a null viewer. The backend ignores the owner and repeated views.
+// Only for signed-in users: the backend reads the viewer from the cookie and
+// ignores the owner and repeated views of the same listing within a day.
 export async function recordListingView(listingId: number): Promise<void> {
     if (USE_MOCK) {
         return;
     }
 
     try {
-        await fetch(`${API_URL}/listings/${listingId}/view`, {
+        await fetch(`${API_URL}/analytics/views/${listingId}`, {
             method: 'POST',
             credentials: 'include',
         });
