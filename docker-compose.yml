@@ -23,8 +23,6 @@ services:
     container_name: backend
     # Run migrations automatically on startup, then start the development server
     command: bash start.sh
-    ports:
-      - "3000:3000"
     env_file:
       - .env
     # PostgreSQL is reached by its Docker service name, not localhost.
@@ -37,6 +35,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       MAIL_USER: ${MAIL_USER}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
     volumes:
       - ./backend:/app
       - /app/node_modules
@@ -63,8 +63,6 @@ services:
     build:
       context: ./frontend
     container_name: frontend-container
-    ports:
-      - "5173:5173"
     env_file:
       - .env
     volumes:
@@ -73,6 +71,15 @@ services:
     depends_on:
        backend:
         condition: service_healthy
+
+  nginx:
+    build: ./nginx
+    container_name: nginx
+    ports:
+      - "8443:8443"
+    depends_on:
+      - frontend
+      - backend
 
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.21.1
