@@ -99,7 +99,13 @@ export class AuthService {
         const client = new OAuth2Client(clientId);
         let payload;
 
-        if (accessToken) {
+        if (credential) {
+            const ticket = await client.verifyIdToken({
+                idToken: credential,
+                audience: clientId,
+            });
+            payload = ticket.getPayload();
+        } else if (accessToken) {
             const tokenInfo = await client.getTokenInfo(accessToken);
 
             const tokenAudience = (tokenInfo as any).audience;
@@ -130,12 +136,6 @@ export class AuthService {
                 email?: string;
                 email_verified?: boolean | string;
             };
-        } else if (credential) {
-            const ticket = await client.verifyIdToken({
-                idToken: credential,
-                audience: clientId,
-            });
-            payload = ticket.getPayload();
         } else {
             throw new BadRequestException('Google credential is missing');
         }
@@ -144,7 +144,7 @@ export class AuthService {
             !payload ||
             !payload.sub ||
             !payload.email ||
-            (payload.email_verified !== true && payload.email_verified !== 'true')
+            payload.email_verified !== true
         ) {
             throw new UnauthorizedException(
                 'Google account could not be verified',
@@ -169,9 +169,39 @@ export class AuthService {
   async linkGoogleAccount(
       userId: number,
       credential?: string,
-      accessToken?: string,
+      currentPassword?: string,
+      code?: string,
   ) {
-    const identity = await this.verifyGoogleCredential(credential, accessToken);
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    // Reauthenticate with current password for password-based accounts
+    if (user.passwordHash) {
+        const passwordMatches = await bcrypt.compare(
+            currentPassword ?? '',
+            user.passwordHash,
+        );
+
+        if (!passwordMatches) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+    }
+
+    // Require TOTP verification if TOTP is enabled
+    if (user.totpEnabled) {
+        const validTotp = await this.verifyTotpCodeForReauth(user, code);
+
+        if (!validTotp) {
+            throw new UnauthorizedException('Invalid verification code');
+        }
+    }
+
+    const identity = await this.verifyGoogleCredential(credential);
 
     const existingUser = await this.userRepository.findOne({
         where: { googleId: identity.googleId },
@@ -183,14 +213,6 @@ export class AuthService {
         );
     }
 
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
     user.googleId = identity.googleId;
     user.googleEmail = identity.googleEmail;
 
@@ -199,6 +221,41 @@ export class AuthService {
     return {
         message: 'Google account connected successfully',
     };
+  }
+
+  private async verifyTotpCodeForReauth(user: { totpEnabled: boolean; totpSecretEncrypted: string | null; id: number }, code?: string): Promise<boolean> {
+    if (!user.totpEnabled || !user.totpSecretEncrypted || !code) {
+        return false;
+    }
+
+    const secret = this.totpService.decryptSecret(user.totpSecretEncrypted);
+
+    if (this.totpService.verifyToken(secret, code)) {
+        return true;
+    }
+
+    const recoveryCode = await this.totpRecoveryCodeRepository.findOne({
+        where: { userId: user.id, used: false },
+    });
+
+    if (recoveryCode) {
+        const codeHash = this.totpService.hashToken(code);
+        const isValidRecovery =
+            codeHash.length === recoveryCode.codeHash.length &&
+            timingSafeEqual(
+                Buffer.from(codeHash),
+                Buffer.from(recoveryCode.codeHash),
+            );
+
+        if (isValidRecovery) {
+            recoveryCode.used = true;
+            recoveryCode.usedAt = new Date();
+            await this.totpRecoveryCodeRepository.save(recoveryCode);
+            return true;
+        }
+    }
+
+    return false;
   }
 
   private toAuthUser(user: User) {
@@ -669,19 +726,12 @@ export class AuthService {
     );
 
     const user = await this.userRepository.findOne({
-        where: [
-            { googleId: identity.googleId },
-            { googleEmail: identity.googleEmail.trim().toLowerCase() },
-        ],
+        where: { googleId: identity.googleId },
     });
 
     if (!user) {
-        const normalizedGoogleEmail = identity.googleEmail
-            .trim()
-            .toLowerCase();
-
         const emailUser = await this.userRepository.findOne({
-            where: { email: normalizedGoogleEmail },
+            where: { email: identity.googleEmail.trim().toLowerCase() },
         });
 
         if (!emailUser) {
@@ -695,12 +745,6 @@ export class AuthService {
             code: 'GOOGLE_ACCOUNT_NOT_LINKED',
             message: 'This Google account is not linked to your iRent account',
         });
-    }
-
-    if (user.googleId !== identity.googleId) {
-        user.googleId = identity.googleId;
-        user.googleEmail = identity.googleEmail;
-        await this.userRepository.save(user);
     }
 
     // If TOTP 2FA is enforced, create a login challenge
@@ -956,7 +1000,7 @@ export class AuthService {
     if (enrollment.attempts >= TOTP_MAX_ATTEMPTS) {
       await this.totpEnrollmentRepository.delete(enrollment.id);
       throw new BadRequestException(
-        'Too many attempts. Please start TOTP setup again.',
+        'tooManyTOTPAttempts',
       );
     }
 

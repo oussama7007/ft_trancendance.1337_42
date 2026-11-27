@@ -59,7 +59,8 @@ linkGoogle(
     return this.authService.linkGoogleAccount(
         request.user!.sub,
         data.credential,
-        data.accessToken,
+        data.currentPassword,
+        data.code,
     );
 }
 

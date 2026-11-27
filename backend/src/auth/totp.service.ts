@@ -137,8 +137,12 @@ export class TotpService {
     private readonly logger = new Logger(TotpService.name);
     private readonly issuer = 'iRent';
 
-    generateSecret(): string {
-        return generateBase32Secret();
+    /**
+     * Generate a base32-encoded random secret (RFC 4648 base32).
+     * Uses 20 bytes (160 bits) which aligns perfectly with 32 base32 characters.
+     */
+    generateSecret(length = 20): string {
+        return generateBase32Secret(length);
     }
 
     generateProvisioningUri(email: string, secret: string): string {

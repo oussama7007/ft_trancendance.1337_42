@@ -64,7 +64,7 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
 
     const googleLogin = useGoogleLogin({
         onSuccess: (tokenResponse) => {
-            void handleGoogleLogin(undefined, tokenResponse.access_token);
+            void handleGoogleLogin(tokenResponse.credential, tokenResponse.access_token);
         },
         onError: () => {
             setError(t.googleLoginFailed);
@@ -94,6 +94,8 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
                 setLoginErrorKey('googleNotRegistered');
             } else if (data.code === 'GOOGLE_ACCOUNT_NOT_LINKED') {
                 setLoginErrorKey('googleNotLinked');
+            } else if (response.status === 400 && data.message === 'Invalid Google credential') {
+                setError(t.googleLoginFailed);
             } else {
                 setError(`${t.googleLoginFailed} (${response.status})`);
             }

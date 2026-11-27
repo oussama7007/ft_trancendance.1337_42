@@ -20,10 +20,18 @@ It includes visual flow diagrams for each feature and one complete system overvi
    - [Login Flow with TOTP](#login-flow-with-totp)
    - [Google OAuth + TOTP](#google-oauth--totp)
    - [Disable & Recovery](#disable--recovery)
-9. [Database Schema](#database-schema)
-10. [Environment Variables](#environment-variables)
-11. [All Files Changed](#all-files-changed)
-12. [Manual Test Flow](#manual-test-flow)
+9. [Google Authentication](#google-authentication)
+   - [Architecture Overview](#architecture-overview)
+   - [Google Account Linking Flow](#google-account-linking-flow)
+   - [Google Sign-in Flow](#google-sign-in-flow)
+   - [Reauthentication Before Linking](#reauthentication-before-linking)
+   - [TOTP Interaction with Google Authentication](#totp-interaction-with-google-authentication)
+   - [Security Decisions](#security-decisions)
+10. [Database Schema](#database-schema)
+11. [Environment Variables](#environment-variables)
+12. [All Files Changed](#all-files-changed)
+13. [Manual Test Flow](#manual-test-flow)
+14. [Resources](#resources)
 
 ---
 
@@ -481,9 +489,218 @@ Google OAuth authenticates identity, but **TOTP is enforced by iRent regardless 
 
 ---
 
-## Database Schema
+## Google Authentication
 
-### User table additions
+This section documents how Google Sign-in and Google Account Linking work in the iRent application using OpenID Connect (OIDC) with ID Tokens.
+
+### Architecture Overview
+
+Google Authentication in iRent follows **OpenID Connect (OIDC)**, which is an identity layer on top of OAuth 2.0. The application does **not** use the OAuth Implicit Flow and does **not** request access to Google APIs. It only needs to verify the user's Google identity.
+
+#### Key Technical Concepts
+
+| Concept | Explanation |
+|---------|-------------|
+| **OAuth 2.0** | An authorization framework that enables third-party applications to obtain limited access to user accounts. |
+| **OpenID Connect (OIDC)** | An identity layer on top of OAuth 2.0 that provides user authentication and profile information via ID Tokens. |
+| **Google ID Token** | A JWT (JSON Web Token) issued by Google that contains claims about the authenticated user, including the `sub` (subject) identifier. |
+| **Token Signature Verification** | Cryptographic verification that the ID Token was issued by Google and has not been tampered with. |
+| **Token Audience Validation** | Checking that the `aud` claim in the ID Token matches the application's `GOOGLE_CLIENT_ID`, ensuring the token was issued for this application. |
+| **Token Issuer Validation** | Checking that the `iss` claim identifies Google as the issuer (`accounts.google.com` or `https://accounts.google.com`). |
+| **Google `sub` Claim** | The stable, unique identifier for a Google account. Used to link Google identities to iRent users. |
+| **Identity Linking** | Associating a Google account (`sub`) with an existing iRent user account. |
+| **HTTP-only Cookies** | Session cookies set by the backend with `HttpOnly` flag, preventing client-side JavaScript access and reducing XSS risk. |
+
+### Important Files
+
+| File | Responsibility |
+|------|----------------|
+| `backend/src/auth/auth.controller.ts` | HTTP endpoints: `POST /auth/google/login`, `POST /auth/google/link` |
+| `backend/src/auth/auth.service.ts` | Google ID Token verification, user lookup, session issuance, linking with reauthentication |
+| `backend/src/auth/dto/google-credential.dto.ts` | Request DTO for Google credential, current password, and TOTP code |
+| `backend/src/auth/user.entity.ts` | Database fields: `googleId`, `googleEmail` |
+| `frontend/src/Pages/LoginPage.tsx` | Google Sign-in button using Google Identity Services ID Token |
+| `frontend/src/Components/settings/GoogleAccountSettings.tsx` | Google Account linking button using Google Identity Services ID Token |
+| `frontend/src/main.tsx` | Google OAuth provider initialization with `VITE_GOOGLE_CLIENT_ID` |
+
+### Google Account Linking Flow
+
+This flow connects an existing iRent account to a Google account. It is user-initiated from Settings and requires reauthentication.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 1: User signs in to their existing iRent account              │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 2: User opens Settings → Connected Accounts                   │
+│  User clicks "Connect Google"                                       │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 3: Google Identity Services returns an ID Token               │
+│  Frontend receives: credential (ID Token)                           │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 4: Backend reauthentication                                   │
+│  POST /auth/google/link                                             │
+│  Body: { credential, currentPassword, code }                        │
+│  Backend verifies:                                                  │
+│    • JWT session is valid (JwtAuthGuard)                            │
+│    • Current password matches (if account has password)             │
+│    • TOTP code is valid (if TOTP is enabled)                        │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 5: Backend verifies Google ID Token                           │
+│  • verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })           │
+│  • Validates signature, expiration, issuer, and audience            │
+│  • Requires email_verified = true                                   │
+│  • Extracts Google sub claim                                        │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 6: Backend checks for conflicts                               │
+│  • Search user by googleId                                          │
+│  • If Google account linked to another iRent user → 409 Conflict    │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 7: Link accounts                                              │
+│  • user.googleId = Google sub                                       │
+│  • user.googleEmail = Google email                                  │
+│  • Save to database                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Google Sign-in Flow
+
+This flow allows users to sign in using their linked Google account. **No automatic account creation or linking occurs.**
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 1: User clicks "Sign in with Google" on Login Page            │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 2: Google Identity Services returns an ID Token               │
+│  Frontend receives: credential (ID Token)                           │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 3: Frontend sends ID Token to backend                         │
+│  POST /auth/google/login                                            │
+│  Body: { credential }                                               │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 4: Backend verifies Google ID Token                           │
+│  • verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })           │
+│  • Validates signature, expiration, issuer, and audience            │
+│  • Requires email_verified = true                                   │
+│  • Extracts Google sub claim                                        │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 5: Backend searches user by googleId ONLY                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ User found?  →  Continue to TOTP/JWT                         │   │
+│  │ Not found? →  401 GOOGLE_ACCOUNT_NOT_LINKED                  │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼ (TOTP enabled path)
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 6: If TOTP enabled, create login challenge                    │
+│  Return: requiresTwoFactor=true, challengeToken                     │
+│  Frontend shows TOTP code entry form                                │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼ (no TOTP)
+┌─────────────────────────────────────────────────────────────────────┐
+│  STEP 7: Issue iRent JWT session                                    │
+│  • JWT contains sub: user.id                                        │
+│  • Set HttpOnly access_token cookie                                 │
+│  • Return user data                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Reauthentication Before Linking
+
+Connecting an external identity provider is a sensitive operation. Before linking Google, the backend requires:
+
+1. **Valid JWT session** — enforced by `JwtAuthGuard` on `POST /auth/google/link`
+2. **Current password** — required for accounts that use password authentication. The backend verifies it with `bcrypt.compare()`. Never accepts a user ID from the frontend; the account ID always comes from the JWT.
+3. **TOTP verification** — required when TOTP is enabled. Accepts either a valid TOTP code or an unused recovery code.
+
+If reauthentication fails, the linking is rejected with `401 Unauthorized`.
+
+### TOTP Interaction with Google Authentication
+
+When a user signs in with Google and TOTP is enabled on their iRent account:
+
+1. Google ID Token is verified successfully
+2. User is found by `googleId`
+3. Backend creates a TOTP login challenge (5-minute TTL, max 5 attempts)
+4. Frontend shows TOTP code entry form
+5. User enters TOTP code or recovery code
+6. Backend verifies and issues the normal iRent JWT session
+
+This ensures Google Sign-in is subject to the same second-factor protection as email/password sign-in.
+
+### Security Decisions
+
+| Decision | Justification |
+|----------|---------------|
+| **ID Token only (no Access Token)** | Eliminates the OAuth Implicit Flow. ID Tokens are specifically designed for authentication and are verified cryptographically. |
+| **Backend verifies every ID Token** | Frontend-provided identity claims are never trusted. `google-auth-library` verifies signature, issuer, audience, and expiration. |
+| **`sub` is the only linking key** | Google email can change and is not a stable identifier. `sub` is the canonical Google account identifier per OpenID Connect. |
+| **No email-based auto-linking** | Prevents account takeover if a Google email matches an existing iRent email but the accounts are unrelated. |
+| **No automatic account creation via Google** | Google remains an additional sign-in method for existing accounts only. New accounts must use email/password registration. |
+| **Reauthentication required for linking** | Prevents session hijacking from leading to Google account linkage. |
+| **Unique constraint on `googleId`** | Database-level protection against linking one Google account to multiple iRent users. |
+| **HTTP-only session cookie** | Protects the JWT from XSS theft. |
+
+### Database Fields for External Identity Linking
+
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `googleId` | varchar | Yes | Google `sub` claim. Unique constraint prevents duplicate linking. |
+| `googleEmail` | varchar | Yes | Google account email. Supplementary information only, never used for lookup. |
+
+### API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `POST /auth/google/login` | POST | Public | Verify Google ID Token and sign in linked user |
+| `POST /auth/google/link` | POST | JWT required | Link Google account to authenticated iRent user |
+| `GET /auth/security` | GET | JWT required | Returns `googleEmail` and `googleLinked` status |
+
+### Registration Flow (Unchanged)
+
+Normal registration remains email/password based:
+
+1. User submits first name, last name, email, date of birth, gender
+2. Backend creates a registration session and sends a verification code
+3. User verifies the code via email
+4. User sets a password and completes registration
+5. Backend hashes the password and creates the user account
+
+Google cannot be used to create new accounts.
+
+
+## Database Schema
 
 | Column | Type | Nullable | Default | Description |
 |--------|------|----------|---------|-------------|
@@ -576,6 +793,7 @@ There is no SMS provider variable anymore. The active application flow uses auth
 | `backend/src/auth/auth.service.ts` | Added TOTP enrollment, login challenge, recovery-code, disable, and regeneration logic; applied TOTP to password and Google login |
 | `backend/src/auth/auth.controller.ts` | Added TOTP setup, verification, login, disable, and recovery endpoints; removed SMS routes |
 | `backend/src/auth/auth.module.ts` | Registered only the TOTP entities and service |
+| `backend/src/auth/dto/google-credential.dto.ts` | Removed `accessToken` field; added `currentPassword` and `code` for reauthentication |
 | `backend/src/auth/dto/login.dto.ts` | Added `@IsEmail()` decorator |
 | `backend/src/auth/dto/verify-password-reset.dto.ts` | Added validation decorators (fixes 500 crash) |
 | `backend/src/auth/dto/reset-password.dto.ts` | Added validation decorators (fixes 500 crash) |
@@ -679,6 +897,24 @@ There is no SMS provider variable anymore. The active application flow uses auth
 | No JWT before 2FA | JWT issued only after TOTP verification succeeds |
 | Google OAuth | Cannot bypass TOTP; same challenge flow applied |
 | Input validation | `class-validator` on all DTOs + `validator.isEmail()` on frontend |
+
+---
+
+## Resources
+
+### Official Documentation
+
+- [Google Identity Services — Web](https://developers.google.com/identity/gsi/web) — JavaScript client library for obtaining Google ID Tokens.
+- [Google OpenID Connect](https://developers.google.com/identity/openid-connect) — Overview of using OIDC with Google for sign-in.
+- [OAuth 2.0 Authorization Framework (RFC 6749)](https://datatracker.ietf.org/doc/html/rfc6749) — IETF specification for OAuth 2.0.
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) — OpenID Connect specification including ID Token validation rules.
+- [OAuth 2.0 for Browser-Based Apps (RFC 8252)](https://datatracker.ietf.org/doc/html/rfc8252) — Best practices for OAuth in browser-based applications.
+- [google-auth-library for Node.js](https://github.com/googleapis/google-auth-library-nodejs#verify-the-id-token) — `verifyIdToken()` documentation and examples.
+- [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) — Authentication best practices, including multi-factor authentication and session management.
+- [OWASP Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) — Guidance on secure session tokens, cookies, and logout.
+- [NestJS Documentation](https://docs.nestjs.com/) — NestJS framework documentation for controllers, guards, and modules.
+- [TypeORM Documentation](https://typeorm.io/) — TypeORM ORM documentation for entities and repositories.
+- [Vercel @react-oauth/google](https://www.npmjs.com/package/@react-oauth/google) — React library for Google Sign-In (used for Google Identity Services integration).
 
 ---
 

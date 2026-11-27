@@ -38,9 +38,11 @@ async function request<T>(
     if (!response.ok) {
         const message = response.status === 503
             ? 'googleNotConfigured'
-            : response.status === 401
-                ? 'googleAuthFailed'
-                : 'requestFailed';
+            : response.status === 409
+                ? 'googleAlreadyLinked'
+                : response.status === 401
+                    ? 'googleAuthFailed'
+                    : 'requestFailed';
 
         throw new Error(message);
     }
@@ -68,6 +70,10 @@ export function GoogleAccountSettings({ lang }: Props) {
             if (error.message === 'googleAuthFailed') {
                 return t.googleAuthFailed;
             }
+
+            if (error.message === 'googleAlreadyLinked') {
+                return t.googleAlreadyLinked;
+            }
         }
 
         return t.requestFailed;
@@ -89,14 +95,14 @@ export function GoogleAccountSettings({ lang }: Props) {
 
     const googleLogin = useGoogleLogin({
         onSuccess: (tokenResponse) => {
-            void linkGoogle(undefined, tokenResponse.access_token);
+            void linkGoogle(tokenResponse.credential);
         },
         onError: () => {
             setError(t.googleAuthFailed);
         },
     });
 
-    async function linkGoogle(credential?: string, accessToken?: string) {
+    async function linkGoogle(credential?: string) {
         setError('');
         setMessage('');
 
@@ -106,7 +112,7 @@ export function GoogleAccountSettings({ lang }: Props) {
             await request(
                 '/auth/google/link',
                 'POST',
-                { credential, accessToken },
+                { credential },
             );
 
             await loadSecurity();

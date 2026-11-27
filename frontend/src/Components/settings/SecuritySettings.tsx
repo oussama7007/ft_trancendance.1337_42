@@ -83,6 +83,8 @@ export function SecuritySettings({ lang }: Props) {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
+    const [totpCurrentPassword, setTotpCurrentPassword] = useState('');
+
     const [disablePassword, setDisablePassword] = useState('');
 
     const [securityError, setSecurityError] = useState('');
@@ -111,6 +113,11 @@ export function SecuritySettings({ lang }: Props) {
             setSecurityError(error.message);
         });
     }, [loadSecurity]);
+
+    useEffect(() => {
+        setSecurityError('');
+        setSecurityMessage('');
+    }, [lang]);
 
     const totpEnabled = security?.totp2faEnabled ?? false;
 
@@ -181,14 +188,14 @@ export function SecuritySettings({ lang }: Props) {
                 qrCodeUrl: string;
                 secret: string;
             }>('/auth/2fa/totp/setup', 'POST', {
-                currentPassword,
+                currentPassword: totpCurrentPassword,
             });
 
             setTotpToken(data.token);
             setTotpQrCode(data.qrCodeUrl);
             setTotpSecret(data.secret);
             setTotpSetupStep('showQr');
-            setCurrentPassword('');
+            setTotpCurrentPassword('');
         } catch (error) {
             const message = error instanceof Error ? error.message : '';
             if (message === 'Current password is incorrect') {
@@ -230,6 +237,8 @@ export function SecuritySettings({ lang }: Props) {
             const message = error instanceof Error ? error.message : '';
             if (message === 'Current password is incorrect') {
                 setSecurityError(t.currentPasswordError);
+            } else if (message === 'tooManyTOTPAttempts') {
+                setSecurityError(t.totpTooManyAttempts);
             } else {
                 setSecurityError(message || t.requestFailed);
             }
@@ -268,6 +277,10 @@ export function SecuritySettings({ lang }: Props) {
             const message = error instanceof Error ? error.message : '';
             if (message === 'Current password is incorrect') {
                 setSecurityError(t.currentPasswordError);
+            } else if (message === 'currentPassword should not be empty') {
+                setSecurityError(t.currentPasswordRequired);
+            } else if (message === 'code should not be empty') {
+                setSecurityError(t.totpCodeRequired);
             } else {
                 setSecurityError(message || t.requestFailed);
             }
@@ -490,8 +503,8 @@ export function SecuritySettings({ lang }: Props) {
                             <PasswordField
                                 id="setupTotpPassword"
                                 label={t.currentPassword}
-                                value={currentPassword}
-                                onChange={setCurrentPassword}
+                                value={totpCurrentPassword}
+                                onChange={setTotpCurrentPassword}
                                 autoComplete="current-password"
                                 showPasswordText={authT.showPassword}
                                 hidePasswordText={authT.hidePassword}
@@ -501,7 +514,7 @@ export function SecuritySettings({ lang }: Props) {
                                 <button
                                     type="button"
                                     onClick={confirmTotpPassword}
-                                    disabled={isTotpLoading || !currentPassword}
+                                    disabled={isTotpLoading || !totpCurrentPassword}
                                     className="flex-1 rounded-xl bg-irent-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                                 >
                                     {isTotpLoading ? t.sending : t.totpContinue}
@@ -527,7 +540,7 @@ export function SecuritySettings({ lang }: Props) {
                                     <Loader2 className="w-8 h-8 animate-spin" />
                                 ) : (
                                     <img
-                                        src={totpQrCode}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpQrCode)}`}
                                         alt="TOTP QR Code"
                                         className="w-48 h-48 rounded-xl border border-irent-border"
                                     />
