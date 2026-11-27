@@ -66,10 +66,8 @@
   }
 
   body {
-    margin: 0;
     background: var(--color-background);
     color: var(--color-text);
-    /* font-family: Arial, Helvetica, sans-serif; */
     font-family: "Geist Variable", "Noto Sans Arabic Variable", Arial, sans-serif;
     /*
      parfois css mktkonx md3oma mn browser chrome ..., donc ana knzid hd webkit bx ngol l browser khdaam hd lkhasiya bttari9a dialk
@@ -77,20 +75,6 @@
     */
     -webkit-font-smoothing: antialiased; 
   }
-
-  button,
-  input,
-  textarea,
-  select {font: inherit}
-}
-/*scrollbar*/
-.scrollbar-hide::-webkit-scrollbar{ /*7ayd liya scrollbar myb9ax yban ga3 , google safar, edge */
-  display: none;
-}
-
-.scrollbar-hide {
-  -ms-overflow-style: none;/*internet explorer*/
-  scrollbar-width: none;/*firefox*/
 }
 
 
@@ -131,18 +115,16 @@
 
 @keyframes marker-bounce {
   0%{
-    transform: translateY(0) rotateX(0deg);
-
+    transform: translateY(0);
   }
   50%{
-    transform: translateY(-8px) rotateX(8deg);
+    transform: translateY(-8px);
   }
   100%{
-    transform: translateY(0) rotateX(0deg);
+    transform: translateY(0);
   }
 }
 
 .marker-3d-bounce {
   animation: marker-bounce 2s ease-in-out infinite;
-  transform-origin: bottom center;
 }
