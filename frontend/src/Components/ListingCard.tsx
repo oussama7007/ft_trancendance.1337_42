@@ -33,6 +33,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
                 <ImageSlider
                     images={getListingImages(item)}
                     alt={item.title[lang]}
+                    previousLabel={translations[lang].homePage.previousImage}
+                    nextLabel={translations[lang].homePage.nextImage}
                     imageClassName="group-hover:scale-105 transition duration-500"
                     fallback={
                         <div className="w-full h-full flex items-center justify-center text-gray-300">

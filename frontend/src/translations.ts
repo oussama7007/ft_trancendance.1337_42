@@ -400,6 +400,8 @@ export const translations = {
             perMonth: '/ الشهر',      
             currency: 'درهم',
             close: 'إغلاق',
+            previousImage: 'الصورة السابقة',
+            nextImage: 'الصورة التالية',
             bedrooms:'غرف النوم',
             sorting: {
                 newest: 'الأحدث',
@@ -1164,6 +1166,8 @@ export const translations = {
             perMonth: '/ month',
             currency: 'DH',
             close: 'Close',
+            previousImage: 'Previous image',
+            nextImage: 'Next image',
             bedrooms: 'Bedrooms',
             sorting: {
                 newest: 'Newest',
@@ -1867,6 +1871,8 @@ export const translations = {
             perMonth: '/ mois',
             currency: 'DH',
             close: 'Fermer',
+            previousImage: 'Image précédente',
+            nextImage: 'Image suivante',
             bedrooms: 'Chambres',
             sorting: {
                 newest: 'Plus récentes',

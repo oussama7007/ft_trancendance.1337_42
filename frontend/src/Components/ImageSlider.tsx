@@ -6,9 +6,11 @@ interface ImageSliderProps {
     alt: string;
     imageClassName?: string;
     fallback: ReactNode;
+    previousLabel: string;
+    nextLabel: string;
 }
 
-export function ImageSlider({ images, alt, imageClassName = "", fallback }: ImageSliderProps) {
+export function ImageSlider({ images, alt, imageClassName = "", fallback, previousLabel, nextLabel }: ImageSliderProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [touchStartX, setTouchStartX] = useState<number | null>(null);
     const hasMultipleImages = images.length > 1;
@@ -51,7 +53,7 @@ export function ImageSlider({ images, alt, imageClassName = "", fallback }: Imag
                             e.stopPropagation();
                             showImage(-1);
                         }}
-                        aria-label="Previous image"
+                        aria-label={previousLabel}
                         className="absolute start-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/85 hover:bg-white shadow-md flex items-center justify-center md:opacity-0 md:group-hover/slider:opacity-100 transition cursor-pointer"
                     >
                         <ChevronLeft className="w-4 h-4 text-gray-800 rtl:rotate-180" />
@@ -63,7 +65,7 @@ export function ImageSlider({ images, alt, imageClassName = "", fallback }: Imag
                             e.stopPropagation();
                             showImage(1);
                         }}
-                        aria-label="Next image"
+                        aria-label={nextLabel}
                         className="absolute end-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/85 hover:bg-white shadow-md flex items-center justify-center md:opacity-0 md:group-hover/slider:opacity-100 transition cursor-pointer"
                     >
                         <ChevronRight className="w-4 h-4 text-gray-800 rtl:rotate-180" />

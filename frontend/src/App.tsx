@@ -210,7 +210,7 @@ function App() {
     if (isAuthLoading) {
         return (
             <main className="flex min-h-screen items-center justify-center">
-                <p>Checking the server...</p>
+                <p>{translations[lang].homePage.loading}</p>
             </main>
         );
     }
