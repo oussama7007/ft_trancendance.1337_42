@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X,
   MapPin,
@@ -15,6 +16,7 @@ import { ImageSlider, getListingImages } from '../ImageSlider';
 import { useChat } from '../../context/chatContextValue';
 import { translations } from '../../translations';
 import { recordListingView } from '../../api/analytics';
+import ConfirmDialog from '../chat/ConfirmDialog';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -53,6 +55,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
   onClose,
   onContact,
 }) => {
+  const navigate = useNavigate();
   const isMine = item !== null && item.ownerId === currentUserId;
 
   const tInterests = translations[lang].chat.interests;
@@ -63,6 +66,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
   const requestStatus = liveRequest?.status ?? storedStatus;
   const conversationId = liveRequest?.conversationId ?? storedConversationId;
   const [loading, setLoading] = useState<boolean>(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
     if (!item || isMine) {
@@ -121,6 +125,11 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
   const description = item.description?.[lang]?.trim();
 
   const handleContactClick = async () => {
+    if (currentUserId === undefined) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (requestStatus === 'ACCEPTED') {
       const targetConversationId = conversationId;
       onClose();
@@ -345,6 +354,36 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
           )}
         </div>
       </aside>
+
+      {showLoginPrompt && (
+        <div className="pointer-events-auto">
+          <ConfirmDialog
+            title={tInterests.loginRequiredTitle}
+            description={tInterests.loginRequiredText}
+            actions={[
+              {
+                label: tInterests.loginRequiredSignIn,
+                tone: 'primary',
+                onSelect: () => {
+                  setShowLoginPrompt(false);
+                  onClose();
+                  navigate('/signin');
+                },
+              },
+              {
+                label: tInterests.loginRequiredSignUp,
+                onSelect: () => {
+                  setShowLoginPrompt(false);
+                  onClose();
+                  navigate('/signup');
+                },
+              },
+            ]}
+            cancelLabel={tInterests.loginRequiredCancel}
+            onCancel={() => setShowLoginPrompt(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };
