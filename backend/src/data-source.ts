@@ -1,7 +1,8 @@
 import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { DataSource } from 'typeorm';
-import { LoginChallenge } from './auth/login-challenge.entity.js';
+import { TotpEnrollment } from './auth/totp-enrollment.entity.js';
+import { TotpRecoveryCode } from './auth/totp-recovery-code.entity.js';
 
 
 
@@ -33,7 +34,6 @@ const dataSource = new DataSource({
   RegistrationSession,
   User,
   Listing,
-  LoginChallenge,
   RoommatePost,
   Handshake,
   Review,
@@ -41,6 +41,8 @@ const dataSource = new DataSource({
   Conversation,
   InterestRequest,
   EmailChangeChallenge,
+  TotpEnrollment,
+  TotpRecoveryCode,
 ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

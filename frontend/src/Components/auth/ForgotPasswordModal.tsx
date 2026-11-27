@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { PasswordField } from "@/Components/auth/PasswordField";
 import { PasswordStrength } from "@/Components/auth/PasswordStrength";
+import validator from 'validator';
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -58,6 +59,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
 
         if (!email.trim()) {
             setError(t.missingFields);
+            return;
+        }
+
+        if (!validator.isEmail(email.trim())) {
+            setError(t.invalidEmail);
             return;
         }
 
@@ -247,7 +253,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                 </Label>
                                 <Input
                                     id="reset-email"
-                                    type="email"
+                                    type="text"
+                                    inputMode="email"
                                     dir={isRtl ? "rtl" : "ltr"}
                                     
                                     value={email}

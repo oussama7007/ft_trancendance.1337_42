@@ -125,7 +125,7 @@ export function SettingsPage({
                             currentEmail={user.email}
                             onEmailChanged={onEmailChanged}
                         />
-                        {/* Password and SMS security */}
+                        {/* Password and authenticator security */}
                         <SecuritySettings lang={lang} />
 
                         {/* Connected Google account */}

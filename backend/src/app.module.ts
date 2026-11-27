@@ -18,7 +18,7 @@ import { ProfileModule } from './profile/profile.module.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['../.env', '.env'],
     }),
 
     TypeOrmModule.forRootAsync({

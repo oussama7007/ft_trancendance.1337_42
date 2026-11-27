@@ -82,7 +82,7 @@ export function EditableNameField({
                         id={id}
                         value={draft}
                         onChange={(event) => setDraft(event.target.value)}
-                        maxLength={50}
+                        maxLength={20}
                         autoFocus
                         disabled={isSaving}
                         className="min-w-0 flex-1"

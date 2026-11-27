@@ -1,6 +1,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useGoogleLogin } from '@react-oauth/google';
+import validator from "validator";
 import type { Language } from "@/types";
 import { translations } from "@/translations";
 import {
@@ -42,8 +43,7 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
     const isRtl = lang === "ar";
 
     const [challengeToken, setChallengeToken] = useState('');
-const [phoneHint, setPhoneHint] = useState('');
-const [smsCode, setSmsCode] = useState('');
+    const [totpCode, setTotpCode] = useState('');
     // Form values
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -52,7 +52,11 @@ const [smsCode, setSmsCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [loginErrorKey, setLoginErrorKey] = useState<
-        'invalidCredentials' | 'connectionError' | 'googleNotRegistered' | 'googleNotLinked' | ''
+        | 'invalidCredentials'
+        | 'connectionError'
+        | 'googleNotRegistered'
+        | 'googleNotLinked'
+        | ''
     >('');
     const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -68,12 +72,12 @@ const [smsCode, setSmsCode] = useState('');
     });
 
     async function handleGoogleLogin(credential?: string, accessToken?: string) {
-    setError('');
-    setLoginErrorKey('');
-    setIsSubmitting(true);
+        setError('');
+        setLoginErrorKey('');
+        setIsSubmitting(true);
 
-    try {
-        const response = await fetch(`${API_URL}/auth/google/login`, {
+        try {
+            const response = await fetch(`${API_URL}/auth/google/login`, {
             method: 'POST',
             credentials: 'include',
             headers: {
@@ -98,7 +102,6 @@ const [smsCode, setSmsCode] = useState('');
 
         if (data.requiresTwoFactor) {
             setChallengeToken(data.challengeToken);
-            setPhoneHint(data.phoneHint);
             return;
         }
 
@@ -109,7 +112,7 @@ const [smsCode, setSmsCode] = useState('');
         setIsSubmitting(false);
     }
 }
-        async function handleSmsVerification(
+    async function handleTotpVerify(
     event: FormEvent<HTMLFormElement>,
 ) {
     event.preventDefault();
@@ -118,7 +121,7 @@ const [smsCode, setSmsCode] = useState('');
 
     try {
         const response = await fetch(
-            `${API_URL}/auth/2fa/login/verify`,
+            `${API_URL}/auth/2fa/totp/login/verify`,
             {
                 method: 'POST',
                 credentials: 'include',
@@ -127,7 +130,7 @@ const [smsCode, setSmsCode] = useState('');
                 },
                 body: JSON.stringify({
                     challengeToken,
-                    code: smsCode,
+                    code: totpCode,
                 }),
             },
         );
@@ -136,7 +139,7 @@ const [smsCode, setSmsCode] = useState('');
 
         if (!response.ok) {
             throw new Error(
-                data.message || 'SMS verification failed',
+                data.message || 'TOTP verification failed',
             );
         }
 
@@ -149,7 +152,7 @@ const [smsCode, setSmsCode] = useState('');
         setError(
             error instanceof Error
                 ? error.message
-                : 'Verification failed',
+                : 'TOTP verification failed',
         );
     } finally {
         setIsSubmitting(false);
@@ -162,8 +165,15 @@ const [smsCode, setSmsCode] = useState('');
         setError("");
         setLoginErrorKey('');
 
-        if (!email.trim() || !password) {
+        const cleanEmail = email.trim();
+
+        if (!cleanEmail || !password) {
             setError(t.missingFields);
+            return;
+        }
+
+        if (!validator.isEmail(cleanEmail)) {
+            setError(t.invalidEmail);
             return;
         }
 
@@ -177,7 +187,7 @@ const [smsCode, setSmsCode] = useState('');
                 },
                 credentials: "include",
                 body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
+                    email: cleanEmail.toLowerCase(),
                     password,
                 }),
             });
@@ -194,7 +204,6 @@ const [smsCode, setSmsCode] = useState('');
             }
             if (data.requiresTwoFactor) {
                 setChallengeToken(data.challengeToken);
-                setPhoneHint(data.phoneHint);
                 setPassword('');
                 return;
             }
@@ -256,22 +265,22 @@ return (
 
                 {challengeToken ? (
                 <form
-                    onSubmit={handleSmsVerification}
+                    onSubmit={handleTotpVerify}
                     className="space-y-4"
                 >
                     <p className="text-sm text-muted-foreground">
-                        {t.twoFactorDescription}{phoneHint}.
+                        {t.totpLoginDescription}
                     </p>
 
-                    <Label htmlFor="smsCode">
-                        {t.smsVerificationCode}
+                    <Label htmlFor="totpCode">
+                        {t.totpCode}
                     </Label>
 
                     <Input
-                        id="smsCode"
-                        value={smsCode}
-                        onChange={(event) => setSmsCode(event.target.value)}
-                        maxLength={8}
+                        id="totpCode"
+                        value={totpCode}
+                        onChange={(event) => setTotpCode(event.target.value)}
+                        maxLength={6}
                         dir="ltr"
                         inputMode="numeric"
                         autoComplete="one-time-code"
@@ -286,7 +295,7 @@ return (
                         {isSubmitting ? t.verifyingCode : t.verifyAndSignIn}
                     </Button>
                 </form>
-                    ) : (
+                ) : (
                 <>
                     {/* Keep your existing email/password form here */}
 
@@ -301,7 +310,8 @@ return (
 
                                 <Input
                                     id="email"
-                                    type="email"
+                                    type="text"
+                                    inputMode="email"
                                     dir={isRtl ? "rtl" : "ltr"}
                                     
                                     value={email}

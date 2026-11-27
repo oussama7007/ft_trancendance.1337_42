@@ -201,10 +201,9 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
             <p className="text-[10px] font-black uppercase tracking-[0.15em] text-(--color-accent)">
               iRent
             </p>
-
-            <h2 className="text-lg font-black text-(--color-primary) truncate">
-              {title}
-            </h2>
+                  <h2 className="text-lg font-black text-(--color-primary)" title={title}>
+          {title.length > 40 ? title.slice(0, 40) + '…' : title}
+        </h2>
           </div>
 
           <button

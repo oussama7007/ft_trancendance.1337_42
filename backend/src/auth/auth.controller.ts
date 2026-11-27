@@ -16,10 +16,11 @@ import { FinishRegistrationDto } from './dto/finish-registration.dto.js';
 
 
 import { GoogleCredentialDto } from './dto/google-credential.dto.js';
-import { PhoneNumberDto } from './dto/phone-number.dto.js';
-import { VerifyPhoneDto } from './dto/verify-phone.dto.js';
-import { VerifyLogin2faDto } from './dto/verify-login-2fa.dto.js';
-import { DisableSms2faDto } from './dto/disable-sms-2fa.dto.js';
+import { SetupTotpDto } from './dto/setup-totp.dto.js';
+import { VerifyTotpSetupDto } from './dto/verify-totp-setup.dto.js';
+import { VerifyTotpLoginDto } from './dto/verify-totp-login.dto.js';
+import { DisableTotpDto } from './dto/disable-totp.dto.js';
+import { RegenerateRecoveryCodesDto } from './dto/regenerate-recovery-codes.dto.js';
 
 
 import { ChangePasswordDto } from './dto/change-password.dto.js';
@@ -197,59 +198,62 @@ changePassword(
     );
 }
 
-@Post('2fa/phone/start')
+@Post('2fa/totp/setup')
 @UseGuards(JwtAuthGuard)
-startPhoneVerification(
+setupTotp(
     @Req() request: AuthenticatedRequest,
-    @Body() data: PhoneNumberDto,
+    @Body() data: SetupTotpDto,
 ) {
-    return this.authService.startPhoneVerification(
-        request.user!.sub,
-        data.phoneNumber,
-    );
-}
-
-@Post('2fa/phone/verify')
-@UseGuards(JwtAuthGuard)
-verifyPhone(
-    @Req() request: AuthenticatedRequest,
-    @Body() data: VerifyPhoneDto,
-) {
-    return this.authService.verifyAndSavePhoneNumber(
-        request.user!.sub,
-        data.phoneNumber,
-        data.code,
-    );
-}
-
-@Post('2fa/enable')
-@UseGuards(JwtAuthGuard)
-enableSms2fa(
-    @Req() request: AuthenticatedRequest,
-) {
-    return this.authService.enableSms2fa(
-        request.user!.sub,
-    );
-}
-
-@Post('2fa/disable')
-@UseGuards(JwtAuthGuard)
-disableSms2fa(
-    @Req() request: AuthenticatedRequest,
-    @Body() data: DisableSms2faDto,
-) {
-    return this.authService.disableSms2fa(
+    return this.authService.setupTotp(
         request.user!.sub,
         data.currentPassword,
     );
 }
 
-@Post('2fa/login/verify')
-async verifyLogin2fa(
-    @Body() data: VerifyLogin2faDto,
+@Post('2fa/totp/verify-setup')
+@UseGuards(JwtAuthGuard)
+verifyTotpSetup(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: VerifyTotpSetupDto,
+) {
+    return this.authService.verifyTotpSetup(
+        request.user!.sub,
+        data.token,
+        data.code,
+    );
+}
+
+@Post('2fa/totp/disable')
+@UseGuards(JwtAuthGuard)
+disableTotp(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: DisableTotpDto,
+) {
+    return this.authService.disableTotp(
+        request.user!.sub,
+        data.currentPassword,
+        data.code,
+    );
+}
+
+@Post('2fa/totp/regenerate-recovery')
+@UseGuards(JwtAuthGuard)
+regenerateRecoveryCodes(
+    @Req() request: AuthenticatedRequest,
+    @Body() data: RegenerateRecoveryCodesDto,
+) {
+    return this.authService.regenerateRecoveryCodes(
+        request.user!.sub,
+        data.currentPassword,
+    );
+}
+
+@Post('2fa/totp/login/verify')
+async verifyTotpLogin(
+    @Body() data: VerifyTotpLoginDto,
     @Res({ passthrough: true }) response: Response,
 ) {
-    const result = await this.authService.verifyLoginChallenge(
+    const result = await this.authService.verifyTotpLogin(
         data.challengeToken,
         data.code,
     );
