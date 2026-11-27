@@ -690,7 +690,6 @@ export const translations = {
                     kpi: {
                         views: 'المشاهدات',
                         contacts: 'الاتصالات',
-                        searches: 'عمليات البحث',
                         activeListings: 'الإعلانات النشطة',
                     },
                     vsPrevious: 'مقارنة بالفترة السابقة',
@@ -1394,7 +1393,6 @@ export const translations = {
             kpi: {
                 views: 'Views',
                 contacts: 'Contacts',
-                searches: 'Searches',
                 activeListings: 'Active listings',
             },
             vsPrevious: 'vs previous period',
@@ -2099,7 +2097,6 @@ export const translations = {
             kpi: {
                 views: 'Vues',
                 contacts: 'Contacts',
-                searches: 'Recherches',
                 activeListings: 'Annonces actives',
             },
             vsPrevious: 'vs période précédente',
