@@ -23,4 +23,10 @@ export class PasswordResetToken {
 
     @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
+
+    @Column({ type: 'varchar', length: 128, nullable: true })
+    grantHash: string | null;
+
+    @Column({ type: 'integer', default: 0 })
+    attempts: number;
 }

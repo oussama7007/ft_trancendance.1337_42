@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { Language } from "@/types";
 import { translations } from "@/translations";
 import {
@@ -14,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { PasswordField } from "@/Components/auth/PasswordField";
 import { PasswordStrength } from "@/Components/auth/PasswordStrength";
+import validator from 'validator';
+import { isPasswordValid } from "@/utils/password";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -36,6 +38,19 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [grantToken, setGrantToken] = useState("");
+
+    useEffect(() => {
+        if (step !== "verify") return;
+
+        if (countdown <= 0) {
+            setStep("email");
+            return;
+        }
+
+        const timeout = setTimeout(() => setCountdown((value) => value - 1), 1000);
+        return () => clearTimeout(timeout);
+    }, [step, countdown]);
 
     const getTranslatedError = (backendMessage: string): string => {
         const errorMap: Record<string, string> = {
@@ -46,18 +61,26 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
             'Too many incorrect attempts': t.tooManyAttempts || 'Too many attempts',
             'Failed to send reset code': t.failedToSend || 'Failed to send code',
             'Could not send password reset email': t.failedToSend || 'Failed to send email',
+            'This reset link has already been used': t.codeExpired || 'Code expired',
+            'Password reset has expired': t.codeExpired || 'Code expired',
+            'Invalid or expired reset grant': t.codeExpired || 'Code expired',
+            'You must verify the code first': t.codeExpired || 'Code expired',
         };
 
         return errorMap[backendMessage] || backendMessage;
     };
 
-    // Request password reset code
     const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError("");
 
         if (!email.trim()) {
             setError(t.missingFields);
+            return;
+        }
+
+        if (!validator.isEmail(email.trim())) {
+            setError(t.invalidEmail);
             return;
         }
 
@@ -85,9 +108,9 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                 );
             }
 
+            setGrantToken("");
+            setCountdown(300);
             setStep("verify");
-            setCountdown(300); // 5 minutes
-            startCountdown();
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "An error occurred";
             setError(getTranslatedError(errorMsg));
@@ -96,7 +119,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         }
     };
 
-    // Verify password reset code
     const handleVerifyCode = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError("");
@@ -131,6 +153,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                 );
             }
 
+            if (typeof data.grantToken !== "string" || !data.grantToken) {
+                throw new Error("Verification failed");
+            }
+
+            setGrantToken(data.grantToken);
             setStep("reset");
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "Verification failed";
@@ -140,7 +167,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         }
     };
 
-    // Reset password
     const handleResetPassword = async (
         event: FormEvent<HTMLFormElement>
     ) => {
@@ -149,6 +175,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
 
         if (!newPassword || !confirmPassword) {
             setError(t.missingFields);
+            return;
+        }
+
+        if (!isPasswordValid(newPassword)) {
+            setError(t.passwordRequirements);
             return;
         }
 
@@ -169,7 +200,7 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                     },
                     body: JSON.stringify({
                         email: email.trim().toLowerCase(),
-                        code: code.trim(),
+                        grantToken,
                         newPassword,
                     }),
                 }
@@ -190,19 +221,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const startCountdown = () => {
-        let remaining = 300;
-        const interval = setInterval(() => {
-            remaining -= 1;
-            setCountdown(remaining);
-
-            if (remaining <= 0) {
-                clearInterval(interval);
-                setStep("email");
-            }
-        }, 1000);
     };
 
     const formatTime = (seconds: number) => {
@@ -247,7 +265,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                 </Label>
                                 <Input
                                     id="reset-email"
-                                    type="email"
+                                    type="text"
+                                    inputMode="email"
                                     dir={isRtl ? "rtl" : "ltr"}
                                     
                                     value={email}
@@ -369,7 +388,9 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                     type="button"
                                     variant="outline"
                                     onClick={() => {
-                                        setStep("verify");
+                                        setStep("email");
+                                        setCode("");
+                                        setGrantToken("");
                                         setNewPassword("");
                                         setConfirmPassword("");
                                     }}

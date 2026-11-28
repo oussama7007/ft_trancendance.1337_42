@@ -8,17 +8,27 @@ import { SharedJwtModule } from './jwt.module.js';
 import { MailService } from '../mail/mail.service.js';
 
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
-import { LoginChallenge } from './login-challenge.entity.js';
 import { PasswordResetToken } from './password-reset-challenge.entity.js';
-import { SmsVerificationService } from './sms-verification.service.js';
+import { TotpEnrollment } from './totp-enrollment.entity.js';
+import { TotpLoginChallenge } from './totp-login-challenge.entity.js';
+import { TotpRecoveryCode } from './totp-recovery-code.entity.js';
+import { TotpService } from './totp.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RegistrationSession, User, LoginChallenge, EmailChangeChallenge, PasswordResetToken]),
+    TypeOrmModule.forFeature([
+      RegistrationSession,
+      User,
+      EmailChangeChallenge,
+      PasswordResetToken,
+      TotpEnrollment,
+      TotpLoginChallenge,
+      TotpRecoveryCode,
+    ]),
     SharedJwtModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, MailService, SmsVerificationService],
+  providers: [AuthService, MailService, TotpService],
   exports: [SharedJwtModule],
 })
 export class AuthModule {}

@@ -1,7 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { Camera, UserRound } from 'lucide-react';
 import type { ProfileTranslations } from '../../translations';
-// import { Avatar } from '../../components/ui/avatar';
 
 interface AvatarUploadProps {
     avatar?: string;
@@ -21,7 +20,6 @@ export function AvatarUpload({ avatar, fullName, onAvatarChange, t }: AvatarUplo
             return;
         }
 
-        // Accept common image formats and avoid very large preview files.
         const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
 
         if (!allowedTypes.includes(file.type)) {

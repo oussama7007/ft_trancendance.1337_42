@@ -15,7 +15,6 @@ interface ProfileHeaderProps {
 function calculateAge(dateOfBirth: string): number | null {
 
     
-    // The backend currently sends the date as YYYY-MM-DD.
     const parts = dateOfBirth.slice(0, 10).split('-');
 
     if (parts.length !== 3) {
@@ -50,7 +49,6 @@ function calculateAge(dateOfBirth: string): number | null {
         age -= 1;
     }
 
-    // Do not display an obviously invalid date of birth.
     return age >= 0 && age <= 120 ? age : null;
 }
 
@@ -72,7 +70,6 @@ export function ProfileHeader({ user, avatar, onAvatarChange, t,
         ? t.ageUnavailable
         : `${t.age}: ${new Intl.NumberFormat(locale).format(age)}`;
 
-    // Use the proper translated label: male, female, or "not specified" for any other value.
     const genderLower = user.gender?.toLowerCase();
     const isMale = genderLower === 'male';
     const isFemale = genderLower === 'female';

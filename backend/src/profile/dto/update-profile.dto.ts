@@ -13,7 +13,7 @@ export class UpdateProfileDto {
     )
     @IsString()
     @MinLength(1)
-    @MaxLength(50)
+    @MaxLength(20)
     firstName?: string;
 
     @IsOptional()
@@ -22,7 +22,7 @@ export class UpdateProfileDto {
     )
     @IsString()
     @MinLength(1)
-    @MaxLength(50)
+    @MaxLength(20)
     lastName?: string;
 
     @IsOptional()

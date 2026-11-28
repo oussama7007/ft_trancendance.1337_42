@@ -1,6 +1,5 @@
 
 import {
-    Heart,
     LayoutDashboard,
     MessageCircle,
     Settings,
@@ -23,10 +22,6 @@ const navigationItems = [
     { key: 'settings', path: '/settings', icon: Settings },
     { key: 'profile', path: '/profile', icon: UserRound },
     { key: 'messages', path: '/chat', icon: MessageCircle },
-] as const;
-
-const futureItems = [
-    { key: 'favorites', icon: Heart },
 ] as const;
 
 export function ProfileSidebar({t, children} : ProfileSidebarProps) {
@@ -61,26 +56,6 @@ export function ProfileSidebar({t, children} : ProfileSidebarProps) {
                 })}
 
                 {children}
-
-                <div className="mx-2 hidden h-px bg-(--color-border) md:block" />
-
-                {futureItems.map((item) => {
-                    const Icon = item.icon;
-                     const label = t[item.key];
-
-                    return (
-                        <button
-                            key={item.key}
-                            type="button"
-                            title={`${label} (${t.comingSoon})`}
-                            aria-label={`${label}, ${t.comingSoon}`}
-                            // disabled
-                            className="flex h-12 w-12 cursor-not-allowed items-center justify-center rounded-xl text-(--color-muted) opacity-60"
-                        >
-                            <Icon size={22} strokeWidth={1.9} />
-                        </button>
-                    );
-                })}
             </nav>
         </aside>
     );

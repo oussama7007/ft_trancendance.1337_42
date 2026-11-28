@@ -65,7 +65,6 @@ export function SettingsPage({
                     </header>
 
                     <div className="flex flex-col gap-5">
-                        {/* Account information */}
                         <AccountSection
                             title={t.account.title}
                             icon={UserRound}
@@ -125,10 +124,8 @@ export function SettingsPage({
                             currentEmail={user.email}
                             onEmailChanged={onEmailChanged}
                         />
-                        {/* Password and SMS security */}
                         <SecuritySettings lang={lang} />
 
-                        {/* Connected Google account */}
                         <GoogleAccountSettings lang={lang} />
                     </div>
                 </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { AccountSection } from '../shared/AccountSection';
 import { Link2 } from 'lucide-react';
 import type { Language } from '../../types';
@@ -38,9 +38,11 @@ async function request<T>(
     if (!response.ok) {
         const message = response.status === 503
             ? 'googleNotConfigured'
-            : response.status === 401
-                ? 'googleAuthFailed'
-                : 'requestFailed';
+            : response.status === 409
+                ? 'googleAlreadyLinked'
+                : response.status === 401
+                    ? 'googleAuthFailed'
+                    : 'requestFailed';
 
         throw new Error(message);
     }
@@ -51,7 +53,6 @@ async function request<T>(
 
 export function GoogleAccountSettings({ lang }: Props) {
     const t = translations[lang].settings.security;
-    const authT = translations[lang].auth;
     const [googleEmail, setGoogleEmail] =
         useState<string | null>(null);
 
@@ -67,6 +68,10 @@ export function GoogleAccountSettings({ lang }: Props) {
 
             if (error.message === 'googleAuthFailed') {
                 return t.googleAuthFailed;
+            }
+
+            if (error.message === 'googleAlreadyLinked') {
+                return t.googleAlreadyLinked;
             }
         }
 
@@ -87,16 +92,7 @@ export function GoogleAccountSettings({ lang }: Props) {
         });
     }, []);
 
-    const googleLogin = useGoogleLogin({
-        onSuccess: (tokenResponse) => {
-            void linkGoogle(undefined, tokenResponse.access_token);
-        },
-        onError: () => {
-            setError(t.googleAuthFailed);
-        },
-    });
-
-    async function linkGoogle(credential?: string, accessToken?: string) {
+    async function linkGoogle(credential: string) {
         setError('');
         setMessage('');
 
@@ -106,7 +102,7 @@ export function GoogleAccountSettings({ lang }: Props) {
             await request(
                 '/auth/google/link',
                 'POST',
-                { credential, accessToken },
+                { credential },
             );
 
             await loadSecurity();
@@ -149,14 +145,15 @@ export function GoogleAccountSettings({ lang }: Props) {
                                         {t.sending}
                                     </p>
                                 ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => googleLogin()}
-                                        className="rounded-lg border border-irent-border bg-irent-surface px-4 py-2 text-sm font-medium text-irent-text hover:bg-irent-background"
-                                        dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                                    >
-                                        {authT.googleSignIn}
-                                    </button>
+                                    <div className="max-w-sm">
+                                        <GoogleSignInButton
+                                            lang={lang}
+                                            text="continue_with"
+                                            onCredential={(credential) => {
+                                                void linkGoogle(credential);
+                                            }}
+                                        />
+                                    </div>
                                 )
                             ) : (
                                 <p className="text-sm text-amber-600">

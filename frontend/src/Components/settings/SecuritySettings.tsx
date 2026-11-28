@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertTriangle, Lock, ShieldCheck, Smartphone } from 'lucide-react';
+import {
+    Lock,
+    ShieldCheck,
+    QrCode,
+    CheckCircle2,
+    Loader2,
+} from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { AccountSection } from '../shared/AccountSection';
 import { PasswordField } from '../auth/PasswordField';
@@ -18,10 +25,7 @@ interface Props {
 }
 
 interface SecurityInfo {
-    phoneNumber: string | null;
-    phoneVerified: boolean;
-    sms2faEnabled: boolean;
-    sms2faAvailable: boolean;
+    totp2faEnabled: boolean;
 }
 
 interface ApiError {
@@ -34,6 +38,14 @@ type PasswordErrorKey =
     | 'passwordMismatch'
     | 'requestFailed'
     | 'currentPasswordError';
+
+type MessageKey =
+    | 'passwordUpdated'
+    | 'totpEnabled'
+    | 'totpDisabled'
+    | 'recoveryRegenerated';
+
+type SetupStep = 'idle' | 'verifyPassword' | 'showQr' | 'showRecovery';
 
 async function request<T>(
     path: string,
@@ -72,23 +84,28 @@ export function SecuritySettings({ lang }: Props) {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    const [disablePassword, setDisablePassword] = useState('');
+    const [totpCurrentPassword, setTotpCurrentPassword] = useState('');
 
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [smsCode, setSmsCode] = useState('');
-    const [codeSent, setCodeSent] = useState(false);
+    const [disablePassword, setDisablePassword] = useState('');
 
     const [securityError, setSecurityError] = useState('');
     const [securityMessage, setSecurityMessage] = useState('');
     const [passwordErrorKey, setPasswordErrorKey] = useState<PasswordErrorKey | ''>('');
-    const [passwordMessageKey, setPasswordMessageKey] = useState<'passwordUpdated' | ''>('');
-    const [loading, setLoading] = useState(false);
+    const [passwordMessageKey, setPasswordMessageKey] = useState<MessageKey | ''>('');
+    const [isPasswordChanging, setIsPasswordChanging] = useState(false);
+    const [isTotpLoading, setIsTotpLoading] = useState(false);
+
+    const [totpSetupStep, setTotpSetupStep] = useState<SetupStep>('idle');
+    const [totpToken, setTotpToken] = useState<string | null>(null);
+    const [totpQrCode, setTotpQrCode] = useState<string | null>(null);
+    const [totpSecret, setTotpSecret] = useState<string | null>(null);
+    const [totpCode, setTotpCode] = useState('');
+    const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
 
     const loadSecurity = useCallback(async () => {
         const data = await request<SecurityInfo>('/auth/security');
 
         setSecurity(data);
-        setPhoneNumber(data.phoneNumber || '');
     }, []);
 
     useEffect(() => {
@@ -97,7 +114,12 @@ export function SecuritySettings({ lang }: Props) {
         });
     }, [loadSecurity]);
 
-    const smsAvailable = security?.sms2faAvailable ?? false;
+    useEffect(() => {
+        setSecurityError('');
+        setSecurityMessage('');
+    }, [lang]);
+
+    const totpEnabled = security?.totp2faEnabled ?? false;
 
     async function handlePasswordChange(
         event: FormEvent<HTMLFormElement>,
@@ -123,7 +145,7 @@ export function SecuritySettings({ lang }: Props) {
         }
 
         try {
-            setLoading(true);
+            setIsPasswordChanging(true);
 
             await request('/auth/password', 'PATCH', {
                 currentPassword,
@@ -142,118 +164,167 @@ export function SecuritySettings({ lang }: Props) {
                     : 'requestFailed',
             );
         } finally {
-            setLoading(false);
+            setIsPasswordChanging(false);
         }
     }
 
-    async function sendPhoneCode() {
-        if (!smsAvailable) {
-            return;
-        }
+    async function startTotpSetup() {
+        setSecurityError('');
+        setSecurityMessage('');
+        setTotpSetupStep('verifyPassword');
+    }
 
+    async function confirmTotpPassword() {
         setSecurityError('');
         setSecurityMessage('');
 
-        const normalizedPhone = phoneNumber.trim();
-
-        if (!/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-            setSecurityError(t.invalidPhone);
-            return;
-        }
-
         try {
-            setLoading(true);
-            await request('/auth/2fa/phone/start', 'POST', {
-                phoneNumber: normalizedPhone,
+            setIsTotpLoading(true);
+
+            const data = await request<{
+                token: string;
+                qrCodeUrl: string;
+                secret: string;
+            }>('/auth/2fa/totp/setup', 'POST', {
+                currentPassword: totpCurrentPassword,
             });
-            setCodeSent(true);
-            setSecurityMessage(t.codeSent);
+
+            setTotpToken(data.token);
+            setTotpSecret(data.secret);
+            setTotpQrCode(data.qrCodeUrl);
+            setTotpSetupStep('showQr');
+            setTotpCurrentPassword('');
         } catch (error) {
-            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
+            const message = error instanceof Error ? error.message : '';
+            if (message === 'Current password is incorrect') {
+                setSecurityError(t.currentPasswordError);
+            } else {
+                setSecurityError(message || t.requestFailed);
+            }
         } finally {
-            setLoading(false);
+            setIsTotpLoading(false);
         }
     }
 
-    async function verifyPhone() {
-        if (!smsAvailable) {
-            return;
-        }
-
+    async function confirmTotpCode() {
         setSecurityError('');
         setSecurityMessage('');
 
+        if (!totpToken || !totpQrCode) {
+            setSecurityError(t.requestFailed);
+            return;
+        }
+
         try {
-            setLoading(true);
-            await request('/auth/2fa/phone/verify', 'POST', {
-                phoneNumber: phoneNumber.trim(),
-                code: smsCode.trim(),
+            setIsTotpLoading(true);
+
+            const data = await request<{
+                recoveryCodes: string[];
+                message: string;
+            }>('/auth/2fa/totp/verify-setup', 'POST', {
+                token: totpToken,
+                code: totpCode,
             });
-            setCodeSent(false);
-            setSmsCode('');
+
+            setRecoveryCodes(data.recoveryCodes);
+            setTotpSetupStep('showRecovery');
+            setSecurityMessage(t.totpEnabled);
+            setTotpCode('');
             await loadSecurity();
-            setSecurityMessage(t.phoneVerified);
         } catch (error) {
-            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
+            const message = error instanceof Error ? error.message : '';
+            if (message === 'Current password is incorrect') {
+                setSecurityError(t.currentPasswordError);
+            } else if (message === 'tooManyTOTPAttempts') {
+                setSecurityError(t.totpTooManyAttempts);
+            } else {
+                setSecurityError(message || t.requestFailed);
+            }
         } finally {
-            setLoading(false);
+            setIsTotpLoading(false);
         }
     }
 
-    async function enable2fa() {
-        if (!smsAvailable) {
-            return;
-        }
+    async function cancelTotpSetup() {
+        setTotpSetupStep('idle');
+        setTotpToken(null);
+        setTotpQrCode(null);
+        setTotpSecret(null);
+        setTotpCode('');
+        setRecoveryCodes([]);
+        setSecurityError('');
+    }
 
+    async function disableTotp2fa() {
         setSecurityError('');
         setSecurityMessage('');
 
         try {
-            setLoading(true);
-            await request('/auth/2fa/enable', 'POST');
-            await loadSecurity();
-            setSecurityMessage(t.smsEnabled);
-        } catch (error) {
-            setSecurityError(error instanceof Error ? error.message : t.requestFailed);
-        } finally {
-            setLoading(false);
-        }
-    }
+            setIsTotpLoading(true);
 
-    async function disable2fa(
-        event: FormEvent<HTMLFormElement>,
-    ) {
-        event.preventDefault();
-
-        setSecurityError('');
-        setSecurityMessage('');
-
-        try {
-            setLoading(true);
-
-            await request('/auth/2fa/disable', 'POST', {
+            await request('/auth/2fa/totp/disable', 'POST', {
                 currentPassword: disablePassword,
+                code: totpCode,
             });
 
             setDisablePassword('');
-
+            setTotpCode('');
             await loadSecurity();
-
-            setSecurityMessage(t.smsDisabled);
+            setSecurityMessage(t.totpDisabled);
         } catch (error) {
-            setSecurityError(
-                error instanceof Error
-                    ? error.message
-                    : t.requestFailed,
-            );
+            const message = error instanceof Error ? error.message : '';
+            if (message === 'Current password is incorrect') {
+                setSecurityError(t.currentPasswordError);
+            } else if (message === 'currentPassword should not be empty') {
+                setSecurityError(t.currentPasswordRequired);
+            } else if (message === 'code should not be empty') {
+                setSecurityError(t.totpCodeRequired);
+            } else {
+                setSecurityError(message || t.requestFailed);
+            }
         } finally {
-            setLoading(false);
+            setIsTotpLoading(false);
+        }
+    }
+
+    async function regenerateTotpRecoveryCodes() {
+        setSecurityError('');
+        setSecurityMessage('');
+
+        if (!disablePassword) {
+            setSecurityError(t.currentPasswordRequired);
+            return;
+        }
+
+        try {
+            setIsTotpLoading(true);
+
+            const data = await request<{
+                recoveryCodes: string[];
+                message: string;
+            }>('/auth/2fa/totp/regenerate-recovery', 'POST', {
+                currentPassword: disablePassword,
+            });
+
+            setRecoveryCodes(data.recoveryCodes);
+            setTotpSetupStep('showRecovery');
+            setDisablePassword('');
+            setSecurityMessage(t.recoveryRegenerated);
+            await loadSecurity();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : '';
+            if (message === 'Current password is incorrect') {
+                setSecurityError(t.currentPasswordError);
+            } else {
+                setSecurityError(message || t.requestFailed);
+            }
+        } finally {
+            setIsTotpLoading(false);
         }
     }
 
     return (
         <div className="flex flex-col gap-5">
-            {/* Password settings */}
             <AccountSection
                 title={t.passwordTitle}
                 icon={Lock}
@@ -304,10 +375,10 @@ export function SecuritySettings({ lang }: Props) {
 
                     <button
                         type="submit"
-                        disabled={loading}
-                        className="rounded-xl bg-irent-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                        disabled={isPasswordChanging}
+                        className="rounded-xl bg-irent-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 w-full"
                     >
-                        {loading ? t.updating : t.updatePassword}
+                        {isPasswordChanging ? t.updating : t.updatePassword}
                     </button>
 
                     {passwordErrorKey && (
@@ -324,190 +395,253 @@ export function SecuritySettings({ lang }: Props) {
                 </form>
             </AccountSection>
 
-            {/* SMS two-factor authentication */}
             <AccountSection
-                title={t.smsTitle}
-                icon={ShieldCheck}
+                title={t.totpTitle}
+                icon={QrCode}
             >
                 <div className="space-y-4">
-                    {!smsAvailable ? (
-                        /* SMS is temporarily unavailable — show notice, no SMS requests */
-                        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-amber-600" />
-                            <div>
-                                <p className="text-sm font-medium text-amber-800">
-                                    {t.smsUnavailable}
-                                </p>
+                    <div className="flex items-center gap-2 text-sm">
+                        <ShieldCheck size={18} />
+                        <span>
+                            {t.status}:{' '}
+                            {totpEnabled ? t.enabled : t.disabled}
+                        </span>
+                    </div>
 
-                                <div className="mt-2 flex items-center gap-2 text-sm text-irent-muted">
-                                    <Smartphone size={16} />
-                                    <span>
-                                        {t.status}:{' '}
-                                        {security?.sms2faEnabled
-                                            ? t.enabled
-                                            : t.disabled}
-                                    </span>
+                    {totpSetupStep === 'idle' && !totpEnabled && (
+                        <div className="rounded-2xl border border-irent-border bg-irent-surface p-5 shadow-sm">
+                            <div className="flex items-start gap-3">
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-irent-accent-soft text-irent-accent">
+                                    <QrCode size={21} />
                                 </div>
-
-                                {/* Allow a user with SMS 2FA already enabled to disable it
-                                    through the password-confirmed flow even while the SMS
-                                    provider is unavailable. */}
-                                {security?.sms2faEnabled && (
-                                    <form
-                                        onSubmit={disable2fa}
-                                        className="mt-4 space-y-3"
-                                    >
-                                        <PasswordField
-                                            id="disable2faPassword"
-                                            label={t.disable2faPassword}
-                                            value={disablePassword}
-                                            onChange={setDisablePassword}
-                                            autoComplete="current-password"
-                                            showPasswordText={authT.showPassword}
-                                            hidePasswordText={authT.hidePassword}
-                                            textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
-                                        />
-
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50"
-                                        >
-                                            {t.disable2fa}
-                                        </button>
-                                    </form>
-                                )}
+                                <div className="min-w-0">
+                                    <p className="font-semibold text-irent-primary">
+                                        {t.totpSetupTitle}
+                                    </p>
+                                    <p className="mt-1 text-sm leading-6 text-irent-muted">
+                                        {t.totpDescription}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    ) : (
-                        /* SMS is available — show the preserved provider controls. */
-                        <>
-                            <p className="text-sm text-irent-muted">
-                                {t.smsDescription}
-                            </p>
-
-                            <div className="flex items-center gap-2 text-sm">
-                                <Smartphone size={18} />
-                                <span>
-                                    {t.status}:{' '}
-                                    {security?.sms2faEnabled
-                                        ? t.enabled
-                                        : t.disabled}
-                                </span>
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="securityPhone"
-                                    className="mb-2 block text-sm font-medium"
-                                >
-                                    {t.phoneNumber}
-                                </label>
-                                <input
-                                    id="securityPhone"
-                                    type="tel"
-                                    dir="ltr"
-                                    value={phoneNumber}
-                                    onChange={(event) => setPhoneNumber(event.target.value)}
-                                    placeholder="+2126XXXXXXXX"
-                                    className="h-11 w-full rounded-xl border border-irent-border bg-irent-surface px-3 text-left text-sm outline-none focus:border-irent-accent"
-                                />
-                                <p className="mt-2 text-xs text-irent-muted">
-                                    {t.phoneHint}
-                                </p>
-                            </div>
-
                             <button
                                 type="button"
-                                onClick={sendPhoneCode}
-                                disabled={loading || !phoneNumber.trim()}
-                                className="rounded-xl border border-irent-border px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                                onClick={startTotpSetup}
+                                disabled={isTotpLoading}
+                                className="mt-5 flex w-full items-center justify-center rounded-xl bg-irent-accent px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {loading ? t.sending : t.sendCode}
+                                {t.enableTotp}
                             </button>
+                        </div>
+                    )}
 
-                            {codeSent && (
-                                <div className="space-y-3">
+                    {totpSetupStep === 'idle' && totpEnabled && (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2 bg-irent-surface rounded-xl p-3">
+                                <CheckCircle2 size={16} className="shrink-0 text-green-600" />
+                                <span className="text-sm font-medium text-green-800">
+                                    {t.totpActive}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={regenerateTotpRecoveryCodes}
+                                disabled={isTotpLoading}
+                                className="w-full rounded-xl border border-irent-border px-5 py-3 text-sm font-semibold text-irent-text disabled:opacity-50"
+                            >
+                                {t.regenerateRecoveryCodes}
+                            </button>
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    disableTotp2fa();
+                                }}
+                                className="space-y-3"
+                            >
+                                <PasswordField
+                                    id="disableTotpPassword"
+                                    label={t.disableTotpPassword}
+                                    value={disablePassword}
+                                    onChange={setDisablePassword}
+                                    autoComplete="current-password"
+                                    showPasswordText={authT.showPassword}
+                                    hidePasswordText={authT.hidePassword}
+                                    textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                                />
+                                <div className="space-y-2">
                                     <label
-                                        htmlFor="smsCode"
+                                        htmlFor="totpDisableCode"
                                         className="block text-sm font-medium"
                                     >
-                                        {t.verificationCode}
+                                        {t.totpCode}
                                     </label>
                                     <input
-                                        id="smsCode"
+                                        id="totpDisableCode"
                                         type="text"
-                                        dir="ltr"
                                         inputMode="numeric"
                                         autoComplete="one-time-code"
-                                        maxLength={6}
-                                        value={smsCode}
-                                        onChange={(event) => setSmsCode(event.target.value)}
+                                        maxLength={64}
+                                        value={totpCode}
+                                        onChange={(e) => setTotpCode(e.target.value)}
+                                        placeholder="000000"
                                         className="h-11 w-full rounded-xl border border-irent-border px-3 text-left"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={verifyPhone}
-                                        disabled={loading || !smsCode.trim()}
-                                        className="rounded-xl bg-irent-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                                    >
-                                        {t.verifyPhone}
-                                    </button>
                                 </div>
-                            )}
+                                <button
+                                    type="submit"
+                                    disabled={isTotpLoading || !disablePassword || !totpCode}
+                                    className="w-full rounded-xl border border-red-300 px-5 py-3 text-sm font-semibold text-red-600 disabled:opacity-50"
+                                >
+                                    {t.disableTotp}
+                                </button>
+                            </form>
+                        </div>
+                    )}
 
-                            {security?.phoneVerified && (
-                                <p className="text-sm font-medium text-green-700">
-                                    {t.phoneVerified}
-                                </p>
-                            )}
-
-                            {!security?.sms2faEnabled ? (
+                    {totpSetupStep === 'verifyPassword' && (
+                        <div className="space-y-3">
+                            <p className="text-sm text-irent-muted">
+                                {t.totpConfirmPassword}
+                            </p>
+                            <PasswordField
+                                id="setupTotpPassword"
+                                label={t.currentPassword}
+                                value={totpCurrentPassword}
+                                onChange={setTotpCurrentPassword}
+                                autoComplete="current-password"
+                                showPasswordText={authT.showPassword}
+                                hidePasswordText={authT.hidePassword}
+                                textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                            />
+                            <div className="flex gap-2">
                                 <button
                                     type="button"
-                                    onClick={enable2fa}
-                                    disabled={loading || !security?.phoneVerified}
-                                    className="rounded-xl bg-irent-accent px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                                    onClick={confirmTotpPassword}
+                                    disabled={isTotpLoading || !totpCurrentPassword}
+                                    className="flex-1 rounded-xl bg-irent-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                                 >
-                                    {t.enable2fa}
+                                    {isTotpLoading ? t.sending : t.totpContinue}
                                 </button>
-                            ) : (
-                                <form onSubmit={disable2fa} className="space-y-3">
-                                    <PasswordField
-                                        id="disable2faPassword"
-                                        label={t.disable2faPassword}
-                                        value={disablePassword}
-                                        onChange={setDisablePassword}
-                                        autoComplete="current-password"
-                                        showPasswordText={authT.showPassword}
-                                        hidePasswordText={authT.hidePassword}
-                                        textDirection={lang === 'ar' ? 'rtl' : 'ltr'}
+                                <button
+                                    type="button"
+                                    onClick={cancelTotpSetup}
+                                    className="flex-1 rounded-xl border border-irent-border px-5 py-2.5 text-sm font-semibold text-irent-text disabled:opacity-50"
+                                >
+                                    {t.cancel}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {totpSetupStep === 'showQr' && (
+                        <div className="space-y-3">
+                            <p className="text-sm text-irent-muted">
+                                {t.totpScanQr}
+                            </p>
+                            <div className="flex justify-center">
+                                {isTotpLoading ? (
+                                    <Loader2 className="w-8 h-8 animate-spin" />
+                                ) : (
+                                    <QRCodeSVG
+                                        value={totpQrCode ?? ""}
+                                        size={192}
+                                        marginSize={2}
+                                        title="TOTP QR Code"
+                                        className="w-48 h-48 rounded-xl border border-irent-border"
                                     />
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-semibold text-red-600 disabled:opacity-50"
-                                    >
-                                        {t.disable2fa}
-                                    </button>
-                                </form>
-                            )}
-                        </>
+                                )}
+                            </div>
+                            <div className="bg-irent-surface rounded-xl p-3 text-xs text-irent-muted break-all">
+                                {totpSecret}
+                            </div>
+                            <div className="space-y-2">
+                                <label
+                                    htmlFor="totpSetupCode"
+                                    className="block text-sm font-medium"
+                                >
+                                    {t.totpEnterCode}
+                                </label>
+                                <input
+                                    id="totpSetupCode"
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete="one-time-code"
+                                    maxLength={6}
+                                    value={totpCode}
+                                    onChange={(e) => setTotpCode(e.target.value)}
+                                    placeholder="000000"
+                                    className="h-11 w-full rounded-xl border border-irent-border px-3 text-left"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={confirmTotpCode}
+                                    disabled={isTotpLoading || !totpCode || totpCode.length < 6}
+                                    className="flex-1 rounded-xl bg-irent-accent px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+                                >
+                                    {isTotpLoading ? t.sending : t.totpVerifyAndEnable}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={cancelTotpSetup}
+                                    className="flex-1 rounded-xl border border-irent-border px-5 py-2.5 text-sm font-semibold text-irent-text disabled:opacity-50"
+                                >
+                                    {t.cancel}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {totpSetupStep === 'showRecovery' && (
+                        <div className="space-y-3">
+                            <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                                <CheckCircle2 size={20} className="shrink-0 text-green-600" />
+                                <p className="text-sm font-medium text-green-800">
+                                    {t.totpEnabled}
+                                </p>
+                                <p className="mt-1 text-sm text-green-700">
+                                    {t.totpRecoveryCodes}
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {recoveryCodes.map((code, index) => (
+                                        <span
+                                            key={index}
+                                            className="px-2 py-1 rounded border border-green-300 bg-green-100 text-xs font-mono text-green-800"
+                                        >
+                                            {code}
+                                        </span>
+                                    ))}
+                                </div>
+                                <p className="mt-3 text-xs text-green-600">
+                                    {t.totpSaveCodes}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTotpSetupStep('idle');
+                                    setRecoveryCodes([]);
+                                }}
+                                className="w-full rounded-xl bg-irent-accent px-5 py-3 text-sm font-semibold text-white"
+                            >
+                                {t.totpDone}
+                            </button>
+                        </div>
+                    )}
+
+                    {securityError && (
+                        <p role="alert" className="text-sm text-red-600">
+                            {securityError}
+                        </p>
+                    )}
+
+                    {securityMessage && (
+                        <p role="status" className="text-sm text-green-700">
+                            {securityMessage}
+                        </p>
                     )}
                 </div>
             </AccountSection>
-
-            {securityError && (
-                <p role="alert" className="text-sm text-red-600">
-                    {securityError}
-                </p>
-            )}
-
-            {securityMessage && (
-                <p role="status" className="text-sm text-green-700">
-                    {securityMessage}
-                </p>
-            )}
         </div>
     );
 }

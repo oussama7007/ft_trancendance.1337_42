@@ -30,7 +30,6 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
             setError('');
             setSaving(true);
             await onSave(draft.trim());
-            // Close only after successful save.
             setIsEditing(false);
         } catch (err) {
             setError(
@@ -120,7 +119,7 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
                     </p>
                 </div>
             ) : description?.trim() ? (
-                <p className="whitespace-pre-line text-sm leading-7 text-irent-muted">
+                <p className="whitespace-pre-line [overflow-wrap:break-word] [word-break:break-all] text-sm leading-7 text-irent-muted">
                     {description}
                 </p>
             ) : (

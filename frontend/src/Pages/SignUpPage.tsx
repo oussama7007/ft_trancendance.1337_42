@@ -16,6 +16,7 @@ import { PasswordField } from "@/Components/auth/PasswordField";
 import { PasswordStrength } from "@/Components/auth/PasswordStrength";
 import { DateOfBirthFields } from "@/Components/auth/DateOfBirthFields";
 import { isPasswordValid } from "@/utils/password";
+import validator from 'validator';
 
 import type { Language } from '@/types';
 import { translations } from '@/translations';
@@ -36,6 +37,8 @@ type RegistrationUser = {
 
 type SignUpErrorKey =
     | 'nameRequired'
+    | 'invalidName'
+    | 'nameTooLong'
     | 'invalidDateOfBirth'
     | 'ageRequirement'
     | 'registrationFailed'
@@ -44,7 +47,9 @@ type SignUpErrorKey =
     | 'pleaseenteryouremail'
     | 'emailAlreadyRegistered'
     | 'invalidCode'
+    | 'tooManyAttempts'
     | 'emailVerificationRequired'
+    | 'invalidEmail'
     | 'passwordRequirements'
     | 'passwordMismatch'
     | 'missingUser'
@@ -112,10 +117,11 @@ export function SignUpPage({
  }: SignUpPageProps) {
 
     const t = translations[lang].auth;
+    const isRtl = lang === "ar";
 
 
-    const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
-    const [sessionId, setSessionId] = useState<number | null>(null)      // given by the backend after step 1
+    const [currentStep, setCurrentStep] = useState(1);
+    const [sessionId, setSessionId] = useState<string | null>(null)
 
 
     const [firstName, setFirstName] = useState("");
@@ -135,7 +141,7 @@ export function SignUpPage({
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const [isSubmitting, setIsSubmitting] = useState(false); // true while waiting for backend
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorKey, setErrorKey] = useState<SignUpErrorKey | ''>('');
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [codeSentSuccessfully, setCodeSentSuccessfully] = useState(false);
@@ -180,6 +186,27 @@ export function SignUpPage({
             setErrorKey('nameRequired');
             return;
         }
+
+        if (cleanFirstName.length > 20 || cleanLastName.length > 20) {
+            setErrorKey('nameTooLong');
+            return;
+        }
+
+        const nameValidator = (name: string) => {
+            const nameWithoutSpaces = name.replace(/\s/g, '');
+            return validator.isAlpha(nameWithoutSpaces) || validator.isAlpha(nameWithoutSpaces, 'ar');
+        };
+
+        if (!nameValidator(cleanFirstName)) {
+            setErrorKey('invalidName');
+            return;
+        }
+
+        if (!nameValidator(cleanLastName)) {
+            setErrorKey('invalidName');
+            return;
+        }
+
         const dateOfBirth = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
 
         if (
@@ -216,7 +243,7 @@ export function SignUpPage({
                 return;
             }
 
-            if (typeof result.data.sessionId !== "number") {
+            if (typeof result.data.sessionId !== "string" || !result.data.sessionId) {
                 setErrorKey('invalidSession');
                 return;
             }
@@ -244,6 +271,11 @@ export function SignUpPage({
 
         if (!email.trim()) {
             setErrorKey('pleaseenteryouremail');
+            return;
+        }
+
+        if (!validator.isEmail(email.trim())) {
+            setErrorKey('invalidEmail');
             return;
         }
 
@@ -295,7 +327,13 @@ export function SignUpPage({
             });
 
             if (!result.ok) {
-                setErrorKey('invalidCode');
+                const message = String(result.data?.message ?? '');
+                setErrorKey(
+                    message.startsWith('Too many incorrect attempts') ||
+                    message.startsWith('Request a verification code first')
+                        ? 'tooManyAttempts'
+                        : 'invalidCode',
+                );
                 return;
             }
 
@@ -351,7 +389,6 @@ export function SignUpPage({
                 return;
             }
 
-            // Registration and authentication succeeded.
             onRegistrationSuccess(result.data.user);
 
             } catch {
@@ -443,6 +480,7 @@ export function SignUpPage({
                                     <Label htmlFor="firstName">{t.firstName}</Label>
                                     <Input
                                         id="firstName"
+                                        maxLength={20}
                                         value={firstName}
                                         onChange={(e) => setFirstName(e.target.value)}
                                         required
@@ -453,6 +491,7 @@ export function SignUpPage({
                                     <Label htmlFor="lastName">{t.lastName}</Label>
                                     <Input
                                         id="lastName"
+                                        maxLength={20}
                                         value={lastName}
                                         onChange={(e) => setLastName(e.target.value)}
                                         required
@@ -506,8 +545,9 @@ export function SignUpPage({
                                     <Label htmlFor="contact">{t.signInDescription}</Label>
                                     <Input
                                         id="contact"
-                                        type="email"
-                                        dir="ltr"
+                                        type="text"
+                                        inputMode="email"
+                                        dir={isRtl ? "rtl" : "ltr"}
                                         
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}

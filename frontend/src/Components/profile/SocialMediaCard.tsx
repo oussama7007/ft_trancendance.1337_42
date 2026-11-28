@@ -100,7 +100,6 @@ export function SocialMediaCard({
     const [messageKey, setMessageKey] = useState<SocialMessageKey | ''>('');
     const direction = lang === 'ar' ? 'rtl' : 'ltr';
 
-    // Keep the form synchronized with updated profile data.
     useEffect(() => {
         setDraft({
             linkedin: user.linkedin ?? '',
@@ -144,7 +143,6 @@ export function SocialMediaCard({
         setErrorKey('');
         setMessageKey('');
 
-        // Validate LinkedIn.
         const linkedin = draft.linkedin.trim()
             ? getSafeSocialUrl(
                 draft.linkedin,
@@ -152,7 +150,6 @@ export function SocialMediaCard({
             )
             : null;
 
-        // Validate Instagram.
         const instagram = draft.instagram.trim()
             ? getSafeSocialUrl(
                 draft.instagram,
@@ -160,7 +157,6 @@ export function SocialMediaCard({
             )
             : null;
 
-        // Validate Facebook.
         const facebook = draft.facebook.trim()
             ? getSafeSocialUrl(
                 draft.facebook,
@@ -195,7 +191,6 @@ export function SocialMediaCard({
         }
     }
 
-    // Build the links that will be displayed.
     const links: SocialLink[] = [];
 
     if (user.linkedin) {

@@ -27,12 +27,11 @@ import Chat from './Components/chat/Chat'
 import { DashboardPage } from './Pages/DashboardPage'
 import { ChatProvider } from './context/ChatContext'
 
-import type { Language, Listing, User } from './types'
+import type { Language, User } from './types'
 import { translations } from './translations'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-// User information returned by the backend.
 type BackendUser = {
     id: number;
     firstName: string;
@@ -48,7 +47,6 @@ type BackendUser = {
     facebook?: string | null;
 };
 
-// Convert backend user data to the frontend User type.
 function mapBackendUser(user: BackendUser): User {
     const isEmail = user.email.includes('@');
 
@@ -69,10 +67,8 @@ function mapBackendUser(user: BackendUser): User {
     };
 }
 
-// Supported application languages.
 const LANGUAGES: Language[] = ['ar', 'fr', 'en'];
 
-// Restore the saved language or use the browser language.
 function getInitialLanguage(): Language {
     try {
         const saved = localStorage.getItem('lang');
@@ -81,7 +77,6 @@ function getInitialLanguage(): Language {
             return saved as Language;
         }
     } catch {
-        // Ignore localStorage errors.
     }
 
     const browser = navigator.language.slice(0, 2);
@@ -91,7 +86,6 @@ function getInitialLanguage(): Language {
         : 'en';
 }
 
-// Scroll to the top whenever the route changes.
 function ScrollToTop() {
     const { pathname } = useLocation();
 
@@ -105,15 +99,12 @@ function ScrollToTop() {
 function App() {
     const navigate = useNavigate();
 
-    // Application language.
     const [lang, setLang] = useState<Language>(getInitialLanguage);
     const t = translations[lang];
 
-    // Authentication state.
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-    // Restore the user's session when the application starts.
     useEffect(() => {
         let isMounted = true;
 
@@ -124,28 +115,17 @@ function App() {
                     credentials: 'include',
                 });
 
-                if (response.status === 401) {
-                    // 401 is a normal result for a visitor who is not signed in.
-                    if (isMounted) {
-                        setCurrentUser(null);
-                    }
-                    return;
-                }
-
                 if (!response.ok) {
                     throw new Error(`Session check failed: ${response.status}`);
                 }
 
-                const user: BackendUser = await response.json();
+                const body = await response.text();
+                const user: BackendUser | null = body ? JSON.parse(body) : null;
 
                 if (isMounted) {
-                    setCurrentUser(mapBackendUser(user));
+                    setCurrentUser(user ? mapBackendUser(user) : null);
                 }
-            } catch (error) {
-                // The public pages can still work without a restored session.
-                // Keep the technical error in the browser console, not in the page.
-                console.error('Session restoration failed:', error);
-
+            } catch {
                 if (isMounted) {
                     setCurrentUser(null);
                 }
@@ -163,7 +143,6 @@ function App() {
         };
     }, []);
 
-    // Keep the language, page direction and title synchronized.
     useEffect(() => {
         document.documentElement.lang = lang;
         document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -171,17 +150,11 @@ function App() {
 
         try {
             localStorage.setItem('lang', lang);
-        } catch (error) {
-            console.warn('Could not save language preference:', error);
-        }
+        } catch {}
     }, [lang, t]);
 
-    // Handle listing selection.
-    const handleSelectListing = (listing: Listing) => {
-        console.log('Selected listing:', listing);
-    };
+    const handleSelectListing = () => {};
 
-    // Log out through the backend.
     const handleLogout = async () => {
         try {
             const response = await fetch(`${API_URL}/auth/logout`, {
@@ -195,9 +168,7 @@ function App() {
 
             setCurrentUser(null);
             navigate('/');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
+        } catch {}
     };
 
     const handleAvatarChanged = useCallback((avatarUrl: string | null) => {
@@ -206,7 +177,6 @@ function App() {
         );
     }, []);
 
-    // Wait until the backend session check finishes.
     if (isAuthLoading) {
         return (
             <main className="flex min-h-screen items-center justify-center">
@@ -230,7 +200,6 @@ function App() {
             <ScrollToTop />
 
             <Routes>
-                {/* Your existing home page */}
                 <Route
                     path="/"
                     element={
@@ -243,7 +212,6 @@ function App() {
                     }
                 />
 
-                {/* Your existing listings page */}
                 <Route
                     path="/listings"
                     element={<ListingsPage lang={lang} currentUserId={currentUser?.id} />}
@@ -288,7 +256,6 @@ function App() {
                         }
                     />
                             
-                {/* Existing placeholder pages */}
                 <Route
                     path="/chat"
                     element={
@@ -323,7 +290,6 @@ function App() {
                 />
 
 
-                {/* Teammate's login implementation */}
                 <Route
                     path="/signin"
                     element={
@@ -337,7 +303,6 @@ function App() {
                     }
                 />
 
-                {/* Teammate's signup implementation */}
                 <Route
                     path="/signup"
                     element={
@@ -355,7 +320,6 @@ function App() {
                     }
                 />
 
-                {/* Your existing legal pages */}
                 <Route
                     path="/privacy"
                     element={<LegalPage lang={lang} kind="privacy" />}
@@ -366,7 +330,6 @@ function App() {
                     element={<LegalPage lang={lang} kind="terms" />}
                 />
 
-                {/* Unknown routes return home */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
 

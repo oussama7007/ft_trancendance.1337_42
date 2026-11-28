@@ -50,23 +50,15 @@ export class User {
   googleEmail: string | null;
 
 
-  @Column({
-        type: 'varchar',
-        length: 20,
-        nullable: true,
-        unique: true,
-    })
-    phoneNumber: string | null;
+    @Column({ type: 'boolean', default: false })
+    totpEnabled: boolean;
 
-    @Column({
-        type: 'boolean',
-        default: false,
-    })
-    phoneVerified: boolean;
+    @Column({ type: 'text', nullable: true })
+    totpSecretEncrypted: string | null;
 
-    @Column({
-        type: 'boolean',
-        default: false,
-    })
-    sms2faEnabled: boolean;
+    @Column({ type: 'varchar', nullable: true })
+    totpLastUsedStep: string | null;
+
+    @Column({ type: 'integer', default: 0 })
+    sessionVersion: number;
 }

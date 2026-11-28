@@ -1,15 +1,14 @@
 import {
+    IsNotEmpty,
     IsString,
-    Length,
-    Matches,
 } from 'class-validator';
 
-export class VerifyLogin2faDto {
+export class VerifyTotpLoginDto {
     @IsString()
-    @Length(64, 64)
+    @IsNotEmpty()
     challengeToken: string;
 
     @IsString()
-    @Matches(/^\d{4,8}$/)
+    @IsNotEmpty()
     code: string;
 }

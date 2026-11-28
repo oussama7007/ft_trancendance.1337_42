@@ -2,10 +2,8 @@ import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 export class UpdatePasswordResetToken1795230000000 implements MigrationInterface {
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Drop old table if exists
         await queryRunner.query(`DROP TABLE IF EXISTS "password_reset_challenge"`);
 
-        // Create new password reset token table
         await queryRunner.createTable(
             new Table({
                 name: 'password_reset_token',
@@ -45,12 +43,10 @@ export class UpdatePasswordResetToken1795230000000 implements MigrationInterface
             }),
         );
 
-        // Create index on tokenHash for faster lookups
         await queryRunner.query(
             `CREATE INDEX "IDX_password_reset_token_hash" ON "password_reset_token" ("tokenHash")`,
         );
 
-        // Create index on expiresAt for cleanup queries
         await queryRunner.query(
             `CREATE INDEX "IDX_password_reset_token_expires" ON "password_reset_token" ("expiresAt")`,
         );

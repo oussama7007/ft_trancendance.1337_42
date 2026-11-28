@@ -1,6 +1,5 @@
 
 
-
 import {
     BadRequestException,
     ConflictException,
@@ -13,8 +12,11 @@ import {
 } from '@nestjs/common';
 
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
-import { LoginChallenge } from './login-challenge.entity.js';
 import { PasswordResetToken } from './password-reset-challenge.entity.js';
+import { TotpEnrollment } from './totp-enrollment.entity.js';
+import { TotpLoginChallenge } from './totp-login-challenge.entity.js';
+import { TotpRecoveryCode } from './totp-recovery-code.entity.js';
+import { TotpService } from './totp.service.js';
 
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto.js';
@@ -26,6 +28,7 @@ import { Repository } from 'typeorm';
 
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto.js';
+import validator from 'validator';
 
 import { RegistrationSession } from './registration-session-entity.js';
 import { User } from './user.entity.js';
@@ -38,32 +41,29 @@ import {
     createHash,
     randomBytes,
     randomInt,
+    randomUUID,
     timingSafeEqual,
 } from 'node:crypto';
-
 
 
 import { OAuth2Client } from 'google-auth-library';
 
 
-
 import { MailService } from '../mail/mail.service.js';
-import { SmsVerificationService } from './sms-verification.service.js';
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
+const TOTP_LOGIN_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+const TOTP_MAX_ATTEMPTS = 5;
+const RECOVERY_CODE_COUNT = 8;
+const REGISTRATION_MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService {
   constructor(
-
-
-
     @InjectRepository(RegistrationSession)
     private readonly registrationSessionRepository: Repository<RegistrationSession>,
 
-
-
-        @InjectRepository(EmailChangeChallenge)
+    @InjectRepository(EmailChangeChallenge)
     private readonly emailChangeChallengeRepository:
         Repository<EmailChangeChallenge>,
 
@@ -71,8 +71,14 @@ export class AuthService {
     private readonly passwordResetTokenRepository:
         Repository<PasswordResetToken>,
 
-    @InjectRepository(LoginChallenge)
-    private readonly loginChallengeRepository: Repository<LoginChallenge>,
+    @InjectRepository(TotpEnrollment)
+    private readonly totpEnrollmentRepository: Repository<TotpEnrollment>,
+
+    @InjectRepository(TotpLoginChallenge)
+    private readonly totpLoginChallengeRepository: Repository<TotpLoginChallenge>,
+
+    @InjectRepository(TotpRecoveryCode)
+    private readonly totpRecoveryCodeRepository: Repository<TotpRecoveryCode>,
 
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -81,11 +87,10 @@ export class AuthService {
 
     private readonly mailService: MailService,
 
-    private readonly smsService: SmsVerificationService,
+    private readonly totpService: TotpService,
   ) {}
   private async verifyGoogleCredential(
     credential?: string,
-    accessToken?: string,
   ) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
 
@@ -99,38 +104,7 @@ export class AuthService {
         const client = new OAuth2Client(clientId);
         let payload;
 
-        if (accessToken) {
-            const tokenInfo = await client.getTokenInfo(accessToken);
-
-            const tokenAudience = (tokenInfo as any).audience;
-            const tokenAzp = (tokenInfo as any).azp;
-            if (tokenAudience !== clientId && tokenAzp !== clientId) {
-                console.warn('Google token audience/azp mismatch:', {
-                    tokenAudience,
-                    tokenAzp,
-                    clientId,
-                });
-            }
-
-            const response = await fetch(
-                'https://openidconnect.googleapis.com/v1/userinfo',
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                },
-            );
-
-            if (!response.ok) {
-                throw new UnauthorizedException('Invalid Google access token');
-            }
-
-            payload = await response.json() as {
-                sub?: string;
-                email?: string;
-                email_verified?: boolean | string;
-            };
-        } else if (credential) {
+        if (credential) {
             const ticket = await client.verifyIdToken({
                 idToken: credential,
                 audience: clientId,
@@ -144,7 +118,7 @@ export class AuthService {
             !payload ||
             !payload.sub ||
             !payload.email ||
-            (payload.email_verified !== true && payload.email_verified !== 'true')
+            payload.email_verified !== true
         ) {
             throw new UnauthorizedException(
                 'Google account could not be verified',
@@ -164,14 +138,42 @@ export class AuthService {
             'Invalid Google credential',
         );
     }
-}
+  }
 
-async linkGoogleAccount(
-    userId: number,
-    credential?: string,
-    accessToken?: string,
-) {
-    const identity = await this.verifyGoogleCredential(credential, accessToken);
+  async linkGoogleAccount(
+      userId: number,
+      credential?: string,
+      currentPassword?: string,
+      code?: string,
+  ) {
+    const user = await this.userRepository.findOne({
+        where: { id: userId },
+    });
+
+    if (!user) {
+        throw new NotFoundException('User not found');
+    }
+
+    if (user.passwordHash) {
+        const passwordMatches = await bcrypt.compare(
+            currentPassword ?? '',
+            user.passwordHash,
+        );
+
+        if (!passwordMatches) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+    }
+
+    if (user.totpEnabled) {
+        const validTotp = await this.verifyTotpCodeForReauth(user, code);
+
+        if (!validTotp) {
+            throw new UnauthorizedException('Invalid verification code');
+        }
+    }
+
+    const identity = await this.verifyGoogleCredential(credential);
 
     const existingUser = await this.userRepository.findOne({
         where: { googleId: identity.googleId },
@@ -183,14 +185,6 @@ async linkGoogleAccount(
         );
     }
 
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
     user.googleId = identity.googleId;
     user.googleEmail = identity.googleEmail;
 
@@ -199,8 +193,42 @@ async linkGoogleAccount(
     return {
         message: 'Google account connected successfully',
     };
-}
-private toAuthUser(user: User) {
+  }
+
+  private async verifyTotpCodeForReauth(user: { totpEnabled: boolean; totpSecretEncrypted: string | null; id: number }, code?: string): Promise<boolean> {
+    if (!user.totpEnabled || !user.totpSecretEncrypted || !code) {
+        return false;
+    }
+
+    const secret = this.totpService.decryptSecret(user.totpSecretEncrypted);
+
+    if (this.totpService.verifyToken(secret, code)) {
+        return true;
+    }
+
+    return this.consumeRecoveryCode(user.id, code);
+  }
+
+  private async consumeRecoveryCode(userId: number, code: string): Promise<boolean> {
+    const normalized = code.trim().replace(/\s+/g, '').toUpperCase();
+
+    if (!/^[0-9A-F]{32}$/.test(normalized)) {
+        return false;
+    }
+
+    const result = await this.totpRecoveryCodeRepository.update(
+        {
+            userId,
+            codeHash: this.totpService.hashToken(normalized),
+            used: false,
+        },
+        { used: true, usedAt: new Date() },
+    );
+
+    return (result.affected ?? 0) > 0;
+  }
+
+  private toAuthUser(user: User) {
     return {
         id: user.id,
         firstName: user.firstName,
@@ -210,10 +238,12 @@ private toAuthUser(user: User) {
         email: user.email,
         avatarUrl: user.avatarUrl,
     };
-}
-private async issueAuthenticatedSession(user: User) {
+  }
+
+  private async issueAuthenticatedSession(user: User) {
     const accessToken = await this.jwtService.signAsync({
         sub: user.id,
+        sessionVersion: user.sessionVersion || 0,
     });
 
     return {
@@ -221,74 +251,24 @@ private async issueAuthenticatedSession(user: User) {
         accessToken,
         user: this.toAuthUser(user),
     };
-}
+  }
 
-
-
-
-
-private async createLoginChallenge(user: User) {
-    if (!user.phoneNumber || !user.phoneVerified) {
-        throw new BadRequestException(
-            'A verified phone number is required for SMS 2FA',
-        );
-    }
-
-    const challengeToken = randomBytes(32).toString('hex');
-
-    const tokenHash = createHash('sha256')
-        .update(challengeToken)
-        .digest('hex');
-
-    const challenge = await this.loginChallengeRepository.save({
-        tokenHash,
-        userId: user.id,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    });
-
-    try {
-        await this.smsService.sendVerificationCode(
-            user.phoneNumber,
-        );
-    } catch (error) {
-        await this.loginChallengeRepository.delete(challenge.id);
-        throw error;
-    }
-
-    return {
-        requiresTwoFactor: true,
-        challengeToken,
-        phoneHint:
-            user.phoneNumber.slice(0, 4) +
-            '••••••' +
-            user.phoneNumber.slice(-2),
-    };
-}
-
-
-
-
-
-
-
-
-private async prepareLogin(user: User) {
-    const sms2faAvailable = process.env.SMS_2FA_ENABLED === 'true';
-
-    if (user.sms2faEnabled && sms2faAvailable) {
-        return this.createLoginChallenge(user);
-    }
-
+  private async prepareLogin(user: User) {
     return this.issueAuthenticatedSession(user);
-}
+  }
 
+  private async completeLogin(user: User) {
+    if (user.totpEnabled) {
+        return this.createTotpLoginChallenge(user.id);
+    }
 
-
+    return this.prepareLogin(user);
+  }
 
   async changePassword(
     userId: number,
     data: ChangePasswordDto,
-) {
+  ) {
     const user = await this.userRepository.findOne({
         where: { id: userId },
     });
@@ -324,25 +304,22 @@ private async prepareLogin(user: User) {
     return {
         message: 'Password updated successfully',
     };
-}
+  }
 
-
-
-private hashEmailChangeCode(
+  private hashEmailChangeCode(
     userId: number,
     code: string,
-): string {
+  ): string {
     return createHash('sha256')
         .update(`${userId}:${code}`)
         .digest('hex');
-}
+  }
 
-
-async startEmailChange(
-    userId: number,
-    newEmail: string,
-    currentPassword: string,
-) {
+  async startEmailChange(
+      userId: number,
+      newEmail: string,
+      currentPassword: string,
+  ) {
     const user = await this.userRepository.findOne({
         where: { id: userId },
     });
@@ -431,12 +408,12 @@ async startEmailChange(
         message: 'Verification code sent',
         expiresInSeconds: 300,
     };
-}
+  }
 
-async verifyEmailChange(
-    userId: number,
-    code: string,
-) {
+  async verifyEmailChange(
+      userId: number,
+      code: string,
+  ) {
     const challenge = await this.emailChangeChallengeRepository.findOne({
         where: { userId },
     });
@@ -509,10 +486,7 @@ async verifyEmailChange(
         email: user.email,
         message: 'Email updated successfully',
     };
-}
-
-
-
+  }
 
   private validateDateOfBirth(dateOfBirth: string): void {
         const birthDate = new Date(dateOfBirth);
@@ -535,31 +509,46 @@ async verifyEmailChange(
                 'You must be at least 18 years old',
             );
         }
-  } 
-
+  }
 
   async startRegistration(data: StartRegistrationDto) {
-    
-    
-    
-    this.validateDateOfBirth(data.dateOfBirth);
-    
-    
-    const session = this.registrationSessionRepository.create(data);
 
+    const nameValidator = (name: string) => {
+        const nameWithoutSpaces = name.replace(/\s/g, '');
+        return validator.isAlpha(nameWithoutSpaces) || validator.isAlpha(nameWithoutSpaces, 'ar');
+    };
+
+    if (!nameValidator(data.firstName)) {
+      throw new BadRequestException('First and last name must contain only letters');
+    }
+
+    if (!nameValidator(data.lastName)) {
+      throw new BadRequestException('First and last name must contain only letters');
+    }
+
+    if (data.firstName.length > 20 || data.lastName.length > 20) {
+      throw new BadRequestException('Name is too long. Maximum 20 characters.');
+    }
+
+    this.validateDateOfBirth(data.dateOfBirth);
+
+
+    const session = this.registrationSessionRepository.create({
+      ...data,
+      token: randomUUID(),
+    });
 
     const savedSession = await this.registrationSessionRepository.save(session);
 
     return {
-      sessionId: savedSession.id,
+      sessionId: savedSession.token,
       message: 'Registration started',
     };
   }
 
-
   async requestVerification(data: RequestVerificationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -590,9 +579,10 @@ async verifyEmailChange(
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
 
     session.email = email;
-    session.verificationCode = code;
+    session.verificationCode = this.hashRegistrationCode(session.token, code);
     session.verificationCodeExpiresAt =
       new Date(Date.now() + 5 * 60 * 1000);
+    session.verificationAttempts = 0;
     session.isVerified = false;
 
     await this.registrationSessionRepository.save(session);
@@ -600,15 +590,14 @@ async verifyEmailChange(
     await this.mailService.sendVerificationCode(email, code);
 
     return {
-      sessionId: session.id,
+      sessionId: session.token,
       message: 'Verification code generated',
     };
   }
 
-
   async verifyRegistration(data: VerifyRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -620,25 +609,47 @@ async verifyEmailChange(
     if (session.verificationCodeExpiresAt.getTime() < Date.now())
       throw new BadRequestException('Verification code has expired');
 
-    if (session.verificationCode !== data.code)
+    const storedHash = Buffer.from(session.verificationCode, 'hex');
+    const providedHash = Buffer.from(
+      this.hashRegistrationCode(session.token, data.code),
+      'hex',
+    );
+    const isValid =
+      storedHash.length === providedHash.length &&
+      timingSafeEqual(storedHash, providedHash);
+
+    if (!isValid) {
+      session.verificationAttempts = (session.verificationAttempts || 0) + 1;
+
+      if (session.verificationAttempts >= REGISTRATION_MAX_ATTEMPTS) {
+        session.verificationCode = null;
+        session.verificationCodeExpiresAt = null;
+        await this.registrationSessionRepository.save(session);
+        throw new BadRequestException(
+          'Too many incorrect attempts. Please request a new code.',
+        );
+      }
+
+      await this.registrationSessionRepository.save(session);
       throw new BadRequestException('Invalid verification code');
+    }
 
     session.isVerified = true;
-    session.verificationCode = undefined;
-    session.verificationCodeExpiresAt = undefined;
+    session.verificationCode = null;
+    session.verificationCodeExpiresAt = null;
+    session.verificationAttempts = 0;
 
     await this.registrationSessionRepository.save(session);
 
     return {
-      sessionId: session.id,
+      sessionId: session.token,
       message: 'Contact verified successfully',
     };
   }
 
-
   async finishRegistration(data: FinishRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -661,17 +672,18 @@ async verifyEmailChange(
       lastName: session.lastName,
       dateOfBirth: session.dateOfBirth,
       gender: session.gender,
-    
+
       email: session.email,
       passwordHash,
     });
 
     const savedUser = await this.userRepository.save(user);
-        const accessToken = await this.jwtService.signAsync({
-            sub: savedUser.id,
-        });
+    const accessToken = await this.jwtService.signAsync({
+        sub: savedUser.id,
+        sessionVersion: savedUser.sessionVersion || 0,
+    });
     await this.registrationSessionRepository.delete(session.id);
-    
+
 
       return {
           accessToken,
@@ -687,15 +699,13 @@ async verifyEmailChange(
       }
   };
 
-
-    async getCurrentUser(userId: number) {
+  async getCurrentUser(userId: number) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
 
-    if (!user) {
+    if (!user)
       throw new NotFoundException('User not found');
-    }
 
     return {
       id: user.id,
@@ -714,27 +724,18 @@ async verifyEmailChange(
 
   async loginWithGoogle(
     credential?: string,
-    accessToken?: string,
   ) {
     const identity = await this.verifyGoogleCredential(
         credential,
-        accessToken,
     );
 
     const user = await this.userRepository.findOne({
-        where: [
-            { googleId: identity.googleId },
-            { googleEmail: identity.googleEmail.trim().toLowerCase() },
-        ],
+        where: { googleId: identity.googleId },
     });
 
     if (!user) {
-        const normalizedGoogleEmail = identity.googleEmail
-            .trim()
-            .toLowerCase();
-
         const emailUser = await this.userRepository.findOne({
-            where: { email: normalizedGoogleEmail },
+            where: { email: identity.googleEmail.trim().toLowerCase() },
         });
 
         if (!emailUser) {
@@ -750,267 +751,9 @@ async verifyEmailChange(
         });
     }
 
-    if (user.googleId !== identity.googleId) {
-        user.googleId = identity.googleId;
-        user.googleEmail = identity.googleEmail;
-        await this.userRepository.save(user);
-    }
-
-    return this.prepareLogin(user);
-}
-
-async startPhoneVerification(
-    userId: number,
-    phoneNumber: string,
-) {
-    // Guard: SMS provider not yet configured.
-    if (process.env.SMS_2FA_ENABLED !== 'true') {
-        throw new ServiceUnavailableException(
-            'SMS two-factor authentication is temporarily unavailable',
-        );
-    }
-
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    const existing = await this.userRepository.findOne({
-        where: { phoneNumber },
-    });
-
-    if (existing && existing.id !== userId) {
-        throw new ConflictException(
-            'This phone number is already used by another account',
-        );
-    }
-
-    await this.smsService.sendVerificationCode(phoneNumber);
-
-    return {
-        message: 'Verification code sent',
-    };
-}
-
-
-
-
-
-
-
-
-
-async verifyAndSavePhoneNumber(
-    userId: number,
-    phoneNumber: string,
-    code: string,
-) {
-    // Guard: SMS provider not yet configured.
-    if (process.env.SMS_2FA_ENABLED !== 'true') {
-        throw new ServiceUnavailableException(
-            'SMS two-factor authentication is temporarily unavailable',
-        );
-    }
-
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    const existing = await this.userRepository.findOne({
-        where: { phoneNumber },
-    });
-
-    if (existing && existing.id !== userId) {
-        throw new ConflictException(
-            'This phone number is already used',
-        );
-    }
-
-    const verified = await this.smsService.verifyCode(
-        phoneNumber,
-        code,
-    );
-
-    if (!verified) {
-        throw new BadRequestException(
-            'Invalid or expired verification code',
-        );
-    }
-
-    user.phoneNumber = phoneNumber;
-    user.phoneVerified = true;
-
-    await this.userRepository.save(user);
-
-    return this.getSecuritySettings(userId);
-}
-
-
-
-
-
-
-
-
-
-async enableSms2fa(userId: number) {
-    // Guard: SMS provider not yet configured.
-    if (process.env.SMS_2FA_ENABLED !== 'true') {
-        throw new ServiceUnavailableException(
-            'SMS two-factor authentication is temporarily unavailable',
-        );
-    }
-
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    if (!user.phoneNumber || !user.phoneVerified) {
-        throw new BadRequestException(
-            'Verify your phone number before enabling 2FA',
-        );
-    }
-
-    user.sms2faEnabled = true;
-
-    await this.userRepository.save(user);
-
-    return this.getSecuritySettings(userId);
-}
-async disableSms2fa(
-    userId: number,
-    currentPassword: string,
-) {
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    const validPassword = await bcrypt.compare(
-        currentPassword,
-        user.passwordHash,
-    );
-
-    if (!validPassword) {
-        throw new UnauthorizedException(
-            'Current password is incorrect',
-        );
-    }
-
-    user.sms2faEnabled = false;
-
-    await this.userRepository.save(user);
-
-    return this.getSecuritySettings(userId);
-}
-async verifyLoginChallenge(
-    challengeToken: string,
-    code: string,
-) {
-    // Guard: SMS provider not yet configured.
-    if (process.env.SMS_2FA_ENABLED !== 'true') {
-        throw new ServiceUnavailableException(
-            'SMS two-factor authentication is temporarily unavailable',
-        );
-    }
-
-    const tokenHash = createHash('sha256')
-        .update(challengeToken)
-        .digest('hex');
-
-    const challenge = await this.loginChallengeRepository.findOne({
-        where: { tokenHash },
-    });
-
-    if (!challenge) {
-        throw new UnauthorizedException(
-            'Login challenge is invalid',
-        );
-    }
-
-    if (challenge.expiresAt.getTime() < Date.now()) {
-        await this.loginChallengeRepository.delete(challenge.id);
-
-        throw new UnauthorizedException(
-            'Login challenge expired',
-        );
-    }
-
-    const user = await this.userRepository.findOne({
-        where: { id: challenge.userId },
-    });
-
-    if (!user || !user.sms2faEnabled || !user.phoneNumber) {
-        throw new UnauthorizedException(
-            'Login challenge is no longer valid',
-        );
-    }
-
-    const verified = await this.smsService.verifyCode(
-        user.phoneNumber,
-        code,
-    );
-
-    if (!verified) {
-        throw new UnauthorizedException(
-            'Invalid SMS verification code',
-        );
-    }
-
-    await this.loginChallengeRepository.delete(challenge.id);
-
-    return this.issueAuthenticatedSession(user);
-}
-async getSecuritySettings(userId: number) {
-    const user = await this.userRepository.findOne({
-        where: { id: userId },
-    });
-
-    if (!user) {
-        throw new NotFoundException('User not found');
-    }
-
-    return {
-        phoneNumber: user.phoneNumber,
-        phoneVerified: user.phoneVerified,
-        sms2faEnabled: user.sms2faEnabled,
-        sms2faAvailable: process.env.SMS_2FA_ENABLED === 'true',
-        googleEmail: user.googleEmail,
-        googleLinked: Boolean(user.googleId),
-    };
-}
-  async validateCredentials(data : LoginDto){
-    const user = await this.userRepository.findOne({
-      where: {email: data.email.trim().toLowerCase()  },
-    });
-    if (!user)
-        throw new UnauthorizedException('Invalid contact or password');
-
-    const passwordMatches = await  bcrypt.compare(data.password, user.passwordHash,
-    );
-    if(!passwordMatches)
-        throw new UnauthorizedException('invalid contact or password');
-
-    return this.prepareLogin(user);
-
+    return this.completeLogin(user);
   }
 
-  // Password reset flow
-  // Step 1: Request password reset by email
   async requestPasswordReset(data: RequestPasswordResetDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -1025,7 +768,6 @@ async getSecuritySettings(userId: number) {
       where: { userId: user.id },
     });
 
-    // Rate limiting: prevent spamming reset requests
     if (
       challenge &&
       challenge.expiresAt.getTime() > now &&
@@ -1039,7 +781,7 @@ async getSecuritySettings(userId: number) {
     }
 
     const code = randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes
+    const expiresAt = new Date(now + 5 * 60 * 1000);
 
     if (!challenge) {
       challenge = this.passwordResetTokenRepository.create({
@@ -1051,8 +793,11 @@ async getSecuritySettings(userId: number) {
     }
 
     challenge.tokenHash = this.hashPasswordResetCode(user.id, code);
+    challenge.grantHash = null;
     challenge.expiresAt = expiresAt;
     challenge.used = false;
+    challenge.attempts = 0;
+    challenge.createdAt = new Date(now);
 
     await this.passwordResetTokenRepository.save(challenge);
 
@@ -1071,7 +816,6 @@ async getSecuritySettings(userId: number) {
     };
   }
 
-  // Step 2: Verify the password reset code
   async verifyPasswordReset(data: VerifyPasswordResetDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -1111,19 +855,26 @@ async getSecuritySettings(userId: number) {
       timingSafeEqual(storedBuffer, providedBuffer);
 
     if (!isValid) {
+      challenge.attempts = (challenge.attempts || 0) + 1;
+      if (challenge.attempts >= 5) {
+        await this.passwordResetTokenRepository.delete(challenge.id);
+      } else {
+        await this.passwordResetTokenRepository.save(challenge);
+      }
       throw new BadRequestException('Invalid verification code');
     }
 
-    // Mark code as verified so user can proceed to password reset
+    const grantToken = randomBytes(32).toString('hex');
     challenge.used = true;
+    challenge.grantHash = this.totpService.hashToken(grantToken);
     await this.passwordResetTokenRepository.save(challenge);
 
     return {
       message: 'Code verified successfully',
+      grantToken,
     };
   }
 
-  // Step 3: Reset password with verified code
   async resetPassword(data: ResetPasswordDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -1154,18 +905,32 @@ async getSecuritySettings(userId: number) {
       throw new BadRequestException('Password reset has expired');
     }
 
-    // Hash and update password
+    const providedGrantHash = this.totpService.hashToken(data.grantToken);
+
+    if (!challenge.grantHash) {
+      throw new BadRequestException('Invalid or expired reset grant');
+    }
+
+    const isValidGrant =
+      providedGrantHash.length === challenge.grantHash.length &&
+      timingSafeEqual(
+        Buffer.from(providedGrantHash),
+        Buffer.from(challenge.grantHash),
+      );
+
+    if (!isValidGrant) {
+      throw new BadRequestException('Invalid or expired reset grant');
+    }
+
     user.passwordHash = await bcrypt.hash(data.newPassword, 12);
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
     await this.userRepository.save(user);
 
-    // Clean up the challenge
     await this.passwordResetTokenRepository.delete(challenge.id);
 
     try {
       await this.mailService.sendPasswordResetCompleted(user.email);
     } catch {
-      // Password reset is already complete; notification failure must not
-      // roll back the database change.
     }
 
     return {
@@ -1173,12 +938,362 @@ async getSecuritySettings(userId: number) {
     };
   }
 
+  private hashRegistrationCode(sessionToken: string, code: string): string {
+    return createHash('sha256')
+        .update(`registration:${sessionToken}:${code}`)
+        .digest('hex');
+  }
+
   private hashPasswordResetCode(
     userId: number,
     code: string,
   ): string {
     return createHash('sha256')
-      .update(`${userId}:${code}`)
-      .digest('hex');
+        .update(`${userId}:${code}`)
+        .digest('hex');
   }
+
+
+  async setupTotp(userId: number, currentPassword: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!validPassword) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    await this.totpEnrollmentRepository.delete({ userId });
+
+    const secret = this.totpService.generateSecret();
+    const encryptedSecret = this.totpService.encryptSecret(secret);
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = this.totpService.hashToken(token);
+
+    const enrollment = this.totpEnrollmentRepository.create({
+      userId,
+      secretEncrypted: encryptedSecret,
+      tokenHash,
+      expiresAt: new Date(Date.now() + TOTP_LOGIN_CHALLENGE_TTL_MS),
+      attempts: 0,
+    });
+
+    await this.totpEnrollmentRepository.save(enrollment);
+
+    const provisioningUri = this.totpService.generateProvisioningUri(
+      user.email,
+      secret,
+    );
+
+    return {
+      token,
+      qrCodeUrl: provisioningUri,
+      secret: this.totpService.decryptSecret(encryptedSecret),
+    };
+  }
+
+  async verifyTotpSetup(userId: number, token: string, code: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const enrollment = await this.totpEnrollmentRepository.findOne({
+      where: { userId },
+    });
+
+    if (!enrollment) {
+      throw new BadRequestException('No pending TOTP enrollment found');
+    }
+
+    if (enrollment.expiresAt.getTime() < Date.now()) {
+      await this.totpEnrollmentRepository.delete(enrollment.id);
+      throw new BadRequestException('TOTP enrollment has expired');
+    }
+
+    if (enrollment.attempts >= TOTP_MAX_ATTEMPTS) {
+      await this.totpEnrollmentRepository.delete(enrollment.id);
+      throw new BadRequestException(
+        'tooManyTOTPAttempts',
+      );
+    }
+
+    const providedHash = this.totpService.hashToken(token);
+    const isValidToken =
+      providedHash.length === enrollment.tokenHash.length &&
+      timingSafeEqual(
+        Buffer.from(providedHash),
+        Buffer.from(enrollment.tokenHash),
+      );
+
+    if (!isValidToken) {
+      enrollment.attempts += 1;
+      await this.totpEnrollmentRepository.save(enrollment);
+      throw new BadRequestException('Invalid enrollment token');
+    }
+
+    if (!enrollment.secretEncrypted) {
+      await this.totpEnrollmentRepository.delete(enrollment.id);
+      throw new BadRequestException('No pending TOTP enrollment found');
+    }
+
+    const secret = this.totpService.decryptSecret(enrollment.secretEncrypted);
+
+    if (!this.totpService.verifyToken(secret, code)) {
+      enrollment.attempts += 1;
+      await this.totpEnrollmentRepository.save(enrollment);
+      throw new BadRequestException('Invalid TOTP verification code');
+    }
+
+    const recoveryCodes = this.totpService.generateRecoveryCodes(
+      RECOVERY_CODE_COUNT,
+    );
+    const codeHashes = recoveryCodes.map((code) => ({
+      userId,
+      codeHash: this.totpService.hashToken(code),
+      used: false,
+    }));
+
+    await this.totpRecoveryCodeRepository.delete({ userId });
+    await this.totpRecoveryCodeRepository.save(codeHashes);
+
+    user.totpEnabled = true;
+    user.totpSecretEncrypted = enrollment.secretEncrypted;
+    user.totpLastUsedStep = null;
+
+    await this.userRepository.save(user);
+    await this.totpEnrollmentRepository.delete(enrollment.id);
+
+    return {
+      recoveryCodes,
+      message: 'TOTP two-factor authentication enabled successfully',
+    };
+  }
+
+
+  private async createTotpLoginChallenge(userId: number) {
+    await this.totpLoginChallengeRepository.delete({ userId });
+
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = this.totpService.hashToken(token);
+
+    const challenge = this.totpLoginChallengeRepository.create({
+      userId,
+      tokenHash,
+      expiresAt: new Date(Date.now() + TOTP_LOGIN_CHALLENGE_TTL_MS),
+      attempts: 0,
+    });
+
+    await this.totpLoginChallengeRepository.save(challenge);
+
+    return {
+      requiresTwoFactor: true,
+      challengeToken: token,
+      message: 'TOTP verification required',
+    };
+  }
+
+  async verifyTotpLogin(challengeToken: string, code: string) {
+    const tokenHash = this.totpService.hashToken(challengeToken);
+
+    const challenge = await this.totpLoginChallengeRepository.findOne({
+      where: { tokenHash },
+    });
+
+    if (!challenge) {
+      throw new UnauthorizedException('Login challenge is invalid');
+    }
+
+    if (challenge.expiresAt.getTime() < Date.now()) {
+      await this.totpLoginChallengeRepository.delete(challenge.id);
+      throw new UnauthorizedException('Login challenge expired');
+    }
+
+    if (challenge.attempts >= TOTP_MAX_ATTEMPTS) {
+      await this.totpLoginChallengeRepository.delete(challenge.id);
+      throw new UnauthorizedException(
+        'Too many incorrect attempts. Please log in again.',
+      );
+    }
+
+    const user = await this.userRepository.findOne({
+      where: { id: challenge.userId },
+    });
+
+    if (!user || !user.totpEnabled || !user.totpSecretEncrypted) {
+      await this.totpLoginChallengeRepository.delete(challenge.id);
+      throw new UnauthorizedException(
+        'Login challenge is no longer valid',
+      );
+    }
+
+    const secret = this.totpService.decryptSecret(user.totpSecretEncrypted);
+
+    const currentStep = Math.floor(Date.now() / 1000 / 30);
+    let isValid = this.totpService.verifyToken(secret, code);
+
+    if (isValid && user.totpLastUsedStep === currentStep.toString()) {
+      isValid = false;
+    }
+
+    let recoveryCodeUsed = false;
+    if (!isValid && await this.consumeRecoveryCode(user.id, code)) {
+      isValid = true;
+      recoveryCodeUsed = true;
+    }
+
+    if (!isValid) {
+      await this.totpLoginChallengeRepository.update(
+        { id: challenge.id },
+        { attempts: () => 'attempts + 1' },
+      );
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    if (!recoveryCodeUsed) {
+      user.totpLastUsedStep = currentStep.toString();
+    }
+
+    await this.totpLoginChallengeRepository.delete({ id: challenge.id });
+
+    await this.userRepository.update({ id: user.id }, { totpLastUsedStep: user.totpLastUsedStep });
+
+    return this.issueAuthenticatedSession(user);
+  }
+
+
+  async disableTotp(
+    userId: number,
+    currentPassword: string,
+    code: string,
+  ) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!validPassword) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    const secret = user.totpSecretEncrypted
+      ? this.totpService.decryptSecret(user.totpSecretEncrypted)
+      : null;
+
+    let isValid = false;
+
+    if (secret && this.totpService.verifyToken(secret, code)) {
+      isValid = true;
+    }
+
+    if (!isValid && await this.consumeRecoveryCode(userId, code)) {
+      isValid = true;
+    }
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    user.totpEnabled = false;
+    user.totpSecretEncrypted = null;
+    user.totpLastUsedStep = null;
+
+    await this.totpRecoveryCodeRepository.delete({ userId });
+    await this.userRepository.save(user);
+
+    return this.getSecuritySettings(userId);
+  }
+
+  async regenerateRecoveryCodes(userId: number, currentPassword: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const validPassword = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!validPassword) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (!user.totpEnabled) {
+      throw new BadRequestException('TOTP is not enabled');
+    }
+
+    await this.totpRecoveryCodeRepository.delete({ userId });
+
+    const recoveryCodes = this.totpService.generateRecoveryCodes(
+      RECOVERY_CODE_COUNT,
+    );
+    const codeHashes = recoveryCodes.map((code) => ({
+      userId,
+      codeHash: this.totpService.hashToken(code),
+      used: false,
+    }));
+
+    await this.totpRecoveryCodeRepository.save(codeHashes);
+
+    return {
+      recoveryCodes,
+      message: 'Recovery codes regenerated successfully',
+    };
+  }
+
+  async validateCredentials(data : LoginDto){
+    const user = await this.userRepository.findOne({
+      where: {email: data.email.trim().toLowerCase()  },
+    });
+    if (!user)
+        throw new UnauthorizedException('Invalid contact or password');
+
+    const passwordMatches = await  bcrypt.compare(data.password, user.passwordHash,
+    );
+    if(!passwordMatches)
+        throw new UnauthorizedException('invalid contact or password');
+
+    return this.completeLogin(user);
+  }
+
+  async getSecuritySettings(userId: number) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return {
+      totp2faEnabled: user.totpEnabled,
+      googleEmail: user.googleEmail,
+      googleLinked: Boolean(user.googleId),
+    };
+  }
+
 }

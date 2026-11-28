@@ -25,7 +25,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'Data we collect',
                     paragraphs: [
-                        'Account data: first name, last name, date of birth, gender and email address. If you enable SMS two-factor authentication, we also store your phone number and whether it is verified. If you link a Google account, we store its Google account identifier and verified email address.',                    ],
+                        'Account data: first name, last name, date of birth, gender and email address. If you enable authenticator two-factor authentication, we store encrypted TOTP setup data and hashed recovery codes. If you link a Google account, we store its Google account identifier and verified email address.',                    ],
                 },
                 {
                     heading: 'How we use your data',
@@ -154,7 +154,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'Données collectées',
                     paragraphs: [
-                        "Données du compte : prénom, nom, date de naissance, genre et adresse e-mail. Si vous activez l'authentification à deux facteurs par SMS, nous enregistrons aussi votre numéro de téléphone et son statut de vérification. Si vous associez un compte Google, nous conservons son identifiant Google et son adresse e-mail vérifiée.",                    ],
+                        "Données du compte : prénom, nom, date de naissance, genre et adresse e-mail. Si vous activez l’authentification à deux facteurs par application, nous conservons les données TOTP chiffrées et les codes de récupération hachés. Si vous associez un compte Google, nous conservons son identifiant Google et son adresse e-mail vérifiée.",                    ],
                 },
                 {
                     heading: 'Utilisation des données',
@@ -283,7 +283,7 @@ export const legalContent: Record<Language, Record<LegalKind, LegalDocument>> = 
                 {
                     heading: 'البيانات التي نجمعها',
                     paragraphs: [
-                    'بيانات الحساب: الاسم الشخصي، اسم العائلة، تاريخ الميلاد، الجنس والبريد الإلكتروني. عند تفعيل المصادقة الثنائية عبر SMS، نخزن رقم هاتفك وحالة التحقق منه. وعند ربط حساب Google، نخزن معرّف حساب Google والبريد الإلكتروني الموثق المرتبط به.',                    ],
+                    'بيانات الحساب: الاسم الشخصي، اسم العائلة، تاريخ الميلاد، الجنس والبريد الإلكتروني. عند تفعيل المصادقة الثنائية عبر تطبيق، نخزن بيانات TOTP المشفرة ورموز الاسترداد المَجزّأة. وعند ربط حساب Google، نخزن معرّف حساب Google والبريد الإلكتروني الموثق المرتبط به.',                    ],
                 },
                 {
                     heading: 'كيف نستعمل بياناتك',

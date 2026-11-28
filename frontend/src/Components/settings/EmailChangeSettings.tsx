@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Mail } from 'lucide-react';
+import validator from 'validator';
 
 import type { Language } from '../../types';
 import { translations } from '../../translations';
@@ -107,6 +108,11 @@ export function EmailChangeSettings({
             return;
         }
 
+        if (!validator.isEmail(newEmail.trim())) {
+            setErrorKey('invalidEmail');
+            return;
+        }
+
         if (newEmail.trim().toLowerCase() === currentEmail.trim().toLowerCase()) {
             setErrorKey('emailSameAsCurrent');
             return;
@@ -197,7 +203,8 @@ export function EmailChangeSettings({
                         <Label htmlFor="newEmail">{t.newEmail}</Label>
                         <Input
                             id="newEmail"
-                            type="email"
+                            type="text"
+                            inputMode="email"
                             dir={direction}
                             autoComplete="email"
                             value={newEmail}

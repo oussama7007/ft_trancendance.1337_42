@@ -6,6 +6,9 @@ export class RegistrationSession
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ type: 'uuid', unique: true, default: () => 'gen_random_uuid()' })
+  token: string;
+
   @Column()
   firstName: string;
 
@@ -23,11 +26,14 @@ export class RegistrationSession
   @Column({ nullable: true })
   email: string;
 
-  @Column({ nullable: true })
-  verificationCode?: string;
+  @Column({ type: 'varchar', nullable: true })
+  verificationCode?: string | null;
+
+  @Column({ type: 'integer', default: 0 })
+  verificationAttempts: number;
 
   @Column({ type: 'timestamp', nullable: true })
-  verificationCodeExpiresAt?: Date;
+  verificationCodeExpiresAt?: Date | null;
 
   @Column({ default: false })
   isVerified: boolean;

@@ -88,9 +88,8 @@ export const ListingsPage: React.FC<ListingsPageProps> = ({ lang, currentUserId 
                 );
                 setListings(data);
                 setMeta(meta);
-            } catch (error) {
+            } catch {
                 if (controller.signal.aborted) return;
-                console.error(error);
                 setHasError(true);
             } finally {
                 if (!controller.signal.aborted) setIsLoading(false);

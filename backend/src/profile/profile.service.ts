@@ -37,8 +37,6 @@ export class ProfileService {
 
     const updatedUser = await this.userRepository.save(user);
 
-    // Delete the previous avatar only if it belongs
-    // to the application's avatar upload directory.
     if (
         oldAvatar &&
         oldAvatar.startsWith('/uploads/avatars/') &&

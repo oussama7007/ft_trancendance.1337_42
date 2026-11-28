@@ -58,7 +58,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ lang }) => {
                     return;
                 }
 
-                console.error(error);
                 setHasError(true);
             } finally {
                 if (!controller.signal.aborted) {

@@ -1,9 +1,8 @@
-import { IsInt, IsString, IsPositive, MinLength, Matches, MaxLength } from 'class-validator';
+import { IsString, IsUUID, MinLength, Matches, MaxLength } from 'class-validator';
 
 export class FinishRegistrationDto {
-  @IsInt()
-  @IsPositive()
-  sessionId: number;
+  @IsUUID('4')
+  sessionId: string;
 
   @IsString()
   @MinLength(8)

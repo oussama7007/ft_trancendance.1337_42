@@ -1,11 +1,10 @@
-import { IsInt, IsString, IsPositive, Length } from 'class-validator';
+import { IsString, IsUUID, Matches } from 'class-validator';
 
 export class VerifyRegistrationDto {
-  @IsInt()
-  @IsPositive()
-  sessionId: number;
+  @IsUUID('4')
+  sessionId: string;
 
   @IsString()
-  @Length(6, 6)
+  @Matches(/^\d{6}$/, { message: 'Verification code must be 6 digits' })
   code: string;
 }

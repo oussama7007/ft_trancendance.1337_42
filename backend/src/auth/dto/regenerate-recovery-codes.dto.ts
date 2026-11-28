@@ -3,7 +3,7 @@ import {
     IsString,
 } from 'class-validator';
 
-export class DisableSms2faDto {
+export class RegenerateRecoveryCodesDto {
     @IsString()
     @IsNotEmpty()
     currentPassword: string;
