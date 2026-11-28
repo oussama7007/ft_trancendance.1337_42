@@ -123,22 +123,16 @@ function App() {
                     credentials: 'include',
                 });
 
-                if (response.status === 401) {
-                    // 401 is a normal result for a visitor who is not signed in.
-                    if (isMounted) {
-                        setCurrentUser(null);
-                    }
-                    return;
-                }
-
                 if (!response.ok) {
                     throw new Error(`Session check failed: ${response.status}`);
                 }
 
-                const user: BackendUser = await response.json();
+                // A visitor who is not signed in gets 200 with an empty body.
+                const body = await response.text();
+                const user: BackendUser | null = body ? JSON.parse(body) : null;
 
                 if (isMounted) {
-                    setCurrentUser(mapBackendUser(user));
+                    setCurrentUser(user ? mapBackendUser(user) : null);
                 }
             } catch (error) {
                 // The public pages can still work without a restored session.
