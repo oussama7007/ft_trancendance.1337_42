@@ -273,7 +273,6 @@ describe('AuthService - Authentication Security', () => {
                 UnauthorizedException,
             );
 
-            // Verify findOne was called only with googleId, not googleEmail
             expect(mockUserRepository.findOne).toHaveBeenCalledWith({
                 where: { googleId: 'google-sub-123' },
             });
@@ -495,18 +494,16 @@ describe('AuthService - Authentication Security', () => {
                 totpLastUsedStep: null,
             } as any;
 
-            // Any of the 8 codes must work, not only the first unused one.
             const thirdCode = 'C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3C3';
 
             mockTotpLoginChallengeRepository.findOne.mockResolvedValue(challenge);
             mockUserRepository.findOne.mockResolvedValue(user);
             mockTotpService.decryptSecret.mockReturnValue('secret');
-            mockTotpService.verifyToken.mockReturnValue(false); // TOTP code invalid
+            mockTotpService.verifyToken.mockReturnValue(false);
             mockTotpService.hashToken.mockImplementation(sha256);
             mockTotpRecoveryCodeRepository.update.mockResolvedValue({ affected: 1 });
             mockJwtService.signAsync.mockResolvedValue('jwt-token');
 
-            // Lower case and spaces are accepted, like a user typing it.
             const result = await service.verifyTotpLogin('challenge-token', ' c3c3c3c3 c3c3c3c3c3c3c3c3c3c3c3c3 ');
 
             expect(result.accessToken).toBe('jwt-token');
@@ -532,7 +529,6 @@ describe('AuthService - Authentication Security', () => {
             mockTotpService.decryptSecret.mockReturnValue('secret');
             mockTotpService.verifyToken.mockReturnValue(false);
             mockTotpService.hashToken.mockImplementation(sha256);
-            // The conditional UPDATE matches nothing: code missing or already used.
             mockTotpRecoveryCodeRepository.update.mockResolvedValue({ affected: 0 });
 
             await expect(
@@ -561,7 +557,6 @@ describe('AuthService - Authentication Security', () => {
 
             expect(challenge.used).toBe(true);
             expect(result.grantToken).toMatch(/^[0-9a-f]{64}$/);
-            // The database keeps only the hash, never the grant itself.
             expect(challenge.grantHash).toBe(sha256(result.grantToken));
             expect(challenge.grantHash).not.toBe(result.grantToken);
         });
@@ -685,13 +680,11 @@ describe('AuthService - Authentication Security', () => {
                     service.verifyRegistration({ sessionId: session.token, code: wrongCode }),
                 ).rejects.toThrow('Invalid verification code');
             }
-            // 5th wrong attempt: the code is cancelled.
             await expect(
                 service.verifyRegistration({ sessionId: session.token, code: wrongCode }),
             ).rejects.toThrow('Too many incorrect attempts');
             expect(session.verificationCode).toBeNull();
 
-            // Even the right code no longer works; a new code must be requested.
             await expect(
                 service.verifyRegistration({ sessionId: session.token, code: sentCode }),
             ).rejects.toThrow('Request a verification code first');

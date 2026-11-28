@@ -74,7 +74,6 @@ export function ProfileSidebar({t, children} : ProfileSidebarProps) {
                             type="button"
                             title={`${label} (${t.comingSoon})`}
                             aria-label={`${label}, ${t.comingSoon}`}
-                            // disabled
                             className="flex h-12 w-12 cursor-not-allowed items-center justify-center rounded-xl text-(--color-muted) opacity-60"
                         >
                             <Icon size={22} strokeWidth={1.9} />

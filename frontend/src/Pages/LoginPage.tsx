@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
 import { ForgotPasswordModal } from "@/Components/auth/ForgotPasswordModal";
 
-// Backend URL
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 type LoginUser = {
@@ -44,11 +43,9 @@ export function LoginPage({ lang ,onLoginSuccess }: LoginPageProps) {
 
     const [challengeToken, setChallengeToken] = useState('');
     const [totpCode, setTotpCode] = useState('');
-    // Form values
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    // Form status
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
     const [loginErrorKey, setLoginErrorKey] = useState<
@@ -287,7 +284,6 @@ return (
                 </form>
                 ) : (
                 <>
-                    {/* Keep your existing email/password form here */}
 
                      <form
                             onSubmit={handleLogin}

@@ -38,12 +38,8 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [countdown, setCountdown] = useState(0);
-    // Single-use grant returned by the backend after the code is verified.
     const [grantToken, setGrantToken] = useState("");
 
-    // One timer while the user is entering the code. It is cleared on every
-    // change, so going back and re-sending never runs two timers, and it
-    // cannot move the user away from the "reset" or "success" steps.
     useEffect(() => {
         if (step !== "verify") return;
 
@@ -74,7 +70,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         return errorMap[backendMessage] || backendMessage;
     };
 
-    // Request password reset code
     const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError("");
@@ -114,7 +109,7 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
             }
 
             setGrantToken("");
-            setCountdown(300); // 5 minutes
+            setCountdown(300);
             setStep("verify");
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "An error occurred";
@@ -124,7 +119,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         }
     };
 
-    // Verify password reset code
     const handleVerifyCode = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setError("");
@@ -173,7 +167,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         }
     };
 
-    // Reset password
     const handleResetPassword = async (
         event: FormEvent<HTMLFormElement>
     ) => {
@@ -395,8 +388,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                     type="button"
                                     variant="outline"
                                     onClick={() => {
-                                        // The code was already used to get the
-                                        // grant, so start again from the email step.
                                         setStep("email");
                                         setCode("");
                                         setGrantToken("");

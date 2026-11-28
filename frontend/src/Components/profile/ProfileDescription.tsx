@@ -30,7 +30,6 @@ export function ProfileDescription({ description, onSave, t }: ProfileDescriptio
             setError('');
             setSaving(true);
             await onSave(draft.trim());
-            // Close only after successful save.
             setIsEditing(false);
         } catch (err) {
             setError(

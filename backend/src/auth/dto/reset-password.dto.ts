@@ -4,12 +4,10 @@ export class ResetPasswordDto {
     @IsEmail()
     email: string;
 
-    // Single-use grant returned by POST /auth/password/reset/verify.
     @IsHexadecimal()
     @Length(64, 64)
     grantToken: string;
 
-    // Same password policy as registration (finish-registration.dto.ts).
     @IsString()
     @MinLength(8)
     @MaxLength(64)

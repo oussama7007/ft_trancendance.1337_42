@@ -4,12 +4,10 @@ export class AddTotpTwoFactor1795300000000 implements MigrationInterface {
     name = 'AddTotpTwoFactor1795300000000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        // Add TOTP columns to user table
         await queryRunner.query(`ALTER TABLE "user" ADD "totpEnabled" boolean NOT NULL DEFAULT false`);
         await queryRunner.query(`ALTER TABLE "user" ADD "totpSecretEncrypted" text`);
         await queryRunner.query(`ALTER TABLE "user" ADD "totpLastUsedStep" character varying`);
 
-        // Create totp_enrollment table (for pending enrollment and login challenges)
         await queryRunner.query(`CREATE TABLE "totp_enrollment" (
             "id" SERIAL NOT NULL,
             "userId" integer NOT NULL,
@@ -21,7 +19,6 @@ export class AddTotpTwoFactor1795300000000 implements MigrationInterface {
             CONSTRAINT "PK_totp_enrollment" PRIMARY KEY ("id")
         )`);
 
-        // Create totp_recovery_codes table
         await queryRunner.query(`CREATE TABLE "totp_recovery_codes" (
             "id" SERIAL NOT NULL,
             "userId" integer NOT NULL,
@@ -31,7 +28,6 @@ export class AddTotpTwoFactor1795300000000 implements MigrationInterface {
             CONSTRAINT "PK_totp_recovery_codes" PRIMARY KEY ("id")
         )`);
 
-        // Add foreign key constraints
         await queryRunner.query(`ALTER TABLE "totp_enrollment" ADD CONSTRAINT "FK_totp_enrollment_user" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE`);
         await queryRunner.query(`ALTER TABLE "totp_recovery_codes" ADD CONSTRAINT "FK_totp_recovery_codes_user" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE`);
     }

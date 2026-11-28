@@ -30,7 +30,6 @@ type GoogleWindow = Window & {
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 
-// Google limits the rendered button width to this range (in px).
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 
@@ -41,12 +40,6 @@ function getGoogleIdentity() {
     return (window as GoogleWindow).google?.accounts?.id;
 }
 
-/**
- * Google draws the button label in the language given by the `hl` parameter
- * of the GSI script (the per-button `locale` option does not change the
- * text). So the script is (re)loaded with the current app language. Loads are
- * queued so a fast language switch cannot leave an older language active.
- */
 function loadGoogleScript(lang: string): Promise<void> {
     loadQueue = loadQueue
         .catch(() => undefined)
@@ -87,11 +80,6 @@ interface GoogleSignInButtonProps {
     disabled?: boolean;
 }
 
-/**
- * Google's official "Sign in with Google" button. It returns an ID token
- * (credential) that the backend verifies, and its label follows the app
- * language (ar / fr / en), including when the language is switched.
- */
 export function GoogleSignInButton({
     lang,
     onCredential,

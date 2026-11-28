@@ -18,11 +18,11 @@ export const passwordRules = [
     {
         label: "One special character",
         test: (password: string) =>
-            /[^\p{L}\p{N}\s]/u.test(password), //  hadi ^ kat3ni (not) b7al !, \p{L} hadi kat3ni جميع الحروف (Letters): تشمل أي حرف من أي لغة في العالم (الإنجليزية a-z، العربية أ-ي، الفرنسية é، وغيرها). , \p{N} جميع الأرقام (Numbers):(١, ٢, ٣, ٤, ٥, ٦, ٧, ٨, ) تشمل الأرقام المعتادة 0-9 وأي أرقام بأي لغة أخرى. 
+            /[^\p{L}\p{N}\s]/u.test(password),
     },
     {
         label: "Maximum 64 characters",
-        test: (password: string) => password.length <= 64, // NIST Guidelines
+        test: (password: string) => password.length <= 64,
     },
 ];
 

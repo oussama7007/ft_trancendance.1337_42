@@ -52,7 +52,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { MailService } from '../mail/mail.service.js';
 
 const VERIFICATION_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
-const TOTP_LOGIN_CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const TOTP_LOGIN_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const TOTP_MAX_ATTEMPTS = 5;
 const RECOVERY_CODE_COUNT = 8;
 const REGISTRATION_MAX_ATTEMPTS = 5;
@@ -154,7 +154,6 @@ export class AuthService {
         throw new NotFoundException('User not found');
     }
 
-    // Reauthenticate with current password for password-based accounts
     if (user.passwordHash) {
         const passwordMatches = await bcrypt.compare(
             currentPassword ?? '',
@@ -166,7 +165,6 @@ export class AuthService {
         }
     }
 
-    // Require TOTP verification if TOTP is enabled
     if (user.totpEnabled) {
         const validTotp = await this.verifyTotpCodeForReauth(user, code);
 
@@ -211,9 +209,6 @@ export class AuthService {
     return this.consumeRecoveryCode(user.id, code);
   }
 
-  // Accepts any of the user's unused recovery codes, not only the first one.
-  // The code is looked up by its hash and marked as used in one UPDATE, so
-  // the same code cannot be used twice, even by two parallel requests.
   private async consumeRecoveryCode(userId: number, code: string): Promise<boolean> {
     const normalized = code.trim().replace(/\s+/g, '').toUpperCase();
 
@@ -262,14 +257,7 @@ export class AuthService {
     return this.issueAuthenticatedSession(user);
   }
 
-  /**
-   * Complete login after credentials are verified.
-   * Checks if TOTP is enabled and either creates a login challenge
-   * or issues the authenticated session directly.
-   * Used by both email/password and Google login paths.
-   */
   private async completeLogin(user: User) {
-    // If TOTP 2FA is enforced, create a login challenge
     if (user.totpEnabled) {
         return this.createTotpLoginChallenge(user.id);
     }
@@ -634,7 +622,6 @@ export class AuthService {
       session.verificationAttempts = (session.verificationAttempts || 0) + 1;
 
       if (session.verificationAttempts >= REGISTRATION_MAX_ATTEMPTS) {
-        // Too many wrong codes: this code is no longer accepted.
         session.verificationCode = null;
         session.verificationCodeExpiresAt = null;
         await this.registrationSessionRepository.save(session);
@@ -781,7 +768,6 @@ export class AuthService {
       where: { userId: user.id },
     });
 
-    // Rate limiting: prevent spamming reset requests
     if (
       challenge &&
       challenge.expiresAt.getTime() > now &&
@@ -795,7 +781,7 @@ export class AuthService {
     }
 
     const code = randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(now + 5 * 60 * 1000); // 5 minutes
+    const expiresAt = new Date(now + 5 * 60 * 1000);
 
     if (!challenge) {
       challenge = this.passwordResetTokenRepository.create({
@@ -807,13 +793,10 @@ export class AuthService {
     }
 
     challenge.tokenHash = this.hashPasswordResetCode(user.id, code);
-    // The grant is only created after the code is verified (step 2).
     challenge.grantHash = null;
     challenge.expiresAt = expiresAt;
     challenge.used = false;
     challenge.attempts = 0;
-    // The resend cooldown is measured from this time, so it must be updated
-    // every time a new code is sent (the row is reused).
     challenge.createdAt = new Date(now);
 
     await this.passwordResetTokenRepository.save(challenge);
@@ -833,7 +816,6 @@ export class AuthService {
     };
   }
 
-  // Step 2: Verify the password reset code and issue a single-use grant
   async verifyPasswordReset(data: VerifyPasswordResetDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -882,8 +864,6 @@ export class AuthService {
       throw new BadRequestException('Invalid verification code');
     }
 
-    // Mark code as verified and issue a single-use grant. The browser gets
-    // the raw grant; the database keeps only its hash.
     const grantToken = randomBytes(32).toString('hex');
     challenge.used = true;
     challenge.grantHash = this.totpService.hashToken(grantToken);
@@ -895,7 +875,6 @@ export class AuthService {
     };
   }
 
-  // Step 3: Reset password with verified code and single-use grant
   async resetPassword(data: ResetPasswordDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -926,7 +905,6 @@ export class AuthService {
       throw new BadRequestException('Password reset has expired');
     }
 
-    // Verify the single-use grant token
     const providedGrantHash = this.totpService.hashToken(data.grantToken);
 
     if (!challenge.grantHash) {
@@ -944,19 +922,15 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset grant');
     }
 
-    // Hash and update password, and increment the session version
     user.passwordHash = await bcrypt.hash(data.newPassword, 12);
     user.sessionVersion = (user.sessionVersion || 0) + 1;
     await this.userRepository.save(user);
 
-    // Clean up the challenge
     await this.passwordResetTokenRepository.delete(challenge.id);
 
     try {
       await this.mailService.sendPasswordResetCompleted(user.email);
     } catch {
-      // Password reset is already complete; notification failure must not
-      // roll back the database change.
     }
 
     return {
@@ -979,7 +953,6 @@ export class AuthService {
         .digest('hex');
   }
 
-  // --- TOTP 2FA Setup ---
 
   async setupTotp(userId: number, currentPassword: string) {
     const user = await this.userRepository.findOne({
@@ -1084,7 +1057,6 @@ export class AuthService {
       throw new BadRequestException('Invalid TOTP verification code');
     }
 
-    // Generate recovery codes
     const recoveryCodes = this.totpService.generateRecoveryCodes(
       RECOVERY_CODE_COUNT,
     );
@@ -1097,7 +1069,6 @@ export class AuthService {
     await this.totpRecoveryCodeRepository.delete({ userId });
     await this.totpRecoveryCodeRepository.save(codeHashes);
 
-    // Activate TOTP
     user.totpEnabled = true;
     user.totpSecretEncrypted = enrollment.secretEncrypted;
     user.totpLastUsedStep = null;
@@ -1111,10 +1082,8 @@ export class AuthService {
     };
   }
 
-  // --- TOTP Login Challenge ---
 
   private async createTotpLoginChallenge(userId: number) {
-    // Clean up any existing challenge
     await this.totpLoginChallengeRepository.delete({ userId });
 
     const token = randomBytes(32).toString('hex');
@@ -1172,16 +1141,13 @@ export class AuthService {
 
     const secret = this.totpService.decryptSecret(user.totpSecretEncrypted);
 
-    // Try TOTP code first with replay protection
     const currentStep = Math.floor(Date.now() / 1000 / 30);
     let isValid = this.totpService.verifyToken(secret, code);
 
-    // Replay protection: reject if this time step was already used
     if (isValid && user.totpLastUsedStep === currentStep.toString()) {
       isValid = false;
     }
 
-    // If not valid, try recovery codes
     let recoveryCodeUsed = false;
     if (!isValid && await this.consumeRecoveryCode(user.id, code)) {
       isValid = true;
@@ -1189,7 +1155,6 @@ export class AuthService {
     }
 
     if (!isValid) {
-      // Atomic increment using TypeORM update with condition
       await this.totpLoginChallengeRepository.update(
         { id: challenge.id },
         { attempts: () => 'attempts + 1' },
@@ -1197,21 +1162,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid verification code');
     }
 
-    // Mark this time step as used to prevent replay (TOTP codes only)
     if (!recoveryCodeUsed) {
       user.totpLastUsedStep = currentStep.toString();
     }
 
-    // Atomic consumption: delete challenge only if still valid
     await this.totpLoginChallengeRepository.delete({ id: challenge.id });
 
-    // Update user with replay protection step
     await this.userRepository.update({ id: user.id }, { totpLastUsedStep: user.totpLastUsedStep });
 
     return this.issueAuthenticatedSession(user);
   }
 
-  // --- TOTP Disable ---
 
   async disableTotp(
     userId: number,

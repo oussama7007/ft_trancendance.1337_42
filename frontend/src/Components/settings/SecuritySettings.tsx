@@ -94,7 +94,6 @@ export function SecuritySettings({ lang }: Props) {
     const [isPasswordChanging, setIsPasswordChanging] = useState(false);
     const [isTotpLoading, setIsTotpLoading] = useState(false);
 
-    // TOTP state
     const [totpSetupStep, setTotpSetupStep] = useState<SetupStep>('idle');
     const [totpToken, setTotpToken] = useState<string | null>(null);
     const [totpQrCode, setTotpQrCode] = useState<string | null>(null);
@@ -167,8 +166,6 @@ export function SecuritySettings({ lang }: Props) {
             setIsPasswordChanging(false);
         }
     }
-
-    // --- TOTP functions ---
 
     async function startTotpSetup() {
         setSecurityError('');
@@ -309,7 +306,6 @@ export function SecuritySettings({ lang }: Props) {
             });
 
             setRecoveryCodes(data.recoveryCodes);
-            // Show the new codes; the old ones no longer work.
             setTotpSetupStep('showRecovery');
             setDisablePassword('');
             setSecurityMessage(t.recoveryRegenerated);
@@ -328,7 +324,6 @@ export function SecuritySettings({ lang }: Props) {
 
     return (
         <div className="flex flex-col gap-5">
-            {/* Password settings */}
             <AccountSection
                 title={t.passwordTitle}
                 icon={Lock}
@@ -399,13 +394,11 @@ export function SecuritySettings({ lang }: Props) {
                 </form>
             </AccountSection>
 
-            {/* Authenticator two-factor authentication (TOTP) */}
             <AccountSection
                 title={t.totpTitle}
                 icon={QrCode}
             >
                 <div className="space-y-4">
-                    {/* TOTP status */}
                     <div className="flex items-center gap-2 text-sm">
                         <ShieldCheck size={18} />
                         <span>

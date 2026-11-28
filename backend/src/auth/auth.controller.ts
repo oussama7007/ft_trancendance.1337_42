@@ -138,8 +138,6 @@ async login(
 
 
 
-  // Visitors who are not signed in get 200 with an empty body (null), so the
-  // browser console stays free of 401 errors on every page load.
   @Get('me')
   @UseGuards(OptionalJwtAuthGuard)
   async getCurrentUser(@Req() request: AuthenticatedRequest) {
@@ -149,7 +147,6 @@ async login(
     try {
       return await this.authService.getCurrentUser(request.user.sub);
     } catch (error) {
-      // The account behind a still-valid token was deleted: treat as signed out.
       if (error instanceof NotFoundException)
         return null;
       throw error;

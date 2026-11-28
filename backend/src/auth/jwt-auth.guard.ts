@@ -56,13 +56,6 @@ export class JwtAuthGuard implements CanActivate {
   }
 }
 
-/**
- * Like JwtAuthGuard, but lets the request through without a user when the
- * token is missing or invalid. Used for GET /auth/me, where "not signed in"
- * is a normal answer (200 with null), not an error. A 401 there would show a
- * red "Failed to load resource" error in the browser console on every page
- * load for visitors.
- */
 @Injectable()
 export class OptionalJwtAuthGuard extends JwtAuthGuard {
   async canActivate(context: ExecutionContext): Promise<boolean> {

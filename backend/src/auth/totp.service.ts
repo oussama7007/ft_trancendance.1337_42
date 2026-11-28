@@ -8,10 +8,10 @@ const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 const TAG_LENGTH = 16;
 
-const TOTP_INTERVAL = 30; // seconds
+const TOTP_INTERVAL = 30;
 const TOTP_DIGITS = 6;
 const TOTP_ALGORITHM = 'sha1';
-const TOTP_WINDOW = 1; // allow ±1 time step for clock drift
+const TOTP_WINDOW = 1;
 
 function getEncryptionKey(): Buffer {
     const keyHex = process.env.TOTP_ENCRYPTION_KEY;
@@ -56,9 +56,6 @@ function hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-/**
- * Generate a base32-encoded random secret (RFC 4648 base32).
- */
 function generateBase32Secret(length = 32): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     const bytes = crypto.randomBytes(length);
@@ -76,9 +73,6 @@ function generateBase32Secret(length = 32): string {
     return result;
 }
 
-/**
- * Decode a base32-encoded string (RFC 4648) into a byte array.
- */
 function decodeBase32(secret: string): Uint8Array {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     const clean = secret.replace(/=+$/, '').toUpperCase();
@@ -95,15 +89,12 @@ function decodeBase32(secret: string): Uint8Array {
         if (bitsLeft >= 8) {
             bytes.push((buffer >> (bitsLeft - 8)) & 0xff);
             bitsLeft -= 8;
-            buffer &= (1 << bitsLeft) - 1; // keep only remaining bits
+            buffer &= (1 << bitsLeft) - 1;
         }
     }
     return new Uint8Array(bytes);
 }
 
-/**
- * Compute the TOTP code for a given secret and time counter (RFC 6238).
- */
 function computeTotp(secret: string, counter: number): string {
     const key = decodeBase32(secret);
     const keyBuffer = Buffer.from(key);
@@ -116,7 +107,6 @@ function computeTotp(secret: string, counter: number): string {
     hmac.update(counterBuffer);
     const hash = hmac.digest();
 
-    // Dynamic truncation (RFC 4226)
     const offset = hash[hash.length - 1] & 0x0f;
     const binary =
         ((hash[offset] & 0x7f) << 24) |
@@ -137,10 +127,6 @@ export class TotpService {
     private readonly logger = new Logger(TotpService.name);
     private readonly issuer = 'iRent';
 
-    /**
-     * Generate a base32-encoded random secret (RFC 4648 base32).
-     * Uses 20 bytes (160 bits) which aligns perfectly with 32 base32 characters.
-     */
     generateSecret(length = 20): string {
         return generateBase32Secret(length);
     }
@@ -153,7 +139,6 @@ export class TotpService {
     verifyToken(secret: string, token: string): boolean {
         try {
             const currentStep = getCurrentTimeStep();
-            // Accept current step and ±window steps for clock drift
             for (let i = -TOTP_WINDOW; i <= TOTP_WINDOW; i++) {
                 const expected = computeTotp(secret, currentStep + i);
                 if (expected === token) {
@@ -181,7 +166,6 @@ export class TotpService {
     generateRecoveryCodes(count = 8): string[] {
         const codes: string[] = [];
         for (let i = 0; i < count; i++) {
-            // 16 bytes = 32 hex characters = 128 bits of entropy per code
             codes.push(crypto.randomBytes(16).toString('hex').toUpperCase());
         }
         return codes;

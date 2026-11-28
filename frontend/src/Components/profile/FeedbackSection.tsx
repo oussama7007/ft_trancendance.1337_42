@@ -20,7 +20,6 @@ export function FeedbackSection({t}: FeedbackSectionProps) {
                 </p>
             </div>
 
-            {/* TODO: Teammate: replace this placeholder with the Feedback component. */}
         </section>
     );
 }

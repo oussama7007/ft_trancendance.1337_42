@@ -120,8 +120,8 @@ export function SignUpPage({
     const isRtl = lang === "ar";
 
 
-    const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
-    const [sessionId, setSessionId] = useState<string | null>(null)      // random id given by the backend after step 1
+    const [currentStep, setCurrentStep] = useState(1);
+    const [sessionId, setSessionId] = useState<string | null>(null)
 
 
     const [firstName, setFirstName] = useState("");
@@ -141,7 +141,7 @@ export function SignUpPage({
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const [isSubmitting, setIsSubmitting] = useState(false); // true while waiting for backend
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorKey, setErrorKey] = useState<SignUpErrorKey | ''>('');
     const [isRateLimited, setIsRateLimited] = useState(false);
     const [codeSentSuccessfully, setCodeSentSuccessfully] = useState(false);
@@ -327,8 +327,6 @@ export function SignUpPage({
             });
 
             if (!result.ok) {
-                // After 5 wrong codes the backend cancels the code; the user
-                // must send a new one.
                 const message = String(result.data?.message ?? '');
                 setErrorKey(
                     message.startsWith('Too many incorrect attempts') ||
@@ -391,7 +389,6 @@ export function SignUpPage({
                 return;
             }
 
-            // Registration and authentication succeeded.
             onRegistrationSuccess(result.data.user);
 
             } catch {

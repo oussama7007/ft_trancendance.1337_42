@@ -167,7 +167,6 @@ async function handleDescriptionSave(description: string) {
                                 lang={lang}
                             />
 
-                            {/* TODO: Teammates can add future profile sections in this column. */}
                             {hasListings && (
                                 <OwnerInterestRequests lang={lang} onAcceptSuccess={handleAcceptRequest} />
                             )}
