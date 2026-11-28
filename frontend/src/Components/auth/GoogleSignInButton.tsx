@@ -33,49 +33,36 @@ const GSI_SCRIPT_URL = 'https://accounts.google.com/gsi/client';
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 
-let loadedLang: string | null = null;
-let loadQueue: Promise<void> = Promise.resolve();
+let scriptPromise: Promise<void> | null = null;
+let initialized = false;
+let activeCredentialHandler: ((credential: string) => void) | null = null;
 
 function getGoogleIdentity() {
     return (window as GoogleWindow).google?.accounts?.id;
 }
 
-function loadGoogleScript(lang: string): Promise<void> {
-    loadQueue = loadQueue
-        .catch(() => undefined)
-        .then(() => {
-            if (loadedLang === lang && getGoogleIdentity()) {
-                return;
-            }
-
-            return new Promise<void>((resolve, reject) => {
-                document
-                    .querySelectorAll('script[data-google-gsi]')
-                    .forEach((script) => script.remove());
-
-                const script = document.createElement('script');
-                script.src = `${GSI_SCRIPT_URL}?hl=${encodeURIComponent(lang)}`;
-                script.async = true;
-                script.dataset.googleGsi = lang;
-                script.onload = () => {
-                    loadedLang = lang;
-                    resolve();
-                };
-                script.onerror = () => {
-                    script.remove();
-                    reject(new Error('Failed to load Google Identity Services'));
-                };
-                document.body.appendChild(script);
-            });
+function loadGoogleScript(): Promise<void> {
+    if (!scriptPromise) {
+        scriptPromise = new Promise<void>((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = GSI_SCRIPT_URL;
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => {
+                script.remove();
+                scriptPromise = null;
+                reject(new Error('Failed to load Google Identity Services'));
+            };
+            document.body.appendChild(script);
         });
+    }
 
-    return loadQueue;
+    return scriptPromise;
 }
 
 interface GoogleSignInButtonProps {
     lang: Language;
     onCredential: (credential: string) => void;
-    onError: () => void;
     text?: ButtonText;
     disabled?: boolean;
 }
@@ -83,7 +70,6 @@ interface GoogleSignInButtonProps {
 export function GoogleSignInButton({
     lang,
     onCredential,
-    onError,
     text = 'signin_with',
     disabled = false,
 }: GoogleSignInButtonProps) {
@@ -93,8 +79,6 @@ export function GoogleSignInButton({
 
     const onCredentialRef = useRef(onCredential);
     onCredentialRef.current = onCredential;
-    const onErrorRef = useRef(onError);
-    onErrorRef.current = onError;
 
     useEffect(() => {
         const wrapper = wrapperRef.current;
@@ -113,23 +97,26 @@ export function GoogleSignInButton({
         if (!GOOGLE_CLIENT_ID) return;
 
         let cancelled = false;
+        const handleCredential = (credential: string) => onCredentialRef.current(credential);
+        activeCredentialHandler = handleCredential;
 
-        loadGoogleScript(lang)
+        loadGoogleScript()
             .then(() => {
                 const googleId = getGoogleIdentity();
                 const container = buttonRef.current;
                 if (cancelled || !googleId || !container) return;
 
-                googleId.initialize({
-                    client_id: GOOGLE_CLIENT_ID,
-                    callback: (response) => {
-                        if (response?.credential) {
-                            onCredentialRef.current(response.credential);
-                        } else {
-                            onErrorRef.current();
-                        }
-                    },
-                });
+                if (!initialized) {
+                    googleId.initialize({
+                        client_id: GOOGLE_CLIENT_ID,
+                        callback: (response) => {
+                            if (response?.credential) {
+                                activeCredentialHandler?.(response.credential);
+                            }
+                        },
+                    });
+                    initialized = true;
+                }
 
                 container.innerHTML = '';
                 googleId.renderButton(container, {
@@ -143,12 +130,13 @@ export function GoogleSignInButton({
                     locale: lang,
                 });
             })
-            .catch(() => {
-                if (!cancelled) onErrorRef.current();
-            });
+            .catch(() => undefined);
 
         return () => {
             cancelled = true;
+            if (activeCredentialHandler === handleCredential) {
+                activeCredentialHandler = null;
+            }
         };
     }, [lang, text, width]);
 

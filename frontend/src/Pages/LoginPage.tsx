@@ -363,10 +363,6 @@ return (
                             onCredential={(credential) => {
                                 void handleGoogleLogin(credential);
                             }}
-                            onError={() => {
-                                setLoginErrorKey('');
-                                setError(t.googleLoginFailed);
-                            }}
                         />
                     </div>
                 </>

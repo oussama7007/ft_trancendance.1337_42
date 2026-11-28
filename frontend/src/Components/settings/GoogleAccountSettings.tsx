@@ -152,10 +152,6 @@ export function GoogleAccountSettings({ lang }: Props) {
                                             onCredential={(credential) => {
                                                 void linkGoogle(credential);
                                             }}
-                                            onError={() => {
-                                                setMessage('');
-                                                setError(t.googleAuthFailed);
-                                            }}
                                         />
                                     </div>
                                 )
