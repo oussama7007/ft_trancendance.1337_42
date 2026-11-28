@@ -73,7 +73,8 @@
      parfois css mktkonx md3oma mn browser chrome ..., donc ana knzid hd webkit bx ngol l browser khdaam hd lkhasiya bttari9a dialk
     ==> hnaya kngol lih l font lkhttota ykon na3imin o r9i9a omybanox mna9ttyni f bzff dial xaxat.
     */
-    -webkit-font-smoothing: antialiased; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
