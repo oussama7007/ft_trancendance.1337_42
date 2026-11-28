@@ -5,10 +5,6 @@ type SearchTab = 'home' | 'roommate' | 'list';
 interface SearchTabsProps {
     activeTab: SearchTab;
     onChange: (tab: SearchTab) => void;
-
-    isLoggedIn: boolean;
-    
-    onNavigate: (page: string) => void;
     labels:{
         home: string;
         roommate: string;
@@ -19,8 +15,6 @@ interface SearchTabsProps {
 export const  SearchTabs = ({
     activeTab,
     onChange,
-    // isLoggedIn,
-    // onNavigate,
     labels,
 }: SearchTabsProps) => {
     const tabs = [{
@@ -59,20 +53,6 @@ export const  SearchTabs = ({
                     </button>
                 );
             })}
-
-            {/* <button onClick={() => {
-                if (!isLoggedIn){
-                    onNavigate('signin');
-                }else{
-                    onNavigate('profile');
-                }    
-            } 
-            } className='px-4 py-2.5 rounded-t-xl text-xs font-black bg-white/40 text-gray-900 hover:bg-white/60 
-            transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer flex items-center gap-2
-            '>
-                <List size={16} />
-                {labels.list}
-            </button> */}
         </div>
     );
 };

@@ -68,8 +68,6 @@ const findCityCoords = (cityObj?: Record<Language, string>) =>{
         CITIES[0]);
 };
 
-// let hasDetectedLocation = false;
-
 const detectNearestCity= (lat: number, lng: number)=>{
     let nearest = CITIES[0];
     let miniDistance = Infinity;
@@ -140,8 +138,6 @@ export const HomePage: React.FC<HomePageProps> = ({
         }
         : DEFAULT_CAMERA
     );
-
-    // const [cameraProps, setCameraProps] = useState<MapCameraProps>(DEFAULT_CAMERA);
 
     const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -386,9 +382,6 @@ const filteredMarkers = mapMarkers.filter(
         <HomeSearchPanel
          activeTab={activeTab}
           onTabChange={handleTabChange}
-
-          isLoggedIn={isLoggedIn}
-          onNavigate={(path) => navigate(path)}
 
           searchQuery={searchQuery}
           onSearchQueryChange={

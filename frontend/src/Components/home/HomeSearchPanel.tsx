@@ -47,9 +47,6 @@ interface HomeSearchPanelProps {
     activeTab: HomeTab;
     onTabChange: (tab: HomeTab) => void;
 
-    isLoggedIn: boolean;
-    onNavigate: (page: string) => void;
-
     searchQuery: string;
     onSearchQueryChange: (value: string) => void;
 
@@ -106,8 +103,6 @@ const genderOptions = [
 export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
     activeTab,
     onTabChange,
-    isLoggedIn,
-    onNavigate,
 
     searchQuery,
     onSearchQueryChange,
@@ -146,7 +141,7 @@ export const HomeSearchPanel: React.FC<HomeSearchPanelProps> = ({
     return (
         <div>
             <SearchTabs 
-                activeTab={activeTab} onChange={onTabChange} isLoggedIn={isLoggedIn} onNavigate={onNavigate}
+                activeTab={activeTab} onChange={onTabChange}
                 labels={{
                     home : labels.tabHome,
                     roommate: labels.tabRoommate,
