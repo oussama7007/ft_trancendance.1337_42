@@ -1,10 +1,9 @@
-import { IsInt, IsString, IsPositive, IsEmail } from 'class-validator';
+import { IsString, IsEmail, IsUUID } from 'class-validator';
 
 export class RequestVerificationDto
 {
-  @IsInt()
-  @IsPositive()
-  sessionId: number;
+  @IsUUID('4')
+  sessionId: string;
 
   @IsEmail()
   @IsString()

@@ -13,11 +13,6 @@ export class GoogleCredentialDto {
     @IsOptional()
     @IsString()
     @IsNotEmpty()
-    accessToken?: string;
-
-    @IsOptional()
-    @IsString()
-    @IsNotEmpty()
     currentPassword?: string;
 
     @IsOptional()

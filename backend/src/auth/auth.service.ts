@@ -14,6 +14,7 @@ import {
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
 import { PasswordResetToken } from './password-reset-challenge.entity.js';
 import { TotpEnrollment } from './totp-enrollment.entity.js';
+import { TotpLoginChallenge } from './totp-login-challenge.entity.js';
 import { TotpRecoveryCode } from './totp-recovery-code.entity.js';
 import { TotpService } from './totp.service.js';
 
@@ -40,6 +41,7 @@ import {
     createHash,
     randomBytes,
     randomInt,
+    randomUUID,
     timingSafeEqual,
 } from 'node:crypto';
 
@@ -53,6 +55,7 @@ const VERIFICATION_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 const TOTP_LOGIN_CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const TOTP_MAX_ATTEMPTS = 5;
 const RECOVERY_CODE_COUNT = 8;
+const REGISTRATION_MAX_ATTEMPTS = 5;
 
 @Injectable()
 export class AuthService {
@@ -71,6 +74,9 @@ export class AuthService {
     @InjectRepository(TotpEnrollment)
     private readonly totpEnrollmentRepository: Repository<TotpEnrollment>,
 
+    @InjectRepository(TotpLoginChallenge)
+    private readonly totpLoginChallengeRepository: Repository<TotpLoginChallenge>,
+
     @InjectRepository(TotpRecoveryCode)
     private readonly totpRecoveryCodeRepository: Repository<TotpRecoveryCode>,
 
@@ -85,7 +91,6 @@ export class AuthService {
   ) {}
   private async verifyGoogleCredential(
     credential?: string,
-    accessToken?: string,
   ) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
 
@@ -105,37 +110,6 @@ export class AuthService {
                 audience: clientId,
             });
             payload = ticket.getPayload();
-        } else if (accessToken) {
-            const tokenInfo = await client.getTokenInfo(accessToken);
-
-            const tokenAudience = (tokenInfo as any).audience;
-            const tokenAzp = (tokenInfo as any).azp;
-            if (tokenAudience !== clientId && tokenAzp !== clientId) {
-                console.warn('Google token audience/azp mismatch:', {
-                    tokenAudience,
-                    tokenAzp,
-                    clientId,
-                });
-            }
-
-            const response = await fetch(
-                'https://openidconnect.googleapis.com/v1/userinfo',
-                {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                },
-            );
-
-            if (!response.ok) {
-                throw new UnauthorizedException('Invalid Google access token');
-            }
-
-            payload = await response.json() as {
-                sub?: string;
-                email?: string;
-                email_verified?: boolean | string;
-            };
         } else {
             throw new BadRequestException('Google credential is missing');
         }
@@ -234,28 +208,29 @@ export class AuthService {
         return true;
     }
 
-    const recoveryCode = await this.totpRecoveryCodeRepository.findOne({
-        where: { userId: user.id, used: false },
-    });
+    return this.consumeRecoveryCode(user.id, code);
+  }
 
-    if (recoveryCode) {
-        const codeHash = this.totpService.hashToken(code);
-        const isValidRecovery =
-            codeHash.length === recoveryCode.codeHash.length &&
-            timingSafeEqual(
-                Buffer.from(codeHash),
-                Buffer.from(recoveryCode.codeHash),
-            );
+  // Accepts any of the user's unused recovery codes, not only the first one.
+  // The code is looked up by its hash and marked as used in one UPDATE, so
+  // the same code cannot be used twice, even by two parallel requests.
+  private async consumeRecoveryCode(userId: number, code: string): Promise<boolean> {
+    const normalized = code.trim().replace(/\s+/g, '').toUpperCase();
 
-        if (isValidRecovery) {
-            recoveryCode.used = true;
-            recoveryCode.usedAt = new Date();
-            await this.totpRecoveryCodeRepository.save(recoveryCode);
-            return true;
-        }
+    if (!/^[0-9A-F]{32}$/.test(normalized)) {
+        return false;
     }
 
-    return false;
+    const result = await this.totpRecoveryCodeRepository.update(
+        {
+            userId,
+            codeHash: this.totpService.hashToken(normalized),
+            used: false,
+        },
+        { used: true, usedAt: new Date() },
+    );
+
+    return (result.affected ?? 0) > 0;
   }
 
   private toAuthUser(user: User) {
@@ -273,6 +248,7 @@ export class AuthService {
   private async issueAuthenticatedSession(user: User) {
     const accessToken = await this.jwtService.signAsync({
         sub: user.id,
+        sessionVersion: user.sessionVersion || 0,
     });
 
     return {
@@ -284,6 +260,21 @@ export class AuthService {
 
   private async prepareLogin(user: User) {
     return this.issueAuthenticatedSession(user);
+  }
+
+  /**
+   * Complete login after credentials are verified.
+   * Checks if TOTP is enabled and either creates a login challenge
+   * or issues the authenticated session directly.
+   * Used by both email/password and Google login paths.
+   */
+  private async completeLogin(user: User) {
+    // If TOTP 2FA is enforced, create a login challenge
+    if (user.totpEnabled) {
+        return this.createTotpLoginChallenge(user.id);
+    }
+
+    return this.prepareLogin(user);
   }
 
   async changePassword(
@@ -554,20 +545,22 @@ export class AuthService {
     this.validateDateOfBirth(data.dateOfBirth);
 
 
-    const session = this.registrationSessionRepository.create(data);
-
+    const session = this.registrationSessionRepository.create({
+      ...data,
+      token: randomUUID(),
+    });
 
     const savedSession = await this.registrationSessionRepository.save(session);
 
     return {
-      sessionId: savedSession.id,
+      sessionId: savedSession.token,
       message: 'Registration started',
     };
   }
 
   async requestVerification(data: RequestVerificationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -598,9 +591,10 @@ export class AuthService {
     const code = randomInt(0, 1000000).toString().padStart(6, '0');
 
     session.email = email;
-    session.verificationCode = code;
+    session.verificationCode = this.hashRegistrationCode(session.token, code);
     session.verificationCodeExpiresAt =
       new Date(Date.now() + 5 * 60 * 1000);
+    session.verificationAttempts = 0;
     session.isVerified = false;
 
     await this.registrationSessionRepository.save(session);
@@ -608,14 +602,14 @@ export class AuthService {
     await this.mailService.sendVerificationCode(email, code);
 
     return {
-      sessionId: session.id,
+      sessionId: session.token,
       message: 'Verification code generated',
     };
   }
 
   async verifyRegistration(data: VerifyRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -627,24 +621,48 @@ export class AuthService {
     if (session.verificationCodeExpiresAt.getTime() < Date.now())
       throw new BadRequestException('Verification code has expired');
 
-    if (session.verificationCode !== data.code)
+    const storedHash = Buffer.from(session.verificationCode, 'hex');
+    const providedHash = Buffer.from(
+      this.hashRegistrationCode(session.token, data.code),
+      'hex',
+    );
+    const isValid =
+      storedHash.length === providedHash.length &&
+      timingSafeEqual(storedHash, providedHash);
+
+    if (!isValid) {
+      session.verificationAttempts = (session.verificationAttempts || 0) + 1;
+
+      if (session.verificationAttempts >= REGISTRATION_MAX_ATTEMPTS) {
+        // Too many wrong codes: this code is no longer accepted.
+        session.verificationCode = null;
+        session.verificationCodeExpiresAt = null;
+        await this.registrationSessionRepository.save(session);
+        throw new BadRequestException(
+          'Too many incorrect attempts. Please request a new code.',
+        );
+      }
+
+      await this.registrationSessionRepository.save(session);
       throw new BadRequestException('Invalid verification code');
+    }
 
     session.isVerified = true;
-    session.verificationCode = undefined;
-    session.verificationCodeExpiresAt = undefined;
+    session.verificationCode = null;
+    session.verificationCodeExpiresAt = null;
+    session.verificationAttempts = 0;
 
     await this.registrationSessionRepository.save(session);
 
     return {
-      sessionId: session.id,
+      sessionId: session.token,
       message: 'Contact verified successfully',
     };
   }
 
   async finishRegistration(data: FinishRegistrationDto) {
     const session = await this.registrationSessionRepository.findOne({
-      where: { id: data.sessionId },
+      where: { token: data.sessionId },
     });
 
     if (!session)
@@ -673,9 +691,10 @@ export class AuthService {
     });
 
     const savedUser = await this.userRepository.save(user);
-        const accessToken = await this.jwtService.signAsync({
-            sub: savedUser.id,
-        });
+    const accessToken = await this.jwtService.signAsync({
+        sub: savedUser.id,
+        sessionVersion: savedUser.sessionVersion || 0,
+    });
     await this.registrationSessionRepository.delete(session.id);
 
 
@@ -718,11 +737,9 @@ export class AuthService {
 
   async loginWithGoogle(
     credential?: string,
-    accessToken?: string,
   ) {
     const identity = await this.verifyGoogleCredential(
         credential,
-        accessToken,
     );
 
     const user = await this.userRepository.findOne({
@@ -747,12 +764,7 @@ export class AuthService {
         });
     }
 
-    // If TOTP 2FA is enforced, create a login challenge
-    if (user.totpEnabled) {
-        return this.createTotpLoginChallenge(user.id);
-    }
-
-    return this.prepareLogin(user);
+    return this.completeLogin(user);
   }
 
   async requestPasswordReset(data: RequestPasswordResetDto) {
@@ -795,8 +807,14 @@ export class AuthService {
     }
 
     challenge.tokenHash = this.hashPasswordResetCode(user.id, code);
+    // The grant is only created after the code is verified (step 2).
+    challenge.grantHash = null;
     challenge.expiresAt = expiresAt;
     challenge.used = false;
+    challenge.attempts = 0;
+    // The resend cooldown is measured from this time, so it must be updated
+    // every time a new code is sent (the row is reused).
+    challenge.createdAt = new Date(now);
 
     await this.passwordResetTokenRepository.save(challenge);
 
@@ -815,7 +833,7 @@ export class AuthService {
     };
   }
 
-  // Step 2: Verify the password reset code
+  // Step 2: Verify the password reset code and issue a single-use grant
   async verifyPasswordReset(data: VerifyPasswordResetDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -855,19 +873,29 @@ export class AuthService {
       timingSafeEqual(storedBuffer, providedBuffer);
 
     if (!isValid) {
+      challenge.attempts = (challenge.attempts || 0) + 1;
+      if (challenge.attempts >= 5) {
+        await this.passwordResetTokenRepository.delete(challenge.id);
+      } else {
+        await this.passwordResetTokenRepository.save(challenge);
+      }
       throw new BadRequestException('Invalid verification code');
     }
 
-    // Mark code as verified so user can proceed to password reset
+    // Mark code as verified and issue a single-use grant. The browser gets
+    // the raw grant; the database keeps only its hash.
+    const grantToken = randomBytes(32).toString('hex');
     challenge.used = true;
+    challenge.grantHash = this.totpService.hashToken(grantToken);
     await this.passwordResetTokenRepository.save(challenge);
 
     return {
       message: 'Code verified successfully',
+      grantToken,
     };
   }
 
-  // Step 3: Reset password with verified code
+  // Step 3: Reset password with verified code and single-use grant
   async resetPassword(data: ResetPasswordDto) {
     const user = await this.userRepository.findOne({
       where: { email: data.email.trim().toLowerCase() },
@@ -898,8 +926,27 @@ export class AuthService {
       throw new BadRequestException('Password reset has expired');
     }
 
-    // Hash and update password
+    // Verify the single-use grant token
+    const providedGrantHash = this.totpService.hashToken(data.grantToken);
+
+    if (!challenge.grantHash) {
+      throw new BadRequestException('Invalid or expired reset grant');
+    }
+
+    const isValidGrant =
+      providedGrantHash.length === challenge.grantHash.length &&
+      timingSafeEqual(
+        Buffer.from(providedGrantHash),
+        Buffer.from(challenge.grantHash),
+      );
+
+    if (!isValidGrant) {
+      throw new BadRequestException('Invalid or expired reset grant');
+    }
+
+    // Hash and update password, and increment the session version
     user.passwordHash = await bcrypt.hash(data.newPassword, 12);
+    user.sessionVersion = (user.sessionVersion || 0) + 1;
     await this.userRepository.save(user);
 
     // Clean up the challenge
@@ -915,6 +962,12 @@ export class AuthService {
     return {
       message: 'Password has been reset successfully',
     };
+  }
+
+  private hashRegistrationCode(sessionToken: string, code: string): string {
+    return createHash('sha256')
+        .update(`registration:${sessionToken}:${code}`)
+        .digest('hex');
   }
 
   private hashPasswordResetCode(
@@ -1062,20 +1115,19 @@ export class AuthService {
 
   private async createTotpLoginChallenge(userId: number) {
     // Clean up any existing challenge
-    await this.totpEnrollmentRepository.delete({ userId });
+    await this.totpLoginChallengeRepository.delete({ userId });
 
     const token = randomBytes(32).toString('hex');
     const tokenHash = this.totpService.hashToken(token);
 
-    const challenge = this.totpEnrollmentRepository.create({
+    const challenge = this.totpLoginChallengeRepository.create({
       userId,
-      secretEncrypted: '', // not used for login challenge
       tokenHash,
       expiresAt: new Date(Date.now() + TOTP_LOGIN_CHALLENGE_TTL_MS),
       attempts: 0,
     });
 
-    await this.totpEnrollmentRepository.save(challenge);
+    await this.totpLoginChallengeRepository.save(challenge);
 
     return {
       requiresTwoFactor: true,
@@ -1087,7 +1139,7 @@ export class AuthService {
   async verifyTotpLogin(challengeToken: string, code: string) {
     const tokenHash = this.totpService.hashToken(challengeToken);
 
-    const challenge = await this.totpEnrollmentRepository.findOne({
+    const challenge = await this.totpLoginChallengeRepository.findOne({
       where: { tokenHash },
     });
 
@@ -1096,12 +1148,12 @@ export class AuthService {
     }
 
     if (challenge.expiresAt.getTime() < Date.now()) {
-      await this.totpEnrollmentRepository.delete(challenge.id);
+      await this.totpLoginChallengeRepository.delete(challenge.id);
       throw new UnauthorizedException('Login challenge expired');
     }
 
     if (challenge.attempts >= TOTP_MAX_ATTEMPTS) {
-      await this.totpEnrollmentRepository.delete(challenge.id);
+      await this.totpLoginChallengeRepository.delete(challenge.id);
       throw new UnauthorizedException(
         'Too many incorrect attempts. Please log in again.',
       );
@@ -1112,7 +1164,7 @@ export class AuthService {
     });
 
     if (!user || !user.totpEnabled || !user.totpSecretEncrypted) {
-      await this.totpEnrollmentRepository.delete(challenge.id);
+      await this.totpLoginChallengeRepository.delete(challenge.id);
       throw new UnauthorizedException(
         'Login challenge is no longer valid',
       );
@@ -1120,42 +1172,41 @@ export class AuthService {
 
     const secret = this.totpService.decryptSecret(user.totpSecretEncrypted);
 
-    // Try TOTP code first
+    // Try TOTP code first with replay protection
+    const currentStep = Math.floor(Date.now() / 1000 / 30);
     let isValid = this.totpService.verifyToken(secret, code);
+
+    // Replay protection: reject if this time step was already used
+    if (isValid && user.totpLastUsedStep === currentStep.toString()) {
+      isValid = false;
+    }
 
     // If not valid, try recovery codes
     let recoveryCodeUsed = false;
-    if (!isValid) {
-      const recoveryCode = await this.totpRecoveryCodeRepository.findOne({
-        where: { userId: user.id, used: false },
-      });
-
-      if (recoveryCode) {
-        const codeHash = this.totpService.hashToken(code);
-        const isValidRecovery =
-          codeHash.length === recoveryCode.codeHash.length &&
-          timingSafeEqual(
-            Buffer.from(codeHash),
-            Buffer.from(recoveryCode.codeHash),
-          );
-
-        if (isValidRecovery) {
-          recoveryCode.used = true;
-          recoveryCode.usedAt = new Date();
-          await this.totpRecoveryCodeRepository.save(recoveryCode);
-          isValid = true;
-          recoveryCodeUsed = true;
-        }
-      }
+    if (!isValid && await this.consumeRecoveryCode(user.id, code)) {
+      isValid = true;
+      recoveryCodeUsed = true;
     }
 
     if (!isValid) {
-      challenge.attempts += 1;
-      await this.totpEnrollmentRepository.save(challenge);
+      // Atomic increment using TypeORM update with condition
+      await this.totpLoginChallengeRepository.update(
+        { id: challenge.id },
+        { attempts: () => 'attempts + 1' },
+      );
       throw new UnauthorizedException('Invalid verification code');
     }
 
-    await this.totpEnrollmentRepository.delete(challenge.id);
+    // Mark this time step as used to prevent replay (TOTP codes only)
+    if (!recoveryCodeUsed) {
+      user.totpLastUsedStep = currentStep.toString();
+    }
+
+    // Atomic consumption: delete challenge only if still valid
+    await this.totpLoginChallengeRepository.delete({ id: challenge.id });
+
+    // Update user with replay protection step
+    await this.userRepository.update({ id: user.id }, { totpLastUsedStep: user.totpLastUsedStep });
 
     return this.issueAuthenticatedSession(user);
   }
@@ -1194,28 +1245,8 @@ export class AuthService {
       isValid = true;
     }
 
-    if (!isValid) {
-      // Try recovery code
-      const recoveryCode = await this.totpRecoveryCodeRepository.findOne({
-        where: { userId, used: false },
-      });
-
-      if (recoveryCode) {
-        const codeHash = this.totpService.hashToken(code);
-        const isValidRecovery =
-          codeHash.length === recoveryCode.codeHash.length &&
-          timingSafeEqual(
-            Buffer.from(codeHash),
-            Buffer.from(recoveryCode.codeHash),
-          );
-
-        if (isValidRecovery) {
-          recoveryCode.used = true;
-          recoveryCode.usedAt = new Date();
-          await this.totpRecoveryCodeRepository.save(recoveryCode);
-          isValid = true;
-        }
-      }
+    if (!isValid && await this.consumeRecoveryCode(userId, code)) {
+      isValid = true;
     }
 
     if (!isValid) {
@@ -1285,13 +1316,7 @@ export class AuthService {
     if(!passwordMatches)
         throw new UnauthorizedException('invalid contact or password');
 
-    // If TOTP 2FA is enabled, create a login challenge instead of issuing JWT directly
-    if (user.totpEnabled) {
-        return this.createTotpLoginChallenge(user.id);
-    }
-
-    return this.prepareLogin(user);
-
+    return this.completeLogin(user);
   }
 
   async getSecuritySettings(userId: number) {

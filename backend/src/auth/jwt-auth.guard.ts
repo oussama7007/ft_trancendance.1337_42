@@ -11,6 +11,7 @@ type JwtPayload = {
   sub: number;
   iat?: number;
   exp?: number;
+  sessionVersion?: number;
 };
 
 export interface AuthenticatedRequest extends Request {
@@ -52,5 +53,25 @@ export class JwtAuthGuard implements CanActivate {
 
     const [type, bearerToken] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? bearerToken : undefined;
+  }
+}
+
+/**
+ * Like JwtAuthGuard, but lets the request through without a user when the
+ * token is missing or invalid. Used for GET /auth/me, where "not signed in"
+ * is a normal answer (200 with null), not an error. A 401 there would show a
+ * red "Failed to load resource" error in the browser console on every page
+ * load for visitors.
+ */
+@Injectable()
+export class OptionalJwtAuthGuard extends JwtAuthGuard {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    try {
+      return await super.canActivate(context);
+    } catch {
+      const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+      request.user = undefined;
+      return true;
+    }
   }
 }

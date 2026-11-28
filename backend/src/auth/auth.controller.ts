@@ -1,4 +1,4 @@
-import { Body, Controller, Patch, Post, Res, HttpStatus, HttpCode, Get, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Patch, Post, Res, HttpStatus, HttpCode, Get, Req, UseGuards, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 
 import { StartEmailChangeDto } from './dto/start-email-change.dto.js';
@@ -26,7 +26,7 @@ import { RegenerateRecoveryCodesDto } from './dto/regenerate-recovery-codes.dto.
 import { ChangePasswordDto } from './dto/change-password.dto.js';
 
 import { LoginDto } from './dto/login.dto.js';
-import { JwtAuthGuard } from './jwt-auth.guard.js';
+import { JwtAuthGuard, OptionalJwtAuthGuard } from './jwt-auth.guard.js';
 import type { AuthenticatedRequest } from './jwt-auth.guard.js';
 
 import type { Response } from 'express';
@@ -138,12 +138,22 @@ async login(
 
 
 
-    @Get('me')
-  @UseGuards(JwtAuthGuard)
-  getCurrentUser(@Req() request: AuthenticatedRequest) {
-    if (request.user)
-      return this.authService.getCurrentUser(request.user.sub);
-    return null;
+  // Visitors who are not signed in get 200 with an empty body (null), so the
+  // browser console stays free of 401 errors on every page load.
+  @Get('me')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getCurrentUser(@Req() request: AuthenticatedRequest) {
+    if (!request.user)
+      return null;
+
+    try {
+      return await this.authService.getCurrentUser(request.user.sub);
+    } catch (error) {
+      // The account behind a still-valid token was deleted: treat as signed out.
+      if (error instanceof NotFoundException)
+        return null;
+      throw error;
+    }
   }
 
 
@@ -157,7 +167,6 @@ async googleLogin(
 ) {
     const result = await this.authService.loginWithGoogle(
         data.credential,
-        data.accessToken,
     );
 
     if ('accessToken' in result) {

@@ -181,7 +181,8 @@ export class TotpService {
     generateRecoveryCodes(count = 8): string[] {
         const codes: string[] = [];
         for (let i = 0; i < count; i++) {
-            codes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
+            // 16 bytes = 32 hex characters = 128 bits of entropy per code
+            codes.push(crypto.randomBytes(16).toString('hex').toUpperCase());
         }
         return codes;
     }
