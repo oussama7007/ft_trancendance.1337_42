@@ -7,6 +7,7 @@ import {
     CheckCircle2,
     Loader2,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { AccountSection } from '../shared/AccountSection';
 import { PasswordField } from '../auth/PasswordField';
@@ -540,9 +541,11 @@ export function SecuritySettings({ lang }: Props) {
                                 {isTotpLoading ? (
                                     <Loader2 className="w-8 h-8 animate-spin" />
                                 ) : (
-                                    <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpQrCode ?? "")}`}
-                                        alt="TOTP QR Code"
+                                    <QRCodeSVG
+                                        value={totpQrCode ?? ""}
+                                        size={192}
+                                        marginSize={2}
+                                        title="TOTP QR Code"
                                         className="w-48 h-48 rounded-xl border border-irent-border"
                                     />
                                 )}
