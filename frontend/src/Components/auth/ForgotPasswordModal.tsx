@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { Language } from "@/types";
 import { translations } from "@/translations";
 import {
@@ -15,6 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { PasswordField } from "@/Components/auth/PasswordField";
 import { PasswordStrength } from "@/Components/auth/PasswordStrength";
 import validator from 'validator';
+import { isPasswordValid } from "@/utils/password";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
@@ -37,6 +38,23 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    // Single-use grant returned by the backend after the code is verified.
+    const [grantToken, setGrantToken] = useState("");
+
+    // One timer while the user is entering the code. It is cleared on every
+    // change, so going back and re-sending never runs two timers, and it
+    // cannot move the user away from the "reset" or "success" steps.
+    useEffect(() => {
+        if (step !== "verify") return;
+
+        if (countdown <= 0) {
+            setStep("email");
+            return;
+        }
+
+        const timeout = setTimeout(() => setCountdown((value) => value - 1), 1000);
+        return () => clearTimeout(timeout);
+    }, [step, countdown]);
 
     const getTranslatedError = (backendMessage: string): string => {
         const errorMap: Record<string, string> = {
@@ -47,6 +65,10 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
             'Too many incorrect attempts': t.tooManyAttempts || 'Too many attempts',
             'Failed to send reset code': t.failedToSend || 'Failed to send code',
             'Could not send password reset email': t.failedToSend || 'Failed to send email',
+            'This reset link has already been used': t.codeExpired || 'Code expired',
+            'Password reset has expired': t.codeExpired || 'Code expired',
+            'Invalid or expired reset grant': t.codeExpired || 'Code expired',
+            'You must verify the code first': t.codeExpired || 'Code expired',
         };
 
         return errorMap[backendMessage] || backendMessage;
@@ -91,9 +113,9 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                 );
             }
 
-            setStep("verify");
+            setGrantToken("");
             setCountdown(300); // 5 minutes
-            startCountdown();
+            setStep("verify");
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "An error occurred";
             setError(getTranslatedError(errorMsg));
@@ -137,6 +159,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                 );
             }
 
+            if (typeof data.grantToken !== "string" || !data.grantToken) {
+                throw new Error("Verification failed");
+            }
+
+            setGrantToken(data.grantToken);
             setStep("reset");
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : "Verification failed";
@@ -158,6 +185,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
             return;
         }
 
+        if (!isPasswordValid(newPassword)) {
+            setError(t.passwordRequirements);
+            return;
+        }
+
         if (newPassword !== confirmPassword) {
             setError(t.passwordMismatch);
             return;
@@ -175,7 +207,7 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                     },
                     body: JSON.stringify({
                         email: email.trim().toLowerCase(),
-                        code: code.trim(),
+                        grantToken,
                         newPassword,
                     }),
                 }
@@ -196,19 +228,6 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
         } finally {
             setIsSubmitting(false);
         }
-    };
-
-    const startCountdown = () => {
-        let remaining = 300;
-        const interval = setInterval(() => {
-            remaining -= 1;
-            setCountdown(remaining);
-
-            if (remaining <= 0) {
-                clearInterval(interval);
-                setStep("email");
-            }
-        }, 1000);
     };
 
     const formatTime = (seconds: number) => {
@@ -376,7 +395,11 @@ export function ForgotPasswordModal({ lang, onClose }: ForgotPasswordModalProps)
                                     type="button"
                                     variant="outline"
                                     onClick={() => {
-                                        setStep("verify");
+                                        // The code was already used to get the
+                                        // grant, so start again from the email step.
+                                        setStep("email");
+                                        setCode("");
+                                        setGrantToken("");
                                         setNewPassword("");
                                         setConfirmPassword("");
                                     }}
