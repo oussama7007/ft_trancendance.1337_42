@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
+import { DataSource } from 'typeorm';
+import { User } from './user.entity.js';
 
 type JwtPayload = {
   sub: number;
@@ -20,7 +22,10 @@ export interface AuthenticatedRequest extends Request {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -35,6 +40,15 @@ export class JwtAuthGuard implements CanActivate {
 
       if (!Number.isSafeInteger(payload.sub) || payload.sub <= 0) {
         throw new Error('Invalid user ID in token');
+      }
+
+      const user = await this.dataSource.getRepository(User).findOne({
+        where: { id: payload.sub },
+        select: { id: true, sessionVersion: true },
+      });
+
+      if (!user || (payload.sessionVersion ?? 0) !== user.sessionVersion) {
+        throw new Error('Session is no longer valid');
       }
 
       request.user = { ...payload, userId: payload.sub };
