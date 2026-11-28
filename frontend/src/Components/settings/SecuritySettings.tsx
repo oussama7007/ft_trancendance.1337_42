@@ -192,8 +192,8 @@ export function SecuritySettings({ lang }: Props) {
             });
 
             setTotpToken(data.token);
-            setTotpQrCode(data.qrCodeUrl);
             setTotpSecret(data.secret);
+            setTotpQrCode(data.qrCodeUrl);
             setTotpSetupStep('showQr');
             setTotpCurrentPassword('');
         } catch (error) {
@@ -293,6 +293,11 @@ export function SecuritySettings({ lang }: Props) {
         setSecurityError('');
         setSecurityMessage('');
 
+        if (!disablePassword) {
+            setSecurityError(t.currentPasswordRequired);
+            return;
+        }
+
         try {
             setIsTotpLoading(true);
 
@@ -304,6 +309,9 @@ export function SecuritySettings({ lang }: Props) {
             });
 
             setRecoveryCodes(data.recoveryCodes);
+            // Show the new codes; the old ones no longer work.
+            setTotpSetupStep('showRecovery');
+            setDisablePassword('');
             setSecurityMessage(t.recoveryRegenerated);
             await loadSecurity();
         } catch (error) {
@@ -477,7 +485,7 @@ export function SecuritySettings({ lang }: Props) {
                                         type="text"
                                         inputMode="numeric"
                                         autoComplete="one-time-code"
-                                        maxLength={6}
+                                        maxLength={64}
                                         value={totpCode}
                                         onChange={(e) => setTotpCode(e.target.value)}
                                         placeholder="000000"
@@ -540,7 +548,7 @@ export function SecuritySettings({ lang }: Props) {
                                     <Loader2 className="w-8 h-8 animate-spin" />
                                 ) : (
                                     <img
-                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpQrCode)}`}
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpQrCode ?? "")}`}
                                         alt="TOTP QR Code"
                                         className="w-48 h-48 rounded-xl border border-irent-border"
                                     />

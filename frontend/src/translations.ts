@@ -94,7 +94,6 @@ export const translations = {
                     regenerateRecoveryCodes: 'تجديد رموز الاسترداد',
                     totpScanQr: 'امسح رمز الاستجابة السريعة باستخدام تطبيق المصادقة.',
                     totpEnterCode: 'أدخل رمز التحقق المكوّن من 6 أرقام من تطبيقك.',
-                    totpVerifyAndEnable: 'تحقق وفعّل المصادقة الثنائية',
                     totpRecoveryCodes: 'رموز الاسترداد',
                     totpSaveCodes: 'احفظ هذه الرموز في مكان آمن. يمكنك استخدامها لتسجيل الدخول إذا فقدت جهازك.',
                     totpConfirmPassword: 'أدخل كلمة مرورك الحالية لبدء إعداد تطبيق المصادقة.',
