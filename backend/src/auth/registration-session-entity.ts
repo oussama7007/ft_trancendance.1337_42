@@ -6,6 +6,10 @@ export class RegistrationSession
   @PrimaryGeneratedColumn()
   id: number;
 
+  // Random, unguessable id sent to the browser. The numeric id stays internal.
+  @Column({ type: 'uuid', unique: true, default: () => 'gen_random_uuid()' })
+  token: string;
+
   @Column()
   firstName: string;
 
@@ -23,11 +27,15 @@ export class RegistrationSession
   @Column({ nullable: true })
   email: string;
 
-  @Column({ nullable: true })
-  verificationCode?: string;
+  // SHA-256 hash of the 6-digit code, never the code itself.
+  @Column({ type: 'varchar', nullable: true })
+  verificationCode?: string | null;
+
+  @Column({ type: 'integer', default: 0 })
+  verificationAttempts: number;
 
   @Column({ type: 'timestamp', nullable: true })
-  verificationCodeExpiresAt?: Date;
+  verificationCodeExpiresAt?: Date | null;
 
   @Column({ default: false })
   isVerified: boolean;

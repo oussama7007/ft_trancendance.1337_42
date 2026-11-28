@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { fileURLToPath } from 'node:url';
 import { DataSource } from 'typeorm';
 import { TotpEnrollment } from './auth/totp-enrollment.entity.js';
+import { TotpLoginChallenge } from './auth/totp-login-challenge.entity.js';
 import { TotpRecoveryCode } from './auth/totp-recovery-code.entity.js';
 
 
@@ -20,7 +21,7 @@ import { Listing } from './listings/listing.entity.js';
 import { RoommatePost } from './roommates/roommate-post.entity.js';
 import { EmailChangeChallenge } from './auth/email-change-challenge.entity.js';
 config({
-  path: fileURLToPath(new URL('../.env', import.meta.url)),
+  path: fileURLToPath(new URL('../../.env', import.meta.url)),
 });
 
 const dataSource = new DataSource({
@@ -42,6 +43,7 @@ const dataSource = new DataSource({
   InterestRequest,
   EmailChangeChallenge,
   TotpEnrollment,
+  TotpLoginChallenge,
   TotpRecoveryCode,
 ],
   migrations: ['src/migrations/*.ts'],

@@ -10,6 +10,7 @@ import { MailService } from '../mail/mail.service.js';
 import { EmailChangeChallenge } from './email-change-challenge.entity.js';
 import { PasswordResetToken } from './password-reset-challenge.entity.js';
 import { TotpEnrollment } from './totp-enrollment.entity.js';
+import { TotpLoginChallenge } from './totp-login-challenge.entity.js';
 import { TotpRecoveryCode } from './totp-recovery-code.entity.js';
 import { TotpService } from './totp.service.js';
 
@@ -21,6 +22,7 @@ import { TotpService } from './totp.service.js';
       EmailChangeChallenge,
       PasswordResetToken,
       TotpEnrollment,
+      TotpLoginChallenge,
       TotpRecoveryCode,
     ]),
     SharedJwtModule,

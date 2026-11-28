@@ -58,4 +58,7 @@ export class User {
 
     @Column({ type: 'varchar', nullable: true })
     totpLastUsedStep: string | null;
+
+    @Column({ type: 'integer', default: 0 })
+    sessionVersion: number;
 }
