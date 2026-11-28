@@ -47,6 +47,7 @@ type SignUpErrorKey =
     | 'pleaseenteryouremail'
     | 'emailAlreadyRegistered'
     | 'invalidCode'
+    | 'tooManyAttempts'
     | 'emailVerificationRequired'
     | 'invalidEmail'
     | 'passwordRequirements'
@@ -120,7 +121,7 @@ export function SignUpPage({
 
 
     const [currentStep, setCurrentStep] = useState(1);   // 1, 2 or 3
-    const [sessionId, setSessionId] = useState<number | null>(null)      // given by the backend after step 1
+    const [sessionId, setSessionId] = useState<string | null>(null)      // random id given by the backend after step 1
 
 
     const [firstName, setFirstName] = useState("");
@@ -242,7 +243,7 @@ export function SignUpPage({
                 return;
             }
 
-            if (typeof result.data.sessionId !== "number") {
+            if (typeof result.data.sessionId !== "string" || !result.data.sessionId) {
                 setErrorKey('invalidSession');
                 return;
             }
@@ -326,7 +327,15 @@ export function SignUpPage({
             });
 
             if (!result.ok) {
-                setErrorKey('invalidCode');
+                // After 5 wrong codes the backend cancels the code; the user
+                // must send a new one.
+                const message = String(result.data?.message ?? '');
+                setErrorKey(
+                    message.startsWith('Too many incorrect attempts') ||
+                    message.startsWith('Request a verification code first')
+                        ? 'tooManyAttempts'
+                        : 'invalidCode',
+                );
                 return;
             }
 
