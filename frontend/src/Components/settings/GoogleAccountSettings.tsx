@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
+import { GoogleSignInButton } from '../auth/GoogleSignInButton';
 import { AccountSection } from '../shared/AccountSection';
 import { Link2 } from 'lucide-react';
 import type { Language } from '../../types';
@@ -53,7 +53,6 @@ async function request<T>(
 
 export function GoogleAccountSettings({ lang }: Props) {
     const t = translations[lang].settings.security;
-    const authT = translations[lang].auth;
     const [googleEmail, setGoogleEmail] =
         useState<string | null>(null);
 
@@ -93,16 +92,7 @@ export function GoogleAccountSettings({ lang }: Props) {
         });
     }, []);
 
-    const googleLogin = useGoogleLogin({
-        onSuccess: (tokenResponse) => {
-            void linkGoogle(tokenResponse.credential);
-        },
-        onError: () => {
-            setError(t.googleAuthFailed);
-        },
-    });
-
-    async function linkGoogle(credential?: string) {
+    async function linkGoogle(credential: string) {
         setError('');
         setMessage('');
 
@@ -155,14 +145,19 @@ export function GoogleAccountSettings({ lang }: Props) {
                                         {t.sending}
                                     </p>
                                 ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() => googleLogin()}
-                                        className="rounded-lg border border-irent-border bg-irent-surface px-4 py-2 text-sm font-medium text-irent-text hover:bg-irent-background"
-                                        dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                                    >
-                                        {authT.googleSignIn}
-                                    </button>
+                                    <div className="max-w-sm">
+                                        <GoogleSignInButton
+                                            lang={lang}
+                                            text="continue_with"
+                                            onCredential={(credential) => {
+                                                void linkGoogle(credential);
+                                            }}
+                                            onError={() => {
+                                                setMessage('');
+                                                setError(t.googleAuthFailed);
+                                            }}
+                                        />
+                                    </div>
                                 )
                             ) : (
                                 <p className="text-sm text-amber-600">
