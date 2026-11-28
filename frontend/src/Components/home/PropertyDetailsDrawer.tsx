@@ -90,9 +90,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
             setConversationId(undefined);
           }
         }
-      } catch (err) {
-        console.error('Failed to fetch interest status', err);
-      }
+      } catch {}
     };
 
     fetchInterestStatus();
@@ -152,8 +150,7 @@ export const PropertyDetailsDrawer: React.FC<PropertyDetailsDrawerProps> = ({
           setConversationId(Number(created.conversationId));
         }
       }
-    } catch (err) {
-      console.error('Failed to send interest request', err);
+    } catch {
     } finally {
       setLoading(false);
     }

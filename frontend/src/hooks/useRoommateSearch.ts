@@ -33,9 +33,8 @@ export function useRoommateSearch({ enabled, city, budget, gender }: RoommateSea
         );
         setRooms(data);
         setHasError(false);
-      } catch (error) {
+      } catch {
         if (controller.signal.aborted) return;
-        console.error(error);
         setRooms([]);
         setHasError(true);
       }

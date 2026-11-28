@@ -166,10 +166,7 @@ useEffect(() => {
         controller.signal,
       );
       setListings(data);
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      console.error(error);
-    }
+    } catch {}
   }, 300);
 
   return () => {

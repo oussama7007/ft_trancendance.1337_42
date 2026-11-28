@@ -27,7 +27,7 @@ import Chat from './Components/chat/Chat'
 import { DashboardPage } from './Pages/DashboardPage'
 import { ChatProvider } from './context/ChatContext'
 
-import type { Language, Listing, User } from './types'
+import type { Language, User } from './types'
 import { translations } from './translations'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -125,9 +125,7 @@ function App() {
                 if (isMounted) {
                     setCurrentUser(user ? mapBackendUser(user) : null);
                 }
-            } catch (error) {
-                console.error('Session restoration failed:', error);
-
+            } catch {
                 if (isMounted) {
                     setCurrentUser(null);
                 }
@@ -152,14 +150,10 @@ function App() {
 
         try {
             localStorage.setItem('lang', lang);
-        } catch (error) {
-            console.warn('Could not save language preference:', error);
-        }
+        } catch {}
     }, [lang, t]);
 
-    const handleSelectListing = (listing: Listing) => {
-        console.log('Selected listing:', listing);
-    };
+    const handleSelectListing = () => {};
 
     const handleLogout = async () => {
         try {
@@ -174,9 +168,7 @@ function App() {
 
             setCurrentUser(null);
             navigate('/');
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
+        } catch {}
     };
 
     const handleAvatarChanged = useCallback((avatarUrl: string | null) => {
