@@ -3,17 +3,18 @@ import { X } from 'lucide-react';
 
 interface ModalShellProps {
   title: string;
+  closeLabel: string;
   onClose: () => void;
   children: React.ReactNode;
 }
 
-export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children }) => {
+export const ModalShell: React.FC<ModalShellProps> = ({ title, closeLabel, onClose, children }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close"
+        aria-label={closeLabel}
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px] cursor-default"
       />
 
@@ -23,7 +24,7 @@ export const ModalShell: React.FC<ModalShellProps> = ({ title, onClose, children
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={closeLabel}
             className="w-9 h-9 shrink-0 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition cursor-pointer"
           >
             <X className="w-4 h-4 text-gray-700" />

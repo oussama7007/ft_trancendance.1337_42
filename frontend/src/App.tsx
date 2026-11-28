@@ -25,6 +25,7 @@ import { Navbar } from './Components/Navbar'
 import { Footer } from './Components/Footer'
 import Chat from './Components/chat/Chat'
 import { DashboardPage } from './Pages/DashboardPage'
+import { ChatProvider } from './context/ChatContext'
 
 import type { Language, Listing, User } from './types'
 import { translations } from './translations'
@@ -203,7 +204,7 @@ function App() {
     if (isAuthLoading) {
         return (
             <main className="flex min-h-screen items-center justify-center">
-                <p>Checking the server...</p>
+                <p>{translations[lang].homePage.loading}</p>
             </main>
         );
     }
@@ -211,6 +212,7 @@ function App() {
     const isRtl = lang === 'ar';
 
     return (
+        <ChatProvider currentUserId={currentUser?.id} lang={lang}>
         <div dir={isRtl ? 'rtl' : 'ltr'} className="min-h-screen bg-white">
             <Navbar
                 lang={lang}
@@ -285,7 +287,7 @@ function App() {
                     path="/chat"
                     element={
                         currentUser
-                            ? <Chat lang={lang} currentUserId={currentUser.id} />
+                            ? <Chat lang={lang} />
                             : <Navigate to="/signin" replace />
                     }
                 />
@@ -364,6 +366,7 @@ function App() {
 
             <Footer lang={lang} />
         </div>
+        </ChatProvider>
     );
 }
 

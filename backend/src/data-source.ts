@@ -20,6 +20,7 @@ import { User } from './auth/user.entity.js';
 import { Listing } from './listings/listing.entity.js';
 import { RoommatePost } from './roommates/roommate-post.entity.js';
 import { EmailChangeChallenge } from './auth/email-change-challenge.entity.js';
+import { ListingView } from './analytics/listing-view.entity.js';
 config({
   path: fileURLToPath(new URL('../../.env', import.meta.url)),
 });
@@ -45,6 +46,7 @@ const dataSource = new DataSource({
   TotpEnrollment,
   TotpLoginChallenge,
   TotpRecoveryCode,
+  ListingView,
 ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,

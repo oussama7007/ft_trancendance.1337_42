@@ -5,7 +5,7 @@ import { diskStorage } from 'multer';
 export const UPLOADS_FOLDER = 'uploads';
 export const MAX_UPLOAD_FILES = 9;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+const MAX_FILE_SIZE = 52428800; // 50MB bl bytes
 
 const EXTENSION_BY_TYPE: Record<string, string> = {
   'image/jpeg': '.jpg',

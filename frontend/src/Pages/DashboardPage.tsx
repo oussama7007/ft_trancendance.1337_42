@@ -5,7 +5,7 @@ import type { AnalyticsData, AnalyticsRange } from '../types/analytics';
 import { translations } from '../translations';
 import { fetchAnalytics } from '../api/analytics';
 import { ApiError } from '../api/apiError';
-import { Building2, Eye, MessageCircle, Search } from 'lucide-react';
+import { Building2, Eye, MessageCircle } from 'lucide-react';
 import { StatCard } from '../Components/dashboard/StatCard';
 import { ViewsChart } from '../Components/dashboard/ViewsChart';
 import { TopListingsTable } from '../Components/dashboard/TopListingsTable';
@@ -15,7 +15,6 @@ const RANGES: AnalyticsRange[] = ['7d', '30d', '90d'];
 const CARDS = [
     { key: 'views', icon: Eye },
     { key: 'contacts', icon: MessageCircle },
-    { key: 'searches', icon: Search },
     { key: 'activeListings', icon: Building2 },
 ] as const;
 
@@ -115,7 +114,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ lang }) => {
                 <p className="py-16 text-center text-sm font-bold text-red-500">{t.loadError}</p>
             ) : (
                 <>
-                    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         {CARDS.map(({ key, icon }) => (
                             <StatCard
                                 key={key}

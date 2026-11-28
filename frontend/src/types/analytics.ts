@@ -5,7 +5,6 @@ export type AnalyticsRange = '7d' | '30d' | '90d';
 export interface AnalyticsSummary {
     views: number;
     contacts: number;
-    searches: number;
     activeListings: number;
 }
 
